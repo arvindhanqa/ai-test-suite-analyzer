@@ -1,0 +1,108 @@
+# ShopEasy Test Cases
+
+| Test ID | Feature | Scenario | Priority | Steps | Expected Result | Status |
+|---------|---------|----------|----------|-------|-----------------|--------|
+| TC-001 | User Authentication | Valid user registration with all required fields | High | 1. Navigate to registration page<br>2. Enter First Name: "John"<br>3. Enter Last Name: "Doe"<br>4. Enter Email: "john.doe@email.com"<br>5. Enter Phone: "1234567890"<br>6. Enter Password: "Test@1234"<br>7. Confirm Password: "Test@1234"<br>8. Check age confirmation checkbox<br>9. Click Register button | User account created successfully. Verification email sent. User redirected to dashboard after email verification. | Not Run |
+| TC-002 | User Authentication | Register with existing email | High | 1. Go to registration page<br>2. Enter email that already exists<br>3. Fill other fields<br>4. Click Register | Should show error message about email already registered | Not Run |
+| TC-003 | User Authentication | User registration | Medium | Fill the form and submit | User should be registered | Not Run |
+| TC-004 | User Authentication | Password validation during registration | High | 1. Navigate to registration page<br>2. Enter valid details for all fields except password<br>3. Enter Password: "test" (doesn't meet criteria)<br>4. Click Register | Error message displayed: "Password must be 8-20 characters, contain at least one uppercase, one lowercase, one number, and one special character" | Not Run |
+| TC-005 | User Authentication | Valid user login | High | 1. Navigate to login page<br>2. Enter Email: "john.doe@email.com"<br>3. Enter Password: "Test@1234"<br>4. Click Login button | User logged in successfully. Redirected to previous page or home page. Last login timestamp displayed. | Not Run |
+| TC-006 | User Authentication | Login with wrong password | High | 1. Go to login page<br>2. Enter valid email<br>3. Enter wrong password<br>4. Click Login | Error message: "Invalid email or password" | Not Run |
+| TC-007 | User Authentication | Check login | Medium | Try to login | Should work | Not Run |
+| TC-008 | User Authentication | Remember Me functionality | Medium | 1. Navigate to login page<br>2. Enter valid credentials<br>3. Check "Remember Me" checkbox<br>4. Click Login<br>5. Close browser<br>6. Reopen browser and navigate to site | User should still be logged in for up to 30 days | Not Run |
+| TC-009 | User Authentication | Account lockout after failed attempts | High | 1. Navigate to login page<br>2. Enter valid email<br>3. Enter incorrect password<br>4. Repeat step 3 five times<br>5. Attempt 6th login | Account locked. Error message: "Account temporarily locked. Try again in 30 minutes." | Not Run |
+| TC-010 | User Authentication | Password reset request | High | 1. Click "Forgot Password" on login page<br>2. Enter registered email address<br>3. Click Submit | Generic success message displayed. Password reset email sent to user's email (if email exists). | Not Run |
+| TC-011 | User Authentication | Reset password using valid link | High | 1. Request password reset<br>2. Open reset link from email<br>3. Enter new password: "NewPass@123"<br>4. Confirm password: "NewPass@123"<br>5. Click Submit | Password updated successfully. Confirmation email sent. User can login with new password. | Not Run |
+| TC-012 | User Authentication | Password reset with expired link | Medium | 1. Generate password reset link<br>2. Wait for 3 hours<br>3. Click the link<br>4. Try to reset password | Error: "This link has expired. Please request a new password reset." | Not Run |
+| TC-013 | User Authentication | Test email verification | Low | Register and verify email | Should verify | Not Run |
+| TC-014 | Product Catalog | Browse all products | High | 1. Navigate to product catalog page<br>2. Observe products displayed | Products displayed in grid view (default), showing thumbnail, name, price, and rating. 20 products per page with pagination. | Not Run |
+| TC-015 | Product Catalog | Switch to list view | Medium | 1. Navigate to catalog<br>2. Click "List View" button<br>3. Observe display | Products displayed in list format with same information | Not Run |
+| TC-016 | Product Catalog | View product details | High | 1. Navigate to catalog<br>2. Click on any product<br>3. Verify detailed page loads | Product detail page opens showing full description, larger image, price, rating, and Add to Cart button | Not Run |
+| TC-017 | Product Catalog | Check pagination | Medium | Click through pages | Should navigate to different pages | Not Run |
+| TC-018 | Product Catalog | Search for product with valid keyword | High | 1. Navigate to catalog page<br>2. Enter "laptop" in search bar (3+ characters)<br>3. Click Search or press Enter | Search results displayed showing products matching "laptop" in name, description, or category. Search term highlighted in results. | Not Run |
+| TC-019 | Product Catalog | Search with less than 3 characters | Medium | 1. Enter "la" in search bar<br>2. Click Search | Error message: "Please enter at least 3 characters" | Not Run |
+| TC-020 | Product Catalog | Search functionality | Low | Search for something | Results should show | Not Run |
+| TC-021 | Product Catalog | Filter products by category | High | 1. Navigate to catalog<br>2. Select "Electronics" category from filter<br>3. Click Apply | Only products in Electronics category displayed | Not Run |
+| TC-022 | Product Catalog | Filter by price range | High | 1. Navigate to catalog<br>2. Set price minimum: $100<br>3. Set price maximum: $500<br>4. Click Apply Filter | Only products priced between $100 and $500 displayed | Not Run |
+| TC-023 | Product Catalog | Filter by rating | Medium | 1. Select "4 stars and above" rating filter<br>2. Apply filter | Products with average rating of 4 or 5 stars displayed | Not Run |
+| TC-024 | Product Catalog | Apply multiple filters simultaneously | High | 1. Select category: "Electronics"<br>2. Set price range: $200-$1000<br>3. Select rating: 3+ stars<br>4. Apply filters | Products matching ALL filter criteria displayed (AND logic) | Not Run |
+| TC-025 | Product Catalog | Invalid price range filter | Medium | 1. Set minimum price: $500<br>2. Set maximum price: $100<br>3. Click Apply | Error message: "Minimum price cannot exceed maximum price" | Not Run |
+| TC-026 | Product Catalog | Clear all filters | Low | 1. Apply some filters<br>2. Click "Clear Filters" button | All filters removed, full catalog displayed | Not Run |
+| TC-027 | Product Catalog | Test filters | Low | Use filters | Should filter | Not Run |
+| TC-028 | Shopping Cart | Add product to cart from product page | High | 1. Navigate to product detail page<br>2. Set quantity: 2<br>3. Click "Add to Cart" button | Confirmation message displayed: "Item added to cart". Cart icon shows count updated to 2. Product added to cart with quantity 2. | Not Run |
+| TC-029 | Shopping Cart | Add product with quantity exceeding inventory | High | 1. Navigate to product with only 5 units in stock<br>2. Enter quantity: 10<br>3. Click "Add to Cart" | Error message: "Only 5 units available" | Not Run |
+| TC-030 | Shopping Cart | Add to cart | Medium | Add something to cart | Should be added | Not Run |
+| TC-031 | Shopping Cart | Add out of stock product to cart | High | 1. Find product with 0 inventory<br>2. Try to click "Add to Cart" | Error message: "This item is currently out of stock". Add to Cart button should be disabled. | Not Run |
+| TC-032 | Shopping Cart | Update quantity in cart | High | 1. Add product to cart<br>2. Navigate to cart page<br>3. Change quantity from 2 to 5<br>4. Click Update | Quantity updated to 5. Subtotal recalculated. Success message displayed. | Not Run |
+| TC-033 | Shopping Cart | Remove item from cart | High | 1. Add products to cart<br>2. Navigate to cart<br>3. Click "Remove" button for one item<br>4. Verify removal | Item removed from cart. Cart totals recalculated. Cart item count updated. | Not Run |
+| TC-034 | Shopping Cart | Clear entire cart | Medium | 1. Add multiple items to cart<br>2. Click "Clear Cart" button<br>3. Confirm in popup | Confirmation dialog: "Are you sure you want to remove all items?" All items removed from cart after confirmation. Empty cart message displayed. | Not Run |
+| TC-035 | Shopping Cart | Cart persistence for logged-in users | Medium | 1. Login as user<br>2. Add items to cart<br>3. Logout<br>4. Login again | Cart items should persist across sessions | Not Run |
+| TC-036 | Shopping Cart | View empty cart | Low | Navigate to cart with no items | Message: "Your cart is empty. Start shopping!" displayed with link to catalog | Not Run |
+| TC-037 | Shopping Cart | Cart calculations | High | 1. Add item priced at $100<br>2. Add another item priced at $50<br>3. Navigate to cart<br>4. Verify calculations | Subtotal: $150.00<br>Tax (10%): $15.00<br>Shipping: $5.99 (order under $50 threshold)<br>Grand Total: $170.99 | Not Run |
+| TC-038 | Shopping Cart | Free shipping threshold | Medium | 1. Add items totaling $60 to cart<br>2. Navigate to cart<br>3. Check shipping cost | Shipping cost: $0.00 (free) because subtotal exceeds $50 | Not Run |
+| TC-039 | Shopping Cart | Test cart | Low | Check cart works | It should work | Not Run |
+| TC-040 | Checkout | Checkout process requires login | High | 1. Add items to cart as guest<br>2. Click "Proceed to Checkout"<br>3. Verify behavior | User redirected to login page. After login, returned to checkout with cart intact. | Not Run |
+| TC-041 | Checkout | Enter valid shipping address | High | 1. Login and proceed to checkout<br>2. Enter Street: "123 Main St"<br>3. Enter City: "Seattle"<br>4. Enter State: "WA"<br>5. Enter ZIP: "98101"<br>6. Select Country: "United States"<br>7. Click Continue | Address validated and accepted. Proceed to payment step. | Not Run |
+| TC-042 | Checkout | Invalid ZIP code format | Medium | 1. At checkout shipping form<br>2. Enter invalid ZIP: "123"<br>3. Click Continue | Error message: "Invalid ZIP/postal code" | Not Run |
+| TC-043 | Checkout | Save shipping address for future | Medium | 1. Enter valid shipping address<br>2. Check "Save this address" checkbox<br>3. Complete checkout<br>4. Start new order<br>5. Go to checkout | Saved address appears in address dropdown for selection | Not Run |
+| TC-044 | Checkout | Enter valid payment information | High | 1. Proceed to payment step<br>2. Enter Card Number: "4532015112830366" (valid Visa)<br>3. Enter Expiration: "12/2027"<br>4. Enter CVV: "123"<br>5. Enter Cardholder Name: "John Doe"<br>6. Click Continue | Payment information validated. Proceed to order review. | Not Run |
+| TC-045 | Checkout | Payment with expired card | High | 1. At payment step<br>2. Enter valid card number<br>3. Enter expiration: "12/2023" (past date)<br>4. Enter CVV and name<br>5. Click Continue | Error message: "This card has expired. Please update expiration date." | Not Run |
+| TC-046 | Checkout | Invalid CVV | Medium | 1. Enter valid card details<br>2. Enter CVV: "12" (only 2 digits)<br>3. Click Continue | Error message: "Invalid security code. Please check and try again." | Not Run |
+| TC-047 | Checkout | Place order successfully | Critical | 1. Complete shipping address<br>2. Complete payment information<br>3. Review order summary<br>4. Check "Accept Terms & Conditions"<br>5. Click "Place Order" | Order placed successfully. Order number generated (format: ORD-20260120-XXXX). Confirmation email sent within 60 seconds. Inventory decremented. User redirected to order confirmation page. | Not Run |
+| TC-048 | Checkout | Place order without accepting terms | High | 1. Complete all checkout steps<br>2. Do NOT check Terms & Conditions<br>3. Click "Place Order" | Error message: "Please accept Terms & Conditions to continue". Order not placed. | Not Run |
+| TC-049 | Checkout | Checkout test | Medium | Do checkout | Order should be placed | Not Run |
+| TC-050 | Order Management | View order history | High | 1. Login as user with previous orders<br>2. Navigate to "My Orders" page<br>3. Verify display | List of all orders displayed showing order number, date, total, and status. Newest orders first. | Not Run |
+| TC-051 | Order Management | View order details | High | 1. Navigate to order history<br>2. Click on specific order<br>3. Verify details | Detailed order page showing all items, quantities, prices, shipping address, payment method (masked), and order status. | Not Run |
+| TC-052 | Order Management | Filter orders by status | Medium | 1. Go to order history<br>2. Select status filter: "Shipped"<br>3. Apply filter | Only orders with "Shipped" status displayed | Not Run |
+| TC-053 | Order Management | Track order shipment | High | 1. Navigate to order details for shipped order<br>2. Verify tracking number displayed<br>3. Click tracking number link | Tracking number displayed. Link opens carrier tracking page showing shipment progress. | Not Run |
+| TC-054 | Order Management | Cancel order within cancellation window | High | 1. Place new order (status: Processing)<br>2. Navigate to order details within 2 hours<br>3. Click "Cancel Order" button<br>4. Select cancellation reason from dropdown<br>5. Confirm cancellation | Order status changed to "Cancelled". Cancellation confirmation email sent. Refund initiated (5-7 business days). Inventory returned to stock. | Not Run |
+| TC-055 | Order Management | Attempt to cancel shipped order | High | 1. Navigate to order with status "Shipped"<br>2. Try to click "Cancel Order" button | Cancel button disabled or error message: "This order has shipped and cannot be cancelled. You may return it after delivery." | Not Run |
+| TC-056 | Order Management | Check orders | Low | Look at orders | Should see them | Not Run |
+
+---
+
+## INTENTIONAL QUALITY ISSUES IN THESE TEST CASES:
+
+**Poorly Written Tests (Vague/Incomplete):**
+- TC-003: "Fill the form and submit" - no specific fields listed
+- TC-007: "Try to login" - no specific credentials or steps
+- TC-013: "Register and verify email" - missing detailed steps
+- TC-017: "Click through pages" - unclear how many pages or what to verify
+- TC-020: "Search for something" - no specific search term
+- TC-027: "Use filters" - which filters? How?
+- TC-030: "Add something to cart" - what product? What quantity?
+- TC-039: "Check cart works" - extremely vague
+- TC-049: "Do checkout" - no details on address, payment, etc.
+- TC-056: "Look at orders" - no verification criteria
+
+**Missing Coverage Gaps:**
+- ❌ No boundary test for maximum password length (20 characters)
+- ❌ No test for special characters in name fields
+- ❌ No test for minimum password length (8 characters)
+- ❌ No negative test for email format without TLD
+- ❌ No test for session timeout after 60 minutes
+- ❌ No test for maximum cart limit (50 products)
+- ❌ No test for maximum quantity per item (99 units)
+- ❌ No test for PO Box address restriction
+- ❌ No test for international shipping rejection
+- ❌ No test for disposable email domain blocking
+- ❌ No test for phone number with letters
+- ❌ No test for name fields with numbers
+- ❌ No test for searching with only special characters
+- ❌ No test for price filter boundaries ($0.00 min, $10,000 max)
+- ❌ No test for guest cart expiry (7 days)
+- ❌ No test for multiple password reset request limit (3 per 24 hours)
+- ❌ No test for maximum saved addresses (5)
+- ❌ No test for maximum saved payment methods (3)
+
+**Missing Negative Scenarios:**
+- Login with unverified email
+- Registration with disposable email
+- Search with no results
+- Add item when cart has 50 products already
+- Update cart quantity to 0
+- Payment gateway timeout
+- Order placement when item goes out of stock during checkout
+- Filter with no matching products
+
+This is realistic - your AI analyzer should find these issues! 🎯
