@@ -1,9 +1,45 @@
+# Personal project documents (keep private)
 Openai-key.txt 
 01-project-overview.txt 
 02-90day-plan.txt 
 03-current-status-next-steps.txt 
 psychological-profile-aravindhan.txt 
-bin/ 
-obj/ 
-.vs/ 
-*.user 
+
+# API Keys and Secrets - NEVER COMMIT
+**/appsettings.json
+**/appsettings.*.json
+**/*secrets*.json
+
+# Build results
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+
+# Visual Studio cache/options
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Visual Studio profiler
+*.psess
+*.vsp
+*.vspx
+*.sap
+
+# User-specific files
+*.rsuser
+
+# NuGet Packages
+*.nupkg
+*.snupkg
+**/packages/*
+!**/packages/build/
+
+# VS Code
+.vscode/
+
+# Rider
+.idea/
