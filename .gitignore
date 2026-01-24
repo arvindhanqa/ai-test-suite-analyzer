@@ -4,17 +4,25 @@ Openai-key.txt
 02-90day-plan.txt 
 03-current-status-next-steps.txt 
 psychological-profile-aravindhan.txt 
+day-*.txt
 
-# API Keys and Secrets - NEVER COMMIT
+# API Keys and Secrets - CRITICAL - NEVER COMMIT
 **/appsettings.json
 **/appsettings.*.json
 **/*secrets*.json
+**/openai-key.txt
 
 # Build results
-bin/
-obj/
+[Bb]in/
+[Oo]bj/
 [Dd]ebug/
 [Rr]elease/
+x64/
+x86/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]ld/
 
 # Visual Studio cache/options
 .vs/
@@ -27,16 +35,11 @@ obj/
 *.psess
 *.vsp
 *.vspx
-*.sap
-
-# User-specific files
-*.rsuser
 
 # NuGet Packages
 *.nupkg
 *.snupkg
 **/packages/*
-!**/packages/build/
 
 # VS Code
 .vscode/
