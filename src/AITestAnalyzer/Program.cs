@@ -19,21 +19,97 @@ namespace AITestAnalyzer
             ExcelPackage.License.SetNonCommercialPersonal("Aravindhan Rajasekaran");
 
             Console.WriteLine("╔════════════════════════════════════════════╗");
-            Console.WriteLine("║  AI Test Suite Analyzer - Day 5 Complete  ║");
+            Console.WriteLine("║    AI Test Suite Analyzer - Day 6         ║");
             Console.WriteLine("╚════════════════════════════════════════════╝");
             Console.WriteLine();
 
-            // STEP 1: Load Configuration
+            // STEP 1: Load configurations
+            var (appConfig, promptConfig) = LoadConfiguration();
+            if (appConfig == null || promptConfig == null) return;
+
+            // STEP 2 & 3: Process multiple test cases
+            Console.WriteLine("📊 Analyzing test cases...");
+            Console.WriteLine();
+
+            var startTime = DateTime.Now;
+            var results = new List<(string TestId, string Result, int Tokens)>();
+
+            for (int row = 2; row <= 6; row++)  // First 5 tests
+            {
+                TestCase testCase = ReadTestCaseFromExcel(appConfig.ExcelPath, rowNumber: row);
+                if (testCase == null) continue;
+
+                var (result, tokens) = await AnalyzeTestCaseWithAI(testCase, appConfig, promptConfig);
+                results.Add((testCase.TestId, result, tokens));
+
+                await Task.Delay(1000);  // Rate limiting
+            }
+
+            var endTime = DateTime.Now;
+
+            // Display clean results
+            Console.WriteLine("╔════════════════════════════════════════════╗");
+            Console.WriteLine("║          TEST QUALITY ANALYSIS             ║");
+            Console.WriteLine("╚════════════════════════════════════════════╝");
+            Console.WriteLine();
+
+            foreach (var (testId, result, _) in results)
+            {
+                Console.WriteLine($"{testId}: {result}");
+            }
+
+            // Display summary statistics
+            Console.WriteLine();
+            Console.WriteLine("═══════════════════════════════════════════════");
+            Console.WriteLine("📊 ANALYSIS SUMMARY");
+            Console.WriteLine("═══════════════════════════════════════════════");
+
+            int totalTests = results.Count;
+            int goodTests = results.Count(r => r.Result == "GOOD");
+            int issueTests = totalTests - goodTests;
+            int totalTokens = results.Sum(r => r.Tokens);
+            double totalCost = totalTokens * 0.00000015;
+            int avgTokens = totalTokens / totalTests;
+            int oldAvgTokens = 750;
+            double percentSaved = ((oldAvgTokens - avgTokens) / (double)oldAvgTokens) * 100;
+            var timeTaken = (endTime - startTime).TotalSeconds;
+
+            Console.WriteLine($"Tests analyzed: {totalTests}");
+            Console.WriteLine($"✅ Good tests: {goodTests} ({(goodTests * 100.0 / totalTests):F0}%)");
+            Console.WriteLine($"⚠️  Tests with issues: {issueTests} ({(issueTests * 100.0 / totalTests):F0}%)");
+            Console.WriteLine();
+            Console.WriteLine($"Total tokens used: {totalTokens:N0}");
+            Console.WriteLine($"Total cost: ${totalCost:F6}");
+            Console.WriteLine($"Average tokens per test: {avgTokens}");
+            Console.WriteLine($"💰 Average savings: {percentSaved:F0}% vs verbose mode");
+            Console.WriteLine();
+            Console.WriteLine($"⏱️  Time taken: {timeTaken:F1} seconds");
+            Console.WriteLine("═══════════════════════════════════════════════");
+
+            Console.WriteLine();
+            Console.WriteLine("🎉 DAY 6 COMPLETE - ANALYSIS FINISHED!");
+            Console.WriteLine();
+            Console.WriteLine("Press any key to exit...");
+            Console.ReadKey();
+        }
+        // ============================================================
+        // METHOD 1: Load Configuration
+        // USES: Configuration.cs class
+        // ============================================================
+        static (Configuration appConfig, PromptConfig promptConfig) LoadConfiguration()
+        {
             Console.WriteLine("📋 Step 1: Loading configuration...");
 
-            var configuration = new ConfigurationBuilder()
+            var configBuilder = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+                .AddJsonFile("PromptConfig.json", optional: false, reloadOnChange: true)
                 .Build();
 
-            string apiKey = configuration["OpenAI:ApiKey"];
-            string model = configuration["OpenAI:Model"] ?? "gpt-4o-mini";
-            string excelPath = configuration["Excel:FilePath"];
+            // Load app configuration
+            string apiKey = configBuilder["OpenAI:ApiKey"];
+            string model = configBuilder["OpenAI:Model"] ?? "gpt-4o-mini";
+            string excelPath = configBuilder["Excel:FilePath"];
 
             // Validate API key
             if (string.IsNullOrEmpty(apiKey) || apiKey == "YOUR-ACTUAL-API-KEY-HERE")
@@ -42,144 +118,126 @@ namespace AITestAnalyzer
                 Console.WriteLine("Please update appsettings.json with your actual API key.");
                 Console.WriteLine("\nPress any key to exit...");
                 Console.ReadKey();
-                return;
+                return (null, null);
             }
+
+            var appConfig = new Configuration
+            {
+                ApiKey = apiKey,
+                Model = model,
+                ExcelPath = excelPath
+            };
+
+            // Load prompt configuration
+            var promptConfig = new PromptConfig
+            {
+                MaxTokens = int.Parse(configBuilder["MaxTokens"] ?? "150"),
+                Model = configBuilder["Model"] ?? "gpt-4o-mini",
+                Temperature = double.Parse(configBuilder["Temperature"] ?? "0.3"),
+                SystemMessage = configBuilder["SystemMessage"] ?? "You are an expert QA analyzer.",
+                UserTemplate = configBuilder["UserTemplate"] ?? "Analyze: {TestId}"
+            };
 
             Console.WriteLine($"✅ Configuration loaded!");
             Console.WriteLine($"   API Key: {apiKey.Substring(0, 7)}...{apiKey.Substring(apiKey.Length - 4)}");
-            Console.WriteLine($"   Model: {model}");
+            Console.WriteLine($"   Model: {promptConfig.Model}");
+            Console.WriteLine($"   Max Tokens: {promptConfig.MaxTokens}");
+            Console.WriteLine($"   Temperature: {promptConfig.Temperature}");
             Console.WriteLine();
 
-            // STEP 2: Read Test Case from Excel
-            Console.WriteLine("📊 Step 2: Reading test case from Excel...");
+            return (appConfig, promptConfig);
+        }
 
+        // ============================================================
+        // METHOD 2: Read Test Case from Excel
+        // USES: TestCase.cs class
+        // ============================================================
+        static TestCase ReadTestCaseFromExcel(string excelPath, int rowNumber = 2)
+        {
             if (!File.Exists(excelPath))
             {
                 Console.WriteLine($"❌ ERROR: Excel file not found at: {excelPath}");
-                Console.WriteLine("Press any key to exit...");
-                Console.ReadKey();
-                return;
+                return null;
             }
-
-            TestCase testCase = null;
 
             try
             {
                 using (var package = new ExcelPackage(new FileInfo(excelPath)))
                 {
-                    var worksheet = package.Workbook.Worksheets[1]; // Sheet2
+                    var worksheet = package.Workbook.Worksheets[1];
 
-                    testCase = new TestCase
+                    var testCase = new TestCase
                     {
-                        TestId = worksheet.Cells[2, 1].Value?.ToString() ?? "",
-                        Feature = worksheet.Cells[2, 2].Value?.ToString() ?? "",
-                        Scenario = worksheet.Cells[2, 3].Value?.ToString() ?? "",
-                        Priority = worksheet.Cells[2, 4].Value?.ToString() ?? "",
-                        Steps = worksheet.Cells[2, 5].Value?.ToString() ?? "",
-                        ExpectedResult = worksheet.Cells[2, 6].Value?.ToString() ?? "",
-                        Status = worksheet.Cells[2, 7].Value?.ToString() ?? ""
+                        TestId = worksheet.Cells[rowNumber, 1].Value?.ToString() ?? "",
+                        Feature = worksheet.Cells[rowNumber, 2].Value?.ToString() ?? "",
+                        Scenario = worksheet.Cells[rowNumber, 3].Value?.ToString() ?? "",
+                        Priority = worksheet.Cells[rowNumber, 4].Value?.ToString() ?? "",
+                        Steps = worksheet.Cells[rowNumber, 5].Value?.ToString() ?? "",
+                        ExpectedResult = worksheet.Cells[rowNumber, 6].Value?.ToString() ?? "",
+                        Status = worksheet.Cells[rowNumber, 7].Value?.ToString() ?? ""
                     };
 
-                    Console.WriteLine($"✅ Test case loaded: {testCase.TestId}");
-                    Console.WriteLine($"   Feature: {testCase.Feature}");
-                    Console.WriteLine($"   Scenario: {testCase.Scenario}");
-                    Console.WriteLine($"   Priority: {testCase.Priority}");
-                    Console.WriteLine();
+                    return testCase;
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"❌ Excel Error: {ex.Message}");
-                Console.WriteLine("Press any key to exit...");
-                Console.ReadKey();
-                return;
+                return null;
             }
+        }
 
-            // STEP 3: Send to OpenAI for Analysis
-            Console.WriteLine("🤖 Step 3: Analyzing test case with AI...");
-            Console.WriteLine("   (This may take 5-10 seconds...)");
-            Console.WriteLine();
-
+        // ============================================================
+        // METHOD 3: Analyze Test Case with AI
+        // OPTIMIZED: Tweet-style feedback (GOOD vs Issue: X)
+        // ============================================================
+        static async Task<(string result, int tokens)> AnalyzeTestCaseWithAI(TestCase testCase, Configuration config, PromptConfig promptConfig)
+        {
             try
             {
                 var openAiService = new OpenAIService(new OpenAiOptions()
                 {
-                    ApiKey = apiKey
+                    ApiKey = config.ApiKey
                 });
+
+                // Build user prompt from template
+                string userPrompt = promptConfig.UserTemplate
+                    .Replace("{TestId}", testCase.TestId)
+                    .Replace("{Feature}", testCase.Feature)
+                    .Replace("{Scenario}", testCase.Scenario)
+                    .Replace("{Priority}", testCase.Priority)
+                    .Replace("{Steps}", testCase.Steps)
+                    .Replace("{ExpectedResult}", testCase.ExpectedResult);
 
                 var completionResult = await openAiService.ChatCompletion.CreateCompletion(
                     new ChatCompletionCreateRequest
                     {
                         Messages = new List<ChatMessage>
                         {
-                            ChatMessage.FromSystem("You are an expert QA test case quality analyzer. Analyze test cases for completeness, clarity, and adherence to best practices."),
-                            ChatMessage.FromUser($@"Analyze this test case for quality issues:
-
-**Test Case Details:**
-- Test ID: {testCase.TestId}
-- Feature: {testCase.Feature}
-- Scenario: {testCase.Scenario}
-- Priority: {testCase.Priority}
-
-**Steps:**
-{testCase.Steps}
-
-**Expected Result:**
-{testCase.ExpectedResult}
-
-**Please provide:**
-1. Overall quality rating (Excellent/Good/Fair/Poor)
-2. Strengths of this test case
-3. Issues or weaknesses found
-4. Specific recommendations for improvement
-5. Missing test scenarios or edge cases
-
-Keep your analysis concise and actionable.")
+                    ChatMessage.FromSystem(promptConfig.SystemMessage),
+                    ChatMessage.FromUser(userPrompt)
                         },
                         Model = Models.Gpt_4o_mini,
-                        MaxTokens = 800,
-                        Temperature = 0.3f
+                        MaxTokens = promptConfig.MaxTokens,
+                        Temperature = (float)promptConfig.Temperature
                     });
 
                 if (completionResult.Successful)
                 {
-                    Console.WriteLine("╔════════════════════════════════════════════╗");
-                    Console.WriteLine("║          AI QUALITY ANALYSIS REPORT        ║");
-                    Console.WriteLine("╚════════════════════════════════════════════╝");
-                    Console.WriteLine();
-                    Console.WriteLine(completionResult.Choices.First().Message.Content);
-                    Console.WriteLine();
-                    Console.WriteLine("╔════════════════════════════════════════════╗");
-                    Console.WriteLine("║              END OF ANALYSIS               ║");
-                    Console.WriteLine("╚════════════════════════════════════════════╝");
-                    Console.WriteLine();
-                    Console.WriteLine("✅ SUCCESS! AI analysis completed!");
-                    Console.WriteLine($"   Tokens used: ~{completionResult.Usage.TotalTokens}");
-                    Console.WriteLine($"   Estimated cost: ~${(completionResult.Usage.TotalTokens * 0.00000015):F6}");
+                    string analysis = completionResult.Choices.First().Message.Content.Trim();
+                    int tokens = completionResult.Usage.TotalTokens;
+
+                    return (analysis, tokens);  // Return result and tokens
                 }
                 else
                 {
-                    Console.WriteLine($"❌ OpenAI API Error:");
-                    Console.WriteLine($"   Code: {completionResult.Error?.Code}");
-                    Console.WriteLine($"   Message: {completionResult.Error?.Message}");
+                    return ($"ERROR: {completionResult.Error?.Message}", 0);
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ API Error: {ex.Message}");
-                if (ex.InnerException != null)
-                {
-                    Console.WriteLine($"   Inner Error: {ex.InnerException.Message}");
-                }
+                return ($"ERROR: {ex.Message}", 0);
             }
-
-            Console.WriteLine();
-            Console.WriteLine("═══════════════════════════════════════════════");
-            Console.WriteLine("🎉 DAY 5 COMPLETE - OPENAI INTEGRATION WORKING!");
-            Console.WriteLine("═══════════════════════════════════════════════");
-            Console.WriteLine();
-            Console.WriteLine("Press any key to exit...");
-            Console.ReadKey();
         }
     }
 }
