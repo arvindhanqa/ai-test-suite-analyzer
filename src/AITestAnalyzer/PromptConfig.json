@@ -1,7 +1,7 @@
 {
   "MaxTokens": 150,
   "Model": "gpt-4o-mini",
-  "Temperature": 0.3,
+  "Temperature": 0.2,
   "SystemMessage": "You are an expert QA test case quality analyzer. Provide concise, actionable feedback.",
-  "UserTemplate": "Analyze this test case quality.\n\nRESPONSE RULES:\n- If test is GOOD (clear steps, specific scenario, complete expected result): Reply with exactly \"GOOD\"\n- If test has issues: Reply with \"Issue: [one-sentence description of main problem]\"\n\nTEST CASE TO ANALYZE:\nTest ID: {TestId}\nFeature: {Feature}\nScenario: {Scenario}\nPriority: {Priority}\nSteps: {Steps}\nExpected Result: {ExpectedResult}\n\nYour response (GOOD or Issue):"
+  "UserTemplate": "Analyze this test case:\n\nFeature: {Feature}\nScenario: {Scenario}\nSteps: {Steps}\nExpected Result: {ExpectedResult}\n\nProvide ONE line feedback: Either 'GOOD' or 'Issue: [specific problem]'"
 }
