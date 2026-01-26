@@ -35,7 +35,7 @@ namespace AITestAnalyzer
 
             // STEP 3: Process test cases
             int startRow = 2;  // First data row (row 1 is header)
-            int totalTests = 56; // Start with 5 for testing
+            int totalTests = 3; // Start with 5 for testing
             Console.WriteLine($"📊 Analyzing {totalTests} test cases...");
             Console.WriteLine();
 
@@ -295,6 +295,16 @@ namespace AITestAnalyzer
                     {
                         worksheet.Cells[rowNumber, 8].Style.Font.Color.SetColor(System.Drawing.Color.Red);
                     }
+
+                    worksheet.Cells[rowNumber, 8].Style.WrapText = true;
+                    worksheet.Cells[rowNumber, 8].Style.VerticalAlignment = OfficeOpenXml.Style.ExcelVerticalAlignment.Top;
+                    worksheet.Cells[rowNumber, 8].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
+                    worksheet.Column(8).Width = 50;  // Set AI Analysis column to 50 characters wide
+
+                    // In AddAnalysisColumnHeader method, add:
+                    worksheet.Cells[1, 8].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                    worksheet.Cells[1, 8].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGray);
+                    worksheet.Cells[1, 8].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Medium);
 
                     package.Save();
                 }
