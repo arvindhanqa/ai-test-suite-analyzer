@@ -36,23 +36,45 @@ namespace AITestAnalyzer
 
             // STEP 3: Process test cases
             int startRow = 2;  // First data row (row 1 is header)
-            int totalTests = 4; // Start with 5 for testing
+            int totalTests = 56; // Process all tests
             Console.WriteLine($"📊 Analyzing {totalTests} test cases...");
             Console.WriteLine();
 
             var startTime = DateTime.Now;
             var results = new List<(string TestId, string Result, int Tokens)>();
+            int processedCount = 0;
 
-            for (int row = startRow; row <= totalTests+1; row++)  // Loops for each test case to the totalTests in the Excel
+            for (int row = startRow; row <= totalTests + 1; row++)
             {
                 TestCase testCase = ReadTestCaseFromExcel(appConfig.ExcelPath, rowNumber: row);
                 if (testCase == null)
                 {
-                    Console.WriteLine($"   ⚠️  Row {row}: Skipped (empty or invalid)");
-                    continue;
+                    continue; // Silently skip empty rows
                 }
 
-                Console.Write($"   Processing {testCase.TestId}...");
+                processedCount++;
+
+                // Calculate progress
+                double percentComplete = (processedCount * 100.0) / totalTests;
+
+                // Estimate remaining time
+                var elapsedTime = (DateTime.Now - startTime).TotalSeconds;
+                double avgTimePerTest = processedCount > 0 ? elapsedTime / processedCount : 0;
+                double estimatedRemaining = (totalTests - processedCount) * avgTimePerTest;
+
+                // Build progress bar (20 characters wide)
+                int barWidth = 20;
+                int filledWidth = (int)(barWidth * percentComplete / 100);
+                string progressBar = "[" + new string('=', filledWidth) + new string('.', barWidth - filledWidth) + "]";
+
+                // Format time remaining
+                TimeSpan remainingSpan = TimeSpan.FromSeconds(estimatedRemaining);
+                string timeRemaining = remainingSpan.TotalMinutes >= 1
+                    ? $"{(int)remainingSpan.TotalMinutes}m {remainingSpan.Seconds}s"
+                    : $"{remainingSpan.Seconds}s";
+
+                // Display progress on single line (overwrites previous line)
+                Console.Write($"\r   {progressBar} {percentComplete:F1}% | {processedCount}/{totalTests} | {testCase.TestId} | ETA: {timeRemaining}   ");
 
                 var (result, tokens) = await AnalyzeTestCaseWithAI(testCase, appConfig, promptConfig);
                 results.Add((testCase.TestId, result, tokens));
@@ -60,12 +82,13 @@ namespace AITestAnalyzer
                 // Write to Excel immediately
                 WriteAnalysisToExcel(outputPath, row, result);
 
-                Console.WriteLine(" ✅");
-
                 await Task.Delay(1000);  // Rate limiting
             }
 
             var endTime = DateTime.Now;
+            Console.WriteLine(); // New line after progress bar
+            Console.WriteLine("   ✅ Analysis complete!");
+            Console.WriteLine();
 
             // STEP 4: Create Quality Issues Sheet
             Console.WriteLine();
