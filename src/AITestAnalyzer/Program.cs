@@ -116,6 +116,8 @@ namespace AITestAnalyzer
             var results = new List<(string TestId, string Result, int Tokens)>();
             int processedCount = 0;
 
+            var progressTracker = new ProgressTracker(totalTests, startTime);
+
             for (int row = startRow; row < startRow + totalTests; row++)
             {
                 TestCase testCase = excelReader.ReadTestCase(rowNumber: row);
@@ -125,28 +127,7 @@ namespace AITestAnalyzer
                 }
 
                 processedCount++;
-
-                // Calculate progress
-                double percentComplete = (processedCount * 100.0) / totalTests;
-
-                // Estimate remaining time
-                var elapsedTime = (DateTime.Now - startTime).TotalSeconds;
-                double avgTimePerTest = processedCount > 0 ? elapsedTime / processedCount : 0;
-                double estimatedRemaining = (totalTests - processedCount) * avgTimePerTest;
-
-                // Build progress bar (20 characters wide)
-                int barWidth = 20;
-                int filledWidth = (int)(barWidth * percentComplete / 100);
-                string progressBar = "[" + new string('=', filledWidth) + new string('.', barWidth - filledWidth) + "]";
-
-                // Format time remaining
-                TimeSpan remainingSpan = TimeSpan.FromSeconds(estimatedRemaining);
-                string timeRemaining = remainingSpan.TotalMinutes >= 1
-                    ? $"{(int)remainingSpan.TotalMinutes}m {remainingSpan.Seconds}s"
-                    : $"{remainingSpan.Seconds}s";
-
-                // Display progress on single line (overwrites previous line)
-                Console.Write($"\r   {progressBar} {percentComplete:F1}% | {processedCount}/{totalTests} | {testCase.TestId} | ETA: {timeRemaining}   ");
+                progressTracker.DisplayProgress(processedCount, testCase.TestId);
 
                 var (result, tokens) = await AnalyzeTestCaseWithAI(testCase, appConfig, promptConfig);
                 results.Add((testCase.TestId, result, tokens));
@@ -158,9 +139,7 @@ namespace AITestAnalyzer
             }
 
             var endTime = DateTime.Now;
-            Console.WriteLine(); // New line after progress bar
-            Console.WriteLine("   ✅ Analysis complete!");
-            Console.WriteLine();
+            progressTracker.Complete();
 
             // STEP 4: Create Quality Issues Sheet
             Console.WriteLine();
