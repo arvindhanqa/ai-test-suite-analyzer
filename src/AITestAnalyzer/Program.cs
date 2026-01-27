@@ -18,6 +18,7 @@ namespace AITestAnalyzer
         {
             ExcelPackage.License.SetNonCommercialPersonal("Aravindhan Rajasekaran");
 
+            Console.WriteLine("===============================================");
             Console.WriteLine("AI Test Suite Analyzer - Week 1");
             Console.WriteLine("===============================================");
             Console.WriteLine();
@@ -36,15 +37,83 @@ namespace AITestAnalyzer
 
             // STEP 3: Process test cases
             int startRow = 2;  // First data row (row 1 is header)
-            int totalTests = 56; // Process all tests
-            Console.WriteLine($"📊 Analyzing {totalTests} test cases...");
+            int totalTests;
+
+            // Count actual rows in Excel
+            int totalRowsInExcel = CountTestRows(appConfig.ExcelPath);
+
+            if (totalRowsInExcel == 0)
+            {
+                Console.WriteLine("❌ ERROR: No test cases found in Excel file");
+                return;
+            }
+
+            // Check if command-line argument provided
+            if (args.Length > 0 && int.TryParse(args[0], out int argTests))
+            {
+                // Command-line argument provided
+                if (argTests > totalRowsInExcel)
+                {
+                    Console.WriteLine($"⚠️  WARNING: Requested {argTests} tests, but only {totalRowsInExcel} exist in Excel");
+                    Console.WriteLine($"   Analyzing all {totalRowsInExcel} tests instead...");
+                    totalTests = totalRowsInExcel;
+                }
+                else
+                {
+                    totalTests = argTests;
+                    Console.WriteLine($"📊 Analyzing {totalTests} of {totalRowsInExcel} test cases (from command line)...");
+                }
+            }
+            else
+            {
+                // No command-line argument - ASK USER
+                Console.WriteLine($"📊 Found {totalRowsInExcel} test cases in Excel.");
+                Console.Write($"   How many tests to analyze? (Enter number or press Enter for all): ");
+
+                string userInput = Console.ReadLine();
+
+                if (string.IsNullOrWhiteSpace(userInput))
+                {
+                    // User pressed Enter - process all
+                    totalTests = totalRowsInExcel;
+                    Console.WriteLine($"   → Analyzing all {totalTests} test cases...");
+                }
+                else if (int.TryParse(userInput, out int userTests) && userTests > 0)
+                {
+                    // User entered a number
+                    if (userTests > totalRowsInExcel)
+                    {
+                        Console.WriteLine($"   ⚠️  Requested {userTests} tests, but only {totalRowsInExcel} exist.");
+                        Console.WriteLine($"   → Analyzing all {totalRowsInExcel} tests instead...");
+                        totalTests = totalRowsInExcel;
+                    }
+                    else
+                    {
+                        totalTests = userTests;
+                        Console.WriteLine($"   → Analyzing {totalTests} of {totalRowsInExcel} test cases...");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("   ❌ Invalid input. Please enter a positive number.");
+                    return;
+                }
+            }
+
+            // Validate
+            if (totalTests < 1)
+            {
+                Console.WriteLine("❌ ERROR: Test count must be at least 1");
+                return;
+            }
+
             Console.WriteLine();
 
             var startTime = DateTime.Now;
             var results = new List<(string TestId, string Result, int Tokens)>();
             int processedCount = 0;
 
-            for (int row = startRow; row <= totalTests + 1; row++)
+            for (int row = startRow; row < startRow + totalTests; row++)
             {
                 TestCase testCase = ReadTestCaseFromExcel(appConfig.ExcelPath, rowNumber: row);
                 if (testCase == null)
@@ -143,7 +212,7 @@ namespace AITestAnalyzer
             {
                 MaxTokens = int.Parse(configBuilder["MaxTokens"] ?? "150"),
                 Model = configBuilder["Model"] ?? "gpt-4o-mini",
-                Temperature = double.Parse(configBuilder["Temperature"] ?? "0.3"),
+                Temperature = double.Parse(configBuilder["Temperature"] ?? "0.2"),
                 SystemMessage = configBuilder["SystemMessage"] ?? "You are an expert QA analyzer.",
                 UserTemplate = configBuilder["UserTemplate"] ?? "Analyze: {Scenario}"
             };
@@ -667,6 +736,37 @@ namespace AITestAnalyzer
             catch (Exception ex)
             {
                 Console.WriteLine($"   ⚠️  Warning: Could not rename sheet: {ex.Message}");
+            }
+        }
+
+        // ============================================================
+        // METHOD: Count Total Test Rows in Excel
+        // ============================================================
+        static int CountTestRows(string excelPath)
+        {
+            try
+            {
+                using (var package = new ExcelPackage(new FileInfo(excelPath)))
+                {
+                    var worksheet = package.Workbook.Worksheets[1]; // Sheet2
+                    int row = 2; // Start from first data row (row 1 is header)
+                    int count = 0;
+
+                    // Count rows until we hit an empty Test ID
+                    while (worksheet.Cells[row, 1].Value != null &&
+                           !string.IsNullOrWhiteSpace(worksheet.Cells[row, 1].Value.ToString()))
+                    {
+                        count++;
+                        row++;
+                    }
+
+                    return count;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ ERROR: Could not count rows in Excel: {ex.Message}");
+                return 0;
             }
         }
     }
