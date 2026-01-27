@@ -32,8 +32,8 @@ namespace AITestAnalyzer
             string outputDir = ExcelWriter.CreateOutputFolder();
             string outputPath = ExcelWriter.PrepareOutputFile(appConfig.ExcelPath, outputDir);
 
-            var excelWriter = new ExcelWriter(appConfig.ExcelPath);
-            excelWriter.RenameOriginalSheet();  // ← ADD THIS LINE
+            var excelWriter = new ExcelWriter(outputPath);// Need to use outputPath here
+            excelWriter.RenameOriginalSheet();  
             excelWriter.AddAnalysisColumnHeader();
             Console.WriteLine();
 
