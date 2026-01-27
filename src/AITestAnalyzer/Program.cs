@@ -27,6 +27,9 @@ namespace AITestAnalyzer
             var (appConfig, promptConfig) = LoadConfiguration();
             if (appConfig == null || promptConfig == null) return;
 
+            // Create AI analyzer
+            var aiAnalyzer = new AIAnalyzer(appConfig, promptConfig);
+
             // STEP 2: Prepare output file
             Console.WriteLine("📁 Preparing output file...");
             string outputDir = ExcelWriter.CreateOutputFolder();
@@ -129,7 +132,7 @@ namespace AITestAnalyzer
                 processedCount++;
                 progressTracker.DisplayProgress(processedCount, testCase.TestId);
 
-                var (result, tokens) = await AnalyzeTestCaseWithAI(testCase, appConfig, promptConfig);
+                var (result, tokens) = await aiAnalyzer.AnalyzeTestCase(testCase);
                 results.Add((testCase.TestId, result, tokens));
 
                 // Write to Excel immediately
@@ -152,7 +155,7 @@ namespace AITestAnalyzer
 
             // STEP 6: Display summary
             Console.WriteLine();
-            DisplaySummary(results, startTime, endTime, outputPath);
+            SummaryDisplay.Display(results, startTime, endTime, outputPath);
 
             Console.WriteLine();
             Console.WriteLine("Press any key to exit...");
@@ -204,88 +207,6 @@ namespace AITestAnalyzer
             Console.WriteLine();
 
             return (appConfig, promptConfig);
-        }
-
-        // ============================================================
-        // METHOD 3: Analyze Test Case with AI
-        // FIXED: Now uses promptConfig.Model instead of hardcoded
-        // OPTIMIZED: Only sends Feature, Scenario, Steps, Expected Result
-        // ============================================================
-        static async Task<(string result, int tokens)> AnalyzeTestCaseWithAI(TestCase testCase, Configuration config, PromptConfig promptConfig)
-        {
-            try
-            {
-                var openAiService = new OpenAIService(new OpenAiOptions()
-                {
-                    ApiKey = config.ApiKey
-                });
-
-                // Build user prompt - only include relevant fields
-                string userPrompt = promptConfig.UserTemplate
-                    .Replace("{Feature}", testCase.Feature)
-                    .Replace("{Scenario}", testCase.Scenario)
-                    .Replace("{Steps}", testCase.Steps)
-                    .Replace("{ExpectedResult}", testCase.ExpectedResult);
-
-                var completionResult = await openAiService.ChatCompletion.CreateCompletion(
-                    new ChatCompletionCreateRequest
-                    {
-                        Messages = new List<ChatMessage>
-                        {
-                            ChatMessage.FromSystem(promptConfig.SystemMessage),
-                            ChatMessage.FromUser(userPrompt)
-                        },
-                        Model = promptConfig.Model,  // ← FIXED! Uses config now ✅
-                        MaxTokens = promptConfig.MaxTokens,
-                        Temperature = (float)promptConfig.Temperature
-                    });
-
-                if (completionResult.Successful)
-                {
-                    string analysis = completionResult.Choices.First().Message.Content.Trim();
-                    int tokens = completionResult.Usage.TotalTokens;
-                    return (analysis, tokens);
-                }
-                else
-                {
-                    return ($"ERROR: {completionResult.Error?.Message}", 0);
-                }
-            }
-            catch (Exception ex)
-            {
-                return ($"ERROR: {ex.Message}", 0);
-            }
-        }
-
-        // ============================================================
-        // METHOD 8: Display Summary Statistics
-        // ============================================================
-        static void DisplaySummary(List<(string TestId, string Result, int Tokens)> results, DateTime start, DateTime end, string outputPath)
-        {
-            Console.WriteLine("===============================================");
-            Console.WriteLine("📊 ANALYSIS SUMMARY");
-            Console.WriteLine("===============================================");
-
-            int totalTests = results.Count;
-            int goodTests = results.Count(r => r.Result == "GOOD");
-            int issueTests = totalTests - goodTests;
-            int totalTokens = results.Sum(r => r.Tokens);
-            double totalCost = totalTokens * 0.00000015;
-            int avgTokens = totalTests > 0 ? totalTokens / totalTests : 0;
-            var timeTaken = (end - start).TotalSeconds;
-
-            Console.WriteLine($"Tests analyzed: {totalTests}");
-            Console.WriteLine($"✅ Good tests: {goodTests} ({(totalTests > 0 ? goodTests * 100.0 / totalTests : 0):F0}%)");
-            Console.WriteLine($"⚠️  Tests with issues: {issueTests} ({(totalTests > 0 ? issueTests * 100.0 / totalTests : 0):F0}%)");
-            Console.WriteLine();
-            Console.WriteLine($"Total tokens: {totalTokens:N0}");
-            Console.WriteLine($"Total cost: ${totalCost:F6}");
-            Console.WriteLine($"Avg tokens/test: {avgTokens}");
-            Console.WriteLine($"⏱️  Time: {timeTaken:F1} seconds");
-            Console.WriteLine();
-            Console.WriteLine($"📁 Output: {Path.GetFileName(outputPath)}");
-            Console.WriteLine($"   Location: {Path.GetDirectoryName(outputPath)}");
-            Console.WriteLine("===============================================");
         }
     }
 }
