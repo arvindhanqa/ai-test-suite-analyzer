@@ -35,17 +35,35 @@ namespace AITestAnalyzer
             string outputDir = ExcelWriter.CreateOutputFolder();
             string outputPath = ExcelWriter.PrepareOutputFile(appConfig.ExcelPath, outputDir);
 
-            var excelWriter = new ExcelWriter(outputPath);// Need to use outputPath here
+            var excelWriter = new ExcelWriter(outputPath, appConfig.WorksheetIndex);// Need to use outputPath here
             excelWriter.RenameOriginalSheet();  
             excelWriter.AddAnalysisColumnHeader();
             Console.WriteLine();
 
-            // STEP 3: Process test cases
+            // STEP 3: Validate and process test cases
             int startRow = 2;  // First data row (row 1 is header)
             int totalTests;
 
+            // Create Excel reader and validate structure
+            var excelReader = new ExcelReader(appConfig.ExcelPath, appConfig.WorksheetIndex);
+
+            Console.WriteLine("🔍 Validating Excel structure...");
+            var (isValid, validationMessage) = excelReader.ValidateExcelStructure();
+
+            if (!isValid)
+            {
+                Console.WriteLine($"❌ VALIDATION ERROR: {validationMessage}");
+                Console.WriteLine("   Please check your Excel file and try again.");
+                Console.WriteLine();
+                Console.WriteLine("Press any key to exit...");
+                Console.ReadKey();
+                return;
+            }
+
+            Console.WriteLine($"   ✅ {validationMessage}");
+            Console.WriteLine();
+
             // Count actual rows in Excel
-            var excelReader = new ExcelReader(appConfig.ExcelPath);
             int totalRowsInExcel = excelReader.CountTestRows();
 
             if (totalRowsInExcel == 0)
@@ -190,7 +208,8 @@ namespace AITestAnalyzer
             {
                 ApiKey = apiKey,
                 Model = model,
-                ExcelPath = excelPath
+                ExcelPath = excelPath,
+                WorksheetIndex = int.Parse(configBuilder["Excel:WorksheetIndex"] ?? "0")
             };
 
             var promptConfig = new PromptConfig

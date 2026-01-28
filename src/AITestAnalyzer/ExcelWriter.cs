@@ -10,10 +10,12 @@ namespace AITestAnalyzer
     public class ExcelWriter
     {
         private readonly string _outputPath;
+        private readonly int _worksheetIndex;
 
-        public ExcelWriter(string outputPath)
+        public ExcelWriter(string outputPath, int worksheetIndex = 0)
         {
             _outputPath = outputPath;
+            _worksheetIndex = worksheetIndex;
         }
 
         // ============================================================
@@ -58,7 +60,7 @@ namespace AITestAnalyzer
             {
                 using (var package = new ExcelPackage(new FileInfo(_outputPath)))
                 {
-                    var worksheet = package.Workbook.Worksheets[1]; // Sheet2 (index 1)
+                    var worksheet = package.Workbook.Worksheets[_worksheetIndex]; // Sheet2 (index 1)
                     worksheet.Name = "AI Detailed Analysis";
                     package.Save();
                     Console.WriteLine("   ✅ Renamed sheet to 'AI Detailed Analysis'");
@@ -77,7 +79,7 @@ namespace AITestAnalyzer
         {
             using (var package = new ExcelPackage(new FileInfo(_outputPath)))
             {
-                var worksheet = package.Workbook.Worksheets[1]; // Sheet2
+                var worksheet = package.Workbook.Worksheets[_worksheetIndex]; // Sheet2
 
                 // Add header in column 8 (H)
                 worksheet.Cells[1, 8].Value = "AI Analysis";
@@ -96,7 +98,7 @@ namespace AITestAnalyzer
             {
                 using (var package = new ExcelPackage(new FileInfo(_outputPath)))
                 {
-                    var worksheet = package.Workbook.Worksheets[1]; // Sheet2
+                    var worksheet = package.Workbook.Worksheets[_worksheetIndex]; // Sheet2
 
                     // Write to column 8 (AI Analysis)
                     worksheet.Cells[rowNumber, 8].Value = analysis;

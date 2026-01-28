@@ -22,6 +22,25 @@
             Status = string.Empty;
         }
 
+        // NEW: Constructor with parameters
+        public TestCase(
+            string testId,
+            string feature,
+            string scenario,
+            string priority,
+            string steps,
+            string expectedResult,
+            string status)
+        {
+            TestId = testId;
+            Feature = feature;
+            Scenario = scenario;
+            Priority = priority;
+            Steps = steps;
+            ExpectedResult = expectedResult;
+            Status = status;
+        }
+
         // ToString for easy display
         public override string ToString()
         {
