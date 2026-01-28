@@ -75,15 +75,41 @@ namespace AITestAnalyzer
         // ============================================================
         // METHOD 4: Add AI Analysis Column Header
         // ============================================================
+        // Add analysis column header with formatting
         public void AddAnalysisColumnHeader()
         {
             using (var package = new ExcelPackage(new FileInfo(_outputPath)))
             {
-                var worksheet = package.Workbook.Worksheets[_worksheetIndex]; // Sheet2
+                var worksheet = package.Workbook.Worksheets[_worksheetIndex];
 
-                // Add header in column 8 (H)
-                worksheet.Cells[1, 8].Value = "AI Analysis";
-                worksheet.Cells[1, 8].Style.Font.Bold = true;
+                // Add "AI Analysis" header in column H (8th column)
+                var headerCell = worksheet.Cells[1, 8];
+                headerCell.Value = "AI Analysis";
+
+                // Style the header
+                headerCell.Style.Font.Bold = true;
+                headerCell.Style.Font.Size = 12;
+                headerCell.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                headerCell.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightBlue);
+                headerCell.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+                headerCell.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
+
+                // ✨ NEW: FREEZE PANES - Keep row 1 (header) visible when scrolling
+                worksheet.View.FreezePanes(2, 1); // Freeze everything above row 2
+
+                // ✨ NEW: AUTO-FILTER - Add dropdown filters to all headers
+                var lastCol = worksheet.Dimension?.End.Column ?? 8;
+                worksheet.Cells[1, 1, 1, lastCol].AutoFilter = true;
+
+                // ✨ NEW: AUTO-SIZE COLUMNS - Fit content width
+                // Auto-size columns 1-7 (existing columns)
+                for (int col = 1; col <= 7; col++)
+                {
+                    worksheet.Column(col).AutoFit();
+                }
+
+                // Set column H (AI Analysis) to wider fixed width for readability
+                worksheet.Column(8).Width = 60;
 
                 package.Save();
             }
@@ -166,8 +192,19 @@ namespace AITestAnalyzer
                         headerRange.Style.Font.Bold = true;
                         headerRange.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
                         headerRange.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightBlue);
+                        headerRange.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
                         headerRange.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Medium);
                     }
+                    // ✨ NEW: Freeze panes on Quality Issues sheet
+                    issuesSheet.View.FreezePanes(2, 1); // Freeze header row
+
+                    // ✨ NEW: Auto-filter on Quality Issues sheet
+                    issuesSheet.Cells[1, 1, 1, 3].AutoFilter = true;
+
+                    // ✨ NEW: Auto-size columns
+                    issuesSheet.Column(1).AutoFit(); // Test ID
+                    issuesSheet.Column(2).Width = 80; // Issue Found (wider for readability)
+                    issuesSheet.Column(3).AutoFit(); // Status
 
                     // DATA ROWS - only tests with issues
                     int currentRow = 2;
@@ -410,6 +447,15 @@ namespace AITestAnalyzer
                     // Add borders to all used cells
                     var usedRange = statsSheet.Cells[1, 1, row, 3];
                     usedRange.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Medium);
+
+                    // ✨ NEW: Auto-size columns for better readability
+                    for (int col = 1; col <= 2; col++)
+                    {
+                        statsSheet.Column(col).AutoFit(15, 50); // Min 15, Max 50 characters
+                    }
+
+                    // ✨ NEW: Freeze panes to keep title visible
+                    statsSheet.View.FreezePanes(2, 1); // Freeze first row
 
                     package.Save();
                     Console.WriteLine("   ✅ Created 'Statistics Dashboard' sheet");
