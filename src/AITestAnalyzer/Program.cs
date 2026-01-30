@@ -16,6 +16,9 @@ namespace AITestAnalyzer
     {
         private const string Version = "1.0.0";
         private const string AppName = "AI Test Suite Analyzer";
+
+        private const int CACHE_MAX_AGE_DAYS = 30;
+
         static async Task Main(string[] args)
         {
             ExcelPackage.License.SetNonCommercialPersonal("Aravindhan Rajasekaran");
@@ -37,14 +40,13 @@ namespace AITestAnalyzer
             string outputDir = ExcelWriter.CreateOutputFolder();
             string outputPath = ExcelWriter.PrepareOutputFile(appConfig.ExcelPath, outputDir);
 
-            var excelWriter = new ExcelWriter(outputPath, appConfig.WorksheetIndex);// Need to use outputPath here
-            excelWriter.RenameOriginalSheet();  
+            var excelWriter = new ExcelWriter(outputPath, appConfig.WorksheetIndex);
+            excelWriter.RenameOriginalSheet();
             excelWriter.AddAnalysisColumnHeader();
             Console.WriteLine();
 
             // STEP 3: Validate and process test cases
             int startRow = 2;  // First data row (row 1 is header)
-            int totalTests;
 
             // Create Excel reader and validate structure
             var excelReader = new ExcelReader(appConfig.ExcelPath, appConfig.WorksheetIndex);
@@ -75,6 +77,9 @@ namespace AITestAnalyzer
             }
 
             // STEP 3B: Parse command-line arguments
+            int totalTests = 0;
+            bool useCache = true;  // Default: cache enabled
+
             if (args.Length > 0)
             {
                 string arg = args[0].ToLower();
@@ -90,6 +95,19 @@ namespace AITestAnalyzer
                 if (arg == "--version" || arg == "-v")
                 {
                     DisplayVersion();
+                    return;
+                }
+
+                // Handle clear cache command
+                if (arg == "--clear-cache")
+                {
+                    WriteInfo("Clearing cache...");
+                    var tempCache = new TestCaseCache();
+                    tempCache.ClearCache();
+                    WriteSuccess("Cache cleared successfully!");
+                    Console.WriteLine();
+                    WriteInfo("All cached analysis results have been deleted.");
+                    WriteInfo("Next run will re-analyze all tests using OpenAI API.");
                     return;
                 }
 
@@ -127,6 +145,14 @@ namespace AITestAnalyzer
                     Console.WriteLine();
                     WriteInfo("Use --help to see available options");
                     return;
+                }
+
+                // Check for --no-cache flag (can be anywhere in args)
+                if (args.Any(a => a.ToLower() == "--no-cache"))
+                {
+                    useCache = false;
+                    WriteWarning("Cache disabled - all tests will use OpenAI API");
+                    Console.WriteLine();
                 }
             }
             else
@@ -169,6 +195,36 @@ namespace AITestAnalyzer
                 }
             }
 
+            // NOW Initialize cache system (AFTER argument parsing)
+            TestCaseCache cache = null;
+            if (useCache)
+            {
+                WriteInfo("Initializing cache system...");
+                cache = new TestCaseCache();
+                int cacheSize = cache.GetCacheSize();
+                int expiredCount = cache.GetExpiredCount(CACHE_MAX_AGE_DAYS);
+
+                if (cacheSize > 0)
+                {
+                    WriteSuccess($"Loaded cache with {cacheSize} entries");
+                    if (expiredCount > 0)
+                    {
+                        WriteWarning($"Found {expiredCount} expired entries (older than {CACHE_MAX_AGE_DAYS} days)");
+                        WriteInfo("Expired entries will be automatically cleaned up");
+                    }
+                }
+                else
+                {
+                    WriteInfo("Cache is empty (first run)");
+                }
+                Console.WriteLine();
+            }
+            else
+            {
+                WriteWarning("Cache is disabled for this run");
+                Console.WriteLine();
+            }
+
             Console.WriteLine();
 
             var startTime = DateTime.Now;
@@ -177,28 +233,82 @@ namespace AITestAnalyzer
 
             var progressTracker = new ProgressTracker(totalTests, startTime);
 
+            // Track cache statistics
+            int cacheHits = 0;
+            int apiCalls = 0;
+
             for (int row = startRow; row < startRow + totalTests; row++)
             {
                 TestCase testCase = excelReader.ReadTestCase(rowNumber: row);
                 if (testCase == null)
                 {
-                    continue; // Silently skip empty rows
+                    continue;
                 }
 
                 processedCount++;
                 progressTracker.DisplayProgress(processedCount, testCase.TestId);
 
-                var (result, tokens) = await aiAnalyzer.AnalyzeTestCase(testCase);
+                string result;
+                int tokens;
+
+                // Check cache if enabled
+                if (useCache && cache != null)
+                {
+                    // Generate hash for this test case
+                    string hash = cache.GenerateHash(testCase);
+
+                    // Try to get from cache
+                    if (cache.TryGetCached(hash, out CachedResult cachedResult, CACHE_MAX_AGE_DAYS))
+                    {
+                        // CACHE HIT! Use cached result
+                        result = cachedResult.AnalysisResult;
+                        tokens = 0; // No tokens used (cached)
+                        cacheHits++;
+                    }
+                    else
+                    {
+                        // CACHE MISS - Call OpenAI API
+                        (result, tokens) = await aiAnalyzer.AnalyzeTestCase(testCase);
+
+                        // Save to cache for next time
+                        cache.AddToCache(testCase.TestId, hash, result, tokens);
+                        apiCalls++;
+
+                        // Rate limiting only for API calls
+                        await Task.Delay(1000);
+                    }
+                }
+                else
+                {
+                    // Cache disabled - always call API
+                    (result, tokens) = await aiAnalyzer.AnalyzeTestCase(testCase);
+                    apiCalls++;
+                    await Task.Delay(1000);
+                }
+
                 results.Add((testCase.TestId, result, tokens));
-
-                // Write to Excel immediately
-                excelWriter.WriteAnalysis( row, result);
-
-                await Task.Delay(1000);  // Rate limiting
+                excelWriter.WriteAnalysis(row, result);
             }
 
             var endTime = DateTime.Now;
             progressTracker.Complete();
+
+            // Save cache to disk (if enabled)
+            if (useCache && cache != null)
+            {
+                Console.WriteLine();
+                WriteInfo("Saving cache...");
+
+                // Clean expired entries before saving
+                int cleaned = cache.CleanExpiredEntries(CACHE_MAX_AGE_DAYS);
+                if (cleaned > 0)
+                {
+                    WriteInfo($"Cleaned {cleaned} expired cache entries");
+                }
+
+                cache.SaveCache();
+                WriteSuccess("Cache saved successfully");
+            }
 
             // STEP 4: Create Quality Issues Sheet
             Console.WriteLine();
@@ -211,7 +321,7 @@ namespace AITestAnalyzer
 
             // STEP 6: Display summary
             Console.WriteLine();
-            SummaryDisplay.Display(results, startTime, endTime, outputPath);
+            SummaryDisplay.Display(results, startTime, endTime, outputPath, cacheHits, apiCalls, useCache);
 
             Console.WriteLine();
             WriteInfo("Press any key to exit...");
@@ -283,12 +393,27 @@ namespace AITestAnalyzer
             Console.WriteLine("  --help, -h                    Show this help message");
             Console.WriteLine("  --version, -v                 Show version information");
             Console.WriteLine("  --all, -a                     Analyze all tests without prompting");
+            Console.WriteLine("  --no-cache                    Disable cache (force fresh analysis)");
+            Console.WriteLine("  --clear-cache                 Clear all cached results");
             Console.WriteLine();
+
             WriteInfo("EXAMPLES:");
             Console.WriteLine("  dotnet run -- 5               # Analyze first 5 test cases");
             Console.WriteLine("  dotnet run -- --all           # Analyze all test cases");
             Console.WriteLine("  dotnet run                    # Interactive: prompts for test count");
+            Console.WriteLine("  dotnet run -- 10 --no-cache   # Analyze 10 tests without cache");
+            Console.WriteLine("  dotnet run -- --clear-cache   # Clear cache and exit");
             Console.WriteLine();
+
+            WriteInfo("CACHE SYSTEM:");
+            Console.WriteLine("  - Analysis results are cached to save API costs");
+            Console.WriteLine("  - Cache expires after 30 days automatically");
+            Console.WriteLine("  - Unchanged tests use cached results (instant + free!)");
+            Console.WriteLine("  - Changed tests are automatically re-analyzed");
+            Console.WriteLine("  - Use --no-cache to force fresh analysis");
+            Console.WriteLine("  - Use --clear-cache to reset all cached data");
+            Console.WriteLine();
+
             WriteInfo("CONFIGURATION:");
             Console.WriteLine("  Edit appsettings.json to configure:");
             Console.WriteLine("    - OpenAI API key");

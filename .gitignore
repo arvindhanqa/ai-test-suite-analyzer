@@ -57,3 +57,8 @@ analysis_results_*.xlsx
 
 # Rider
 .idea/
+
+# Cache directory
+cache/
+**/cache/
+test_analysis_cache.json
