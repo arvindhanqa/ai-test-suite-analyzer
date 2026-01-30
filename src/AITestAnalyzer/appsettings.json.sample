@@ -1,0 +1,10 @@
+{
+  "OpenAI": {
+    "ApiKey": "YOUR-OPENAI-API-KEY-HERE",
+    "Model": "gpt-4o-mini"
+  },
+  "Excel": {
+    "FilePath": "../../data/test_cases_shopease.xlsx",
+    "WorksheetIndex": 1
+  }
+}

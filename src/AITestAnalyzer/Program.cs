@@ -32,6 +32,15 @@ namespace AITestAnalyzer
             var (appConfig, promptConfig) = LoadConfiguration();
             if (appConfig == null || promptConfig == null) return;
 
+            // STEP 1B: Validate configuration before proceeding
+            bool configIsValid = await ValidateConfiguration(appConfig, promptConfig);
+            if (!configIsValid)
+            {
+                WriteInfo("Press any key to exit...");
+                Console.ReadKey();
+                return;
+            }
+
             // Create AI analyzer
             var aiAnalyzer = new AIAnalyzer(appConfig, promptConfig);
 
@@ -52,9 +61,9 @@ namespace AITestAnalyzer
             var excelReader = new ExcelReader(appConfig.ExcelPath, appConfig.WorksheetIndex);
 
             WriteInfo("Validating Excel structure...");
-            var (isValid, validationMessage) = excelReader.ValidateExcelStructure();
+            var (excelIsValid, validationMessage) = excelReader.ValidateExcelStructure();
 
-            if (!isValid)
+            if (!excelIsValid)
             {
                 WriteError($"VALIDATION ERROR: {validationMessage}");
                 WriteError("Please check your Excel file and try again.");
@@ -375,6 +384,49 @@ namespace AITestAnalyzer
 
             return (appConfig, promptConfig);
         }
+
+        // ============================================================
+        // METHOD 1B: Validate Configuration
+        // ============================================================
+        static async Task<bool> ValidateConfiguration(Configuration appConfig, PromptConfig promptConfig)
+        {
+            WriteInfo("Validating configuration...");
+            Console.WriteLine();
+
+            var validator = new ConfigurationValidator(appConfig, promptConfig);
+
+            // Run all validations
+            var (isValid, errorMessage) = await validator.ValidateAll();
+
+            if (!isValid)
+            {
+                Console.WriteLine();
+                WriteError("CONFIGURATION ERROR:");
+                WriteError(errorMessage);
+                Console.WriteLine();
+                WriteInfo("Please fix the configuration and try again.");
+                Console.WriteLine();
+                WriteInfo("Need help? Run: dotnet run -- --help");
+                return false;
+            }
+
+            // All checks passed - show success messages
+            WriteSuccess("API key format valid");
+            WriteSuccess("Excel file exists and is accessible");
+
+            // Get worksheet name for display
+            var worksheetResult = validator.ValidateWorksheetIndex();
+            if (worksheetResult.IsValid && !string.IsNullOrEmpty(worksheetResult.DetailedInfo))
+            {
+                WriteSuccess(worksheetResult.DetailedInfo);
+            }
+
+            WriteSuccess("OpenAI API connection successful");
+            Console.WriteLine();
+
+            return true;
+        }
+
         // ============================================================
         // METHOD 2: Display Help Text
         // ============================================================

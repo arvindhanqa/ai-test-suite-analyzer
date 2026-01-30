@@ -158,6 +158,16 @@ cd ai-test-suite-analyzer
 
 2. **Configure API Key and Settings**
    
+   **Option A: Use the sample file (recommended for first-time users)**
+```bash
+   cd src/AITestAnalyzer
+   cp appsettings.json.sample appsettings.json
+```
+   
+   Then edit `appsettings.json` and replace `YOUR-OPENAI-API-KEY-HERE` with your actual API key.
+
+   **Option B: Edit directly**
+   
    Edit `src/AITestAnalyzer/appsettings.json`:
 ```json
 {
@@ -172,6 +182,8 @@ cd ai-test-suite-analyzer
 }
 ```
 
+   See `CONFIGURATION.md` for detailed configuration guide and troubleshooting.
+
 3. **Install Dependencies**
 ```bash
 cd src/AITestAnalyzer
@@ -184,6 +196,28 @@ dotnet build
 ```
 
 ---
+## ⚙️ Configuration Validation
+
+The tool automatically validates your configuration on startup:
+```
+🔍 Validating configuration...
+
+✅ API key format valid
+✅ Excel file exists and is accessible
+✅ Worksheet index valid (Sheet: 'Sheet2')
+✅ OpenAI API connection successful
+```
+
+**Validation checks:**
+- ✅ API key exists and has correct format (starts with `sk-`)
+- ✅ Excel file exists at specified path
+- ✅ Excel file is accessible (not locked by another program)
+- ✅ Worksheet index is within valid range
+- ✅ OpenAI API connection works (test API call)
+
+**If validation fails**, you'll see a detailed error message with instructions on how to fix it.
+
+See `CONFIGURATION.md` for troubleshooting help.
 
 ## Usage
 

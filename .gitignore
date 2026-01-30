@@ -12,6 +12,10 @@ day-*.txt
 **/*secrets*.json
 **/openai-key.txt
 
+# But allow sample files
+!appsettings.json.sample
+!**/appsettings.json.sample
+
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/
