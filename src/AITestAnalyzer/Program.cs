@@ -14,6 +14,8 @@ namespace AITestAnalyzer
 {
     class Program
     {
+        private const string Version = "1.0.0";
+        private const string AppName = "AI Test Suite Analyzer";
         static async Task Main(string[] args)
         {
             ExcelPackage.License.SetNonCommercialPersonal("Aravindhan Rajasekaran");
@@ -72,63 +74,99 @@ namespace AITestAnalyzer
                 return;
             }
 
-            // Check if command-line argument provided
-            if (args.Length > 0 && int.TryParse(args[0], out int argTests))
+            // STEP 3B: Parse command-line arguments
+            if (args.Length > 0)
             {
-                // Command-line argument provided
-                if (argTests > totalRowsInExcel)
+                string arg = args[0].ToLower();
+
+                // Handle help flag
+                if (arg == "--help" || arg == "-h")
                 {
-                    WriteWarning($"WARNING: Requested {argTests} tests, but only {totalRowsInExcel} exist in Excel");
-                    WriteInfo($"   Analyzing all {totalRowsInExcel} tests instead...");
-                    totalTests = totalRowsInExcel;
+                    DisplayHelp();
+                    return;
                 }
+
+                // Handle version flag
+                if (arg == "--version" || arg == "-v")
+                {
+                    DisplayVersion();
+                    return;
+                }
+
+                // Handle --all flag
+                if (arg == "--all" || arg == "-a")
+                {
+                    totalTests = totalRowsInExcel;
+                    WriteInfo($"Analyzing all {totalTests} tests (--all flag)");
+                }
+                // Handle numeric argument
+                else if (int.TryParse(arg, out int requestedCount))
+                {
+                    if (requestedCount <= 0)
+                    {
+                        WriteError("Test count must be greater than 0");
+                        return;
+                    }
+
+                    if (requestedCount > totalRowsInExcel)
+                    {
+                        WriteWarning($"Requested {requestedCount} tests but only {totalRowsInExcel} available");
+                        totalTests = totalRowsInExcel;
+                        WriteInfo($"Analyzing all {totalTests} tests instead");
+                    }
+                    else
+                    {
+                        totalTests = requestedCount;
+                        WriteInfo($"Analyzing {totalTests} tests (from command-line)");
+                    }
+                }
+                // Handle unknown argument
                 else
                 {
-                    totalTests = argTests;
-                    WriteInfo($"Analyzing {totalTests} of {totalRowsInExcel} test cases (from command line)...");
+                    WriteError($"Unknown argument: {arg}");
+                    Console.WriteLine();
+                    WriteInfo("Use --help to see available options");
+                    return;
                 }
             }
             else
             {
-                // No command-line argument - ASK USER
+                // Interactive mode (no arguments provided)
                 WriteSuccess($"Found {totalRowsInExcel} test cases in Excel.");
-                Console.WriteLine($"   How many tests to analyze? (Enter number or press Enter for all): ");
+                Console.Write("   How many tests to analyze? (Enter number or press Enter for all): ");
 
                 string userInput = Console.ReadLine();
 
                 if (string.IsNullOrWhiteSpace(userInput))
                 {
-                    // User pressed Enter - process all
                     totalTests = totalRowsInExcel;
-                    WriteInfo($"   → Analyzing all {totalTests} test cases...");
+                    WriteInfo($"Analyzing all {totalTests} tests");
                 }
-                else if (int.TryParse(userInput, out int userTests) && userTests > 0)
+                else if (int.TryParse(userInput, out int userCount))
                 {
-                    // User entered a number
-                    if (userTests > totalRowsInExcel)
+                    if (userCount <= 0)
                     {
-                        WriteWarning($"Requested {userTests} tests, but only {totalRowsInExcel} exist.");
-                        WriteInfo($"  → Analyzing all {totalRowsInExcel} tests instead...");
+                        WriteError("Invalid input. Must be greater than 0");
+                        return;
+                    }
+
+                    if (userCount > totalRowsInExcel)
+                    {
+                        WriteWarning($"Requested {userCount} tests but only {totalRowsInExcel} available");
                         totalTests = totalRowsInExcel;
                     }
                     else
                     {
-                        totalTests = userTests;
-                        WriteInfo($"   → Analyzing {totalTests} of {totalRowsInExcel} test cases...");
+                        totalTests = userCount;
                     }
+
+                    WriteInfo($"Analyzing {totalTests} tests");
                 }
                 else
                 {
-                    WriteError("Invalid input. Please enter a positive number.");
+                    WriteError("Invalid input. Please enter a number");
                     return;
                 }
-            }
-
-            // Validate
-            if (totalTests < 1)
-            {
-                WriteError("ERROR: Test count must be at least 1");
-                return;
             }
 
             Console.WriteLine();
@@ -227,6 +265,50 @@ namespace AITestAnalyzer
 
             return (appConfig, promptConfig);
         }
+        // ============================================================
+        // METHOD 2: Display Help Text
+        // ============================================================
+        static void DisplayHelp()
+        {
+            WriteHeader($"{AppName} v{Version}");
+            Console.WriteLine();
+            WriteInfo("USAGE:");
+            Console.WriteLine("  dotnet run                    # Interactive mode (prompts for test count)");
+            Console.WriteLine("  dotnet run -- <number>        # Analyze specific number of tests");
+            Console.WriteLine("  dotnet run -- --all           # Analyze all tests without prompting");
+            Console.WriteLine("  dotnet run -- --help          # Show this help message");
+            Console.WriteLine("  dotnet run -- --version       # Show version information");
+            Console.WriteLine();
+            WriteInfo("OPTIONS:");
+            Console.WriteLine("  --help, -h                    Show this help message");
+            Console.WriteLine("  --version, -v                 Show version information");
+            Console.WriteLine("  --all, -a                     Analyze all tests without prompting");
+            Console.WriteLine();
+            WriteInfo("EXAMPLES:");
+            Console.WriteLine("  dotnet run -- 5               # Analyze first 5 test cases");
+            Console.WriteLine("  dotnet run -- --all           # Analyze all test cases");
+            Console.WriteLine("  dotnet run                    # Interactive: prompts for test count");
+            Console.WriteLine();
+            WriteInfo("CONFIGURATION:");
+            Console.WriteLine("  Edit appsettings.json to configure:");
+            Console.WriteLine("    - OpenAI API key");
+            Console.WriteLine("    - Excel file path");
+            Console.WriteLine("    - Worksheet index");
+            Console.WriteLine();
+        }
+
+        // ============================================================
+        // METHOD 3: Display Version
+        // ============================================================
+        static void DisplayVersion()
+        {
+            WriteSuccess($"{AppName} v{Version}");
+            Console.WriteLine("Copyright (c) 2026 Aravindhan Rajasekaran");
+            Console.WriteLine("Licensed under MIT License");
+            Console.WriteLine();
+            WriteInfo("GitHub: https://github.com/arvindhanqa/ai-test-suite-analyzer");
+        }
+
 
         // ============================================================
         // COLOR HELPER METHODS

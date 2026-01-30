@@ -168,36 +168,60 @@ dotnet build
 
 ---
 
-## 🚀 Usage
+## Usage
 
-### Quick Start
+### Command-Line Options
 
-1. **Prepare your Excel file** with columns:
-   - Test ID | Feature | Scenario | Priority | Steps | Expected Result | Status
-
-2. **Update configuration** in `appsettings.json`:
-   - Set your OpenAI API key
-   - Point to your Excel file path
-   - Set worksheet index (0 = first sheet, 1 = second sheet, etc.)
-
-3. **Run the analyzer**
+**Interactive Mode (default):**
 ```bash
 dotnet run
 ```
+Prompts you for the number of tests to analyze. Press Enter to analyze all tests.
 
-   **OR with command-line arguments:**
+**Analyze Specific Number:**
 ```bash
-dotnet run -- 10    # Analyze only 10 tests
+dotnet run -- 5
 ```
+Analyzes the first 5 test cases.
 
-4. **Interactive mode**: If no arguments provided, the tool will prompt:
+**Analyze All Tests:**
+```bash
+dotnet run -- --all
+# or
+dotnet run -- -a
 ```
-📊 Found 56 test cases in Excel.
-   How many tests to analyze? (Enter number or press Enter for all):
-```
+Analyzes all tests without prompting.
 
-5. **Find results** in `output/` folder:
-   - `analysis_results_YYYYMMDD_HHMMSS.xlsx`
+**Show Help:**
+```bash
+dotnet run -- --help
+# or
+dotnet run -- -h
+```
+Displays comprehensive usage information.
+
+**Show Version:**
+```bash
+dotnet run -- --version
+# or
+dotnet run -- -v
+```
+Displays version and license information.
+
+### Examples
+```bash
+# Analyze first 10 tests
+dotnet run -- 10
+
+# Analyze all tests non-interactively
+dotnet run -- --all
+
+# Interactive mode - choose how many
+dotnet run
+
+# Get help
+dotnet run -- --help
+```
 
 ### Sample Output
 ```
