@@ -18,9 +18,9 @@ namespace AITestAnalyzer
         {
             ExcelPackage.License.SetNonCommercialPersonal("Aravindhan Rajasekaran");
 
-            Console.WriteLine("===============================================");
-            Console.WriteLine("AI Test Suite Analyzer - Week 1");
-            Console.WriteLine("===============================================");
+            WriteHeader("===============================================");
+            WriteHeader("AI Test Suite Analyzer - Week 1");
+            WriteHeader("===============================================");
             Console.WriteLine();
 
             // STEP 1: Load configurations
@@ -31,7 +31,7 @@ namespace AITestAnalyzer
             var aiAnalyzer = new AIAnalyzer(appConfig, promptConfig);
 
             // STEP 2: Prepare output file
-            Console.WriteLine("📁 Preparing output file...");
+            WriteInfo("Preparing output file...");
             string outputDir = ExcelWriter.CreateOutputFolder();
             string outputPath = ExcelWriter.PrepareOutputFile(appConfig.ExcelPath, outputDir);
 
@@ -47,20 +47,20 @@ namespace AITestAnalyzer
             // Create Excel reader and validate structure
             var excelReader = new ExcelReader(appConfig.ExcelPath, appConfig.WorksheetIndex);
 
-            Console.WriteLine("🔍 Validating Excel structure...");
+            WriteInfo("Validating Excel structure...");
             var (isValid, validationMessage) = excelReader.ValidateExcelStructure();
 
             if (!isValid)
             {
-                Console.WriteLine($"❌ VALIDATION ERROR: {validationMessage}");
-                Console.WriteLine("   Please check your Excel file and try again.");
+                WriteError($"VALIDATION ERROR: {validationMessage}");
+                WriteError("Please check your Excel file and try again.");
                 Console.WriteLine();
-                Console.WriteLine("Press any key to exit...");
+                WriteInfo("Press any key to exit...");
                 Console.ReadKey();
                 return;
             }
 
-            Console.WriteLine($"   ✅ {validationMessage}");
+            WriteSuccess($"{validationMessage}");
             Console.WriteLine();
 
             // Count actual rows in Excel
@@ -68,7 +68,7 @@ namespace AITestAnalyzer
 
             if (totalRowsInExcel == 0)
             {
-                Console.WriteLine("❌ ERROR: No test cases found in Excel file");
+                WriteError("ERROR: No test cases found in Excel file");
                 return;
             }
 
@@ -78,21 +78,21 @@ namespace AITestAnalyzer
                 // Command-line argument provided
                 if (argTests > totalRowsInExcel)
                 {
-                    Console.WriteLine($"⚠️  WARNING: Requested {argTests} tests, but only {totalRowsInExcel} exist in Excel");
-                    Console.WriteLine($"   Analyzing all {totalRowsInExcel} tests instead...");
+                    WriteWarning($"WARNING: Requested {argTests} tests, but only {totalRowsInExcel} exist in Excel");
+                    WriteInfo($"   Analyzing all {totalRowsInExcel} tests instead...");
                     totalTests = totalRowsInExcel;
                 }
                 else
                 {
                     totalTests = argTests;
-                    Console.WriteLine($"📊 Analyzing {totalTests} of {totalRowsInExcel} test cases (from command line)...");
+                    WriteInfo($"Analyzing {totalTests} of {totalRowsInExcel} test cases (from command line)...");
                 }
             }
             else
             {
                 // No command-line argument - ASK USER
-                Console.WriteLine($"📊 Found {totalRowsInExcel} test cases in Excel.");
-                Console.Write($"   How many tests to analyze? (Enter number or press Enter for all): ");
+                WriteSuccess($"Found {totalRowsInExcel} test cases in Excel.");
+                Console.WriteLine($"   How many tests to analyze? (Enter number or press Enter for all): ");
 
                 string userInput = Console.ReadLine();
 
@@ -100,26 +100,26 @@ namespace AITestAnalyzer
                 {
                     // User pressed Enter - process all
                     totalTests = totalRowsInExcel;
-                    Console.WriteLine($"   → Analyzing all {totalTests} test cases...");
+                    WriteInfo($"   → Analyzing all {totalTests} test cases...");
                 }
                 else if (int.TryParse(userInput, out int userTests) && userTests > 0)
                 {
                     // User entered a number
                     if (userTests > totalRowsInExcel)
                     {
-                        Console.WriteLine($"   ⚠️  Requested {userTests} tests, but only {totalRowsInExcel} exist.");
-                        Console.WriteLine($"   → Analyzing all {totalRowsInExcel} tests instead...");
+                        WriteWarning($"Requested {userTests} tests, but only {totalRowsInExcel} exist.");
+                        WriteInfo($"  → Analyzing all {totalRowsInExcel} tests instead...");
                         totalTests = totalRowsInExcel;
                     }
                     else
                     {
                         totalTests = userTests;
-                        Console.WriteLine($"   → Analyzing {totalTests} of {totalRowsInExcel} test cases...");
+                        WriteInfo($"   → Analyzing {totalTests} of {totalRowsInExcel} test cases...");
                     }
                 }
                 else
                 {
-                    Console.WriteLine("   ❌ Invalid input. Please enter a positive number.");
+                    WriteError("Invalid input. Please enter a positive number.");
                     return;
                 }
             }
@@ -127,7 +127,7 @@ namespace AITestAnalyzer
             // Validate
             if (totalTests < 1)
             {
-                Console.WriteLine("❌ ERROR: Test count must be at least 1");
+                WriteError("ERROR: Test count must be at least 1");
                 return;
             }
 
@@ -164,11 +164,11 @@ namespace AITestAnalyzer
 
             // STEP 4: Create Quality Issues Sheet
             Console.WriteLine();
-            Console.WriteLine("📋 Creating Quality Issues Summary...");
+            WriteInfo("Creating Quality Issues Summary...");
             excelWriter.CreateQualityIssuesSheet(results);
 
             // STEP 5: Create Statistics Dashboard
-            Console.WriteLine("📊 Creating Statistics Dashboard...");
+            WriteInfo("Creating Statistics Dashboard...");
             excelWriter.CreateStatisticsDashboard(results, startTime, endTime);
 
             // STEP 6: Display summary
@@ -176,7 +176,7 @@ namespace AITestAnalyzer
             SummaryDisplay.Display(results, startTime, endTime, outputPath);
 
             Console.WriteLine();
-            Console.WriteLine("Press any key to exit...");
+            WriteInfo("Press any key to exit...");
             Console.ReadKey();
         }
 
@@ -185,7 +185,7 @@ namespace AITestAnalyzer
         // ============================================================
         static (Configuration appConfig, PromptConfig promptConfig) LoadConfiguration()
         {
-            Console.WriteLine("📋 Loading configuration...");
+            WriteInfo("Loading configuration...");
 
             var configBuilder = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
@@ -199,8 +199,8 @@ namespace AITestAnalyzer
 
             if (string.IsNullOrEmpty(apiKey) || apiKey == "YOUR-ACTUAL-API-KEY-HERE")
             {
-                Console.WriteLine("❌ ERROR: OpenAI API key not configured!");
-                Console.WriteLine("Please update appsettings.json with your actual API key.");
+                WriteError("ERROR: OpenAI API key not configured!");
+                WriteError("Please update appsettings.json with your actual API key.");
                 return (null, null);
             }
 
@@ -221,11 +221,54 @@ namespace AITestAnalyzer
                 UserTemplate = configBuilder["UserTemplate"] ?? "Analyze: {Scenario}"
             };
 
-            Console.WriteLine($"   ✅ Model: {promptConfig.Model}");
-            Console.WriteLine($"   ✅ Max Tokens: {promptConfig.MaxTokens}");
+            WriteSuccess($"Model: {promptConfig.Model}");
+            WriteSuccess($"Max Tokens: {promptConfig.MaxTokens}");
             Console.WriteLine();
 
             return (appConfig, promptConfig);
         }
+
+        // ============================================================
+        // COLOR HELPER METHODS
+        // ============================================================
+        static void WriteSuccess(string message)
+        {
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.Write("✅ ");
+            Console.ResetColor();
+            Console.WriteLine(message);
+        }
+
+        static void WriteWarning(string message)
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.Write("⚠️  ");
+            Console.ResetColor();
+            Console.WriteLine(message);
+        }
+
+        static void WriteError(string message)
+        {
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.Write("❌ ");
+            Console.ResetColor();
+            Console.WriteLine(message);
+        }
+
+        static void WriteInfo(string message)
+        {
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.Write("📊 ");
+            Console.ResetColor();
+            Console.WriteLine(message);
+        }
+
+        static void WriteHeader(string message)
+        {
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine(message);
+            Console.ResetColor();
+        }
+
     }
 }
