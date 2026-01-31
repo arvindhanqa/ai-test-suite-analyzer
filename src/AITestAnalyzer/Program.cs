@@ -23,6 +23,13 @@ namespace AITestAnalyzer
         {
             ExcelPackage.License.SetNonCommercialPersonal("Aravindhan Rajasekaran");
 
+            // Check for batch mode FIRST (before other argument handling)
+            if (args.Length > 0 && args[0].ToLower() == "--batch")
+            {
+                await RunBatchMode(args);
+                return;
+            }
+
             WriteHeader("===============================================");
             WriteHeader("AI Test Suite Analyzer - Week 1");
             WriteHeader("===============================================");
@@ -338,6 +345,150 @@ namespace AITestAnalyzer
         }
 
         // ============================================================
+        // STEP 2: Add this NEW METHOD to Program.cs (after Main method)
+        // ============================================================
+
+        /// <summary>
+        /// Handles batch processing of multiple Excel files
+        /// </summary>
+        static async Task RunBatchMode(string[] args)
+        {
+            ExcelPackage.License.SetNonCommercialPersonal("Aravindhan Rajasekaran");
+
+            WriteHeader("═══════════════════════════════════════════════════════════════════════");
+            WriteHeader("   AI TEST SUITE ANALYZER - BATCH MODE");
+            WriteHeader("═══════════════════════════════════════════════════════════════════════\n");
+
+            // Parse batch arguments
+            string folderPath = null;
+            int? testLimit = null;
+            int worksheetIndex = 0;
+            bool useCache = true;
+
+            for (int i = 1; i < args.Length; i++)
+            {
+                string arg = args[i].ToLower();
+
+                if (arg.StartsWith("--folder="))
+                {
+                    folderPath = args[i].Substring("--folder=".Length);
+                }
+                else if (arg.StartsWith("--limit="))
+                {
+                    if (int.TryParse(args[i].Substring("--limit=".Length), out int limit))
+                    {
+                        testLimit = limit;
+                    }
+                }
+                else if (arg.StartsWith("--sheet="))
+                {
+                    if (int.TryParse(args[i].Substring("--sheet=".Length), out int sheet))
+                    {
+                        worksheetIndex = sheet;
+                    }
+                }
+                else if (arg == "--no-cache")
+                {
+                    useCache = false;
+                }
+                else if (!arg.StartsWith("--"))
+                {
+                    // Positional argument = folder path
+                    folderPath = args[i];
+                }
+            }
+
+            // Validate folder path
+            if (string.IsNullOrEmpty(folderPath))
+            {
+                WriteError("Batch mode requires a folder path.");
+                Console.WriteLine();
+                DisplayBatchHelp();
+                return;
+            }
+
+            // Load configuration
+            var (appConfig, promptConfig) = LoadConfiguration();
+            if (appConfig == null || promptConfig == null)
+            {
+                WriteError("Failed to load configuration. Exiting.");
+                return;
+            }
+
+            // Validate API key only (skip Excel validation since we'll process multiple files)
+            var validator = new ConfigurationValidator(appConfig, promptConfig);
+            var apiKeyResult = validator.ValidateApiKey();
+            if (!apiKeyResult.IsValid)
+            {
+                WriteError($"API Key Error: {apiKeyResult.ErrorMessage}");
+                return;
+            }
+
+            // Test OpenAI connection
+            WriteInfo("Testing OpenAI API connection...");
+            var connectionResult = await validator.ValidateOpenAIConnection();
+            if (!connectionResult.IsValid)
+            {
+                WriteError($"OpenAI Connection Error: {connectionResult.ErrorMessage}");
+                return;
+            }
+            WriteSuccess("OpenAI API connection successful");
+            Console.WriteLine();
+
+            // Run batch processing
+            var batchProcessor = new BatchProcessor(appConfig, promptConfig);
+
+            try
+            {
+                var results = await batchProcessor.ProcessBatchAsync(
+                    folderPath,
+                    testLimit,
+                    worksheetIndex,
+                    useCache);
+
+                if (results.Count == 0)
+                {
+                    WriteWarning("No files were processed.");
+                }
+            }
+            catch (DirectoryNotFoundException ex)
+            {
+                WriteError($"Folder not found: {ex.Message}");
+            }
+            catch (Exception ex)
+            {
+                WriteError($"Batch processing failed: {ex.Message}");
+            }
+
+            Console.WriteLine();
+            WriteInfo("Press any key to exit...");
+            Console.ReadKey();
+        }
+
+        /// <summary>
+        /// Display help specifically for batch mode
+        /// </summary>
+        static void DisplayBatchHelp()
+        {
+            WriteInfo("BATCH MODE USAGE:");
+            Console.WriteLine("  dotnet run -- --batch --folder=<path>");
+            Console.WriteLine("  dotnet run -- --batch <path>");
+            Console.WriteLine();
+            WriteInfo("OPTIONS:");
+            Console.WriteLine("  --folder=<path>  Folder containing Excel files to process");
+            Console.WriteLine("  --limit=<n>      Limit number of tests per file (optional)");
+            Console.WriteLine("  --sheet=<n>      Worksheet index to analyze (default: 0)");
+            Console.WriteLine("  --no-cache       Disable caching (force fresh analysis)");
+            Console.WriteLine();
+            WriteInfo("EXAMPLES:");
+            Console.WriteLine("  dotnet run -- --batch --folder=./data");
+            Console.WriteLine("  dotnet run -- --batch ./data --limit=5");
+            Console.WriteLine("  dotnet run -- --batch C:\\TestCases --limit=10 --sheet=0");
+            Console.WriteLine("  dotnet run -- --batch ./data --no-cache");
+        }
+
+
+        // ============================================================
         // METHOD 1: Load Configuration
         // ============================================================
         static (Configuration appConfig, PromptConfig promptConfig) LoadConfiguration()
@@ -472,6 +623,18 @@ namespace AITestAnalyzer
             Console.WriteLine("    - Excel file path");
             Console.WriteLine("    - Worksheet index");
             Console.WriteLine();
+
+            WriteInfo("BATCH MODE:");
+            Console.WriteLine("  --batch                       Enable batch processing mode");
+            Console.WriteLine("  --batch --folder=<path>       Process all Excel files in folder");
+            Console.WriteLine("  --batch <path> --limit=<n>    Limit tests per file");
+            Console.WriteLine("  --batch <path> --sheet=<n>    Specify worksheet index");
+            Console.WriteLine("  --batch <path> --no-cache     Disable caching");
+            Console.WriteLine();
+            WriteInfo("BATCH EXAMPLES:");
+            Console.WriteLine("  dotnet run -- --batch --folder=./data");
+            Console.WriteLine("  dotnet run -- --batch ./data --limit=5");
+            Console.WriteLine("  dotnet run -- --batch C:\\TestCases --sheet=1 --no-cache");
         }
 
         // ============================================================

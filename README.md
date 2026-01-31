@@ -33,7 +33,32 @@ Manual test case review is:
 - ⚙️ **Configurable worksheet** selection (supports multiple Excel templates)
 - 📄 **Clear error messages** for troubleshooting
 
-### 🆕 Intelligent Caching System (NEW!)
+### 🆕 Batch Processing (NEW!)
+Process multiple Excel files in a single command:
+
+- **Multi-File Processing**: Analyze entire folders of test suites at once
+- **Separate Output Files**: Each input file gets its own timestamped analysis report
+- **Aggregate Statistics**: Combined summary showing quality across all files
+- **Color-Coded Table**: Visual comparison of quality scores per file
+- **Cache Integration**: Cached results work across files for massive cost savings
+- **Flexible Options**: Limit tests per file, specify worksheet index
+
+**Example batch output:**
+```
+┌─────────────────────────────────┬────────┬─────────┬──────────┬────────────┐
+│ File                            │ Tests  │ Quality │ Tokens   │ Cost       │
+├─────────────────────────────────┼────────┼─────────┼──────────┼────────────┤
+│ test_cases_shopease.xlsx        │     56 │   5.4%  │    6,900 │ $0.001035  │
+│ test_cases_taskflow.xlsx        │     30 │  10.0%  │    3,700 │ $0.000555  │
+└─────────────────────────────────┴────────┴─────────┴──────────┴────────────┘
+
+📈 AGGREGATE STATISTICS
+   Files processed:     2
+   Total tests:         86
+   Overall quality:     7.0%
+```
+
+### 🆕 Intelligent Caching System
 The tool includes a production-ready cache system that dramatically reduces API costs and analysis time:
 
 - **Content-Aware Caching**: Tests are cached based on their content hash, not Test ID
@@ -117,12 +142,14 @@ Excel Input → ExcelReader → AIAnalyzer → OpenAI API (with retry)
            Validation    ProgressTracker   Error Handling
                 ↓              ↓              ↓
            ExcelWriter → [3 Professional Sheets] → Output
+                ↓
+         BatchProcessor → [Multiple Files] → Aggregate Summary
 ```
 
 ### Code Structure (Professional SOLID Architecture)
 ```
 AITestAnalyzer/
-├── Program.cs              # Main orchestration (209 lines)
+├── Program.cs              # Main orchestration (280 lines)
 ├── Configuration.cs        # App configuration model
 ├── PromptConfig.cs         # AI prompt configuration
 ├── TestCase.cs            # Test case data model
@@ -130,7 +157,9 @@ AITestAnalyzer/
 ├── ExcelWriter.cs         # Excel writing + formatting
 ├── AIAnalyzer.cs          # OpenAI integration + retry logic
 ├── ProgressTracker.cs     # Real-time progress display
-└── SummaryDisplay.cs      # Console output formatting
+├── SummaryDisplay.cs      # Console output formatting
+├── TestCaseCache.cs       # Intelligent cache system
+└── BatchProcessor.cs      # Multi-file batch processing (NEW!)
 ```
 
 **Key Design Principles:**
@@ -243,114 +272,51 @@ Analyzes all tests in the Excel file without prompting.
 
 **Bypass Cache (Force Fresh Analysis):**
 ```bash
-dotnet run -- 10 --no-cache
+dotnet run -- --no-cache
 ```
-Forces fresh analysis even if tests are cached. Useful after modifying AI prompts.
+Forces re-analysis of all tests, ignoring cached results.
 
-**Clear All Cached Results:**
+**Clear Cache:**
 ```bash
 dotnet run -- --clear-cache
 ```
-Removes all cached analysis results and exits.
+Removes all cached results (useful when changing prompts or model).
 
-**Show Help:**
+### 🆕 Batch Processing Mode (NEW!)
+
+**Process all Excel files in a folder:**
 ```bash
-dotnet run -- --help
+dotnet run -- --batch --folder=C:\path\to\test-cases
 ```
-Displays comprehensive usage information including cache commands.
 
-**Show Version:**
+**With relative path (from src/AITestAnalyzer):**
 ```bash
-dotnet run -- --version
+dotnet run -- --batch --folder=../../data
 ```
-Displays version and license information.
 
-### Cache System Usage
-
-The cache works automatically - no configuration needed:
-
-1. **First run**: All tests analyzed via OpenAI API, results cached automatically
-2. **Subsequent runs**: Unchanged tests use cached results (instant + free!)
-3. **Modified tests**: Content changes detected automatically, re-analyzed via API
-4. **Expired cache**: Entries older than 30 days refreshed automatically
-
-**Cache storage**: `cache/test_analysis_cache.json` (auto-managed, gitignored)
-
-**When to clear cache:**
-- After modifying AI prompts (get fresh analysis with new prompts)
-- After major OpenAI model updates
-- To reset and start fresh
-
-**Pro tip**: Use `--no-cache` for one-time bypass, `--clear-cache` for permanent reset.
-
-### Examples
+**Limit tests per file (for testing):**
 ```bash
-# Analyze first 10 tests
-dotnet run -- 10
-
-# Analyze all tests non-interactively
-dotnet run -- --all
-
-# Interactive mode - choose how many
-dotnet run
-
-# Get help
-dotnet run -- --help
+dotnet run -- --batch --folder=../../data --limit=5
 ```
 
-### Sample Output
+**Specify worksheet index:**
+```bash
+dotnet run -- --batch --folder=../../data --sheet=1 --limit=3
 ```
-===============================================
-AI Test Suite Analyzer - Week 1
-===============================================
 
-📋 Loading configuration...
-   ✅ Model: gpt-4o-mini
-   ✅ Max Tokens: 150
+**Batch mode options:**
+| Option | Description | Example |
+|--------|-------------|---------|
+| `--batch` | Enable batch processing mode | Required flag |
+| `--folder=<path>` | Folder containing Excel files | `--folder=./data` |
+| `--limit=<n>` | Max tests to analyze per file | `--limit=10` |
+| `--sheet=<n>` | Worksheet index (0-based) | `--sheet=1` |
 
-📁 Preparing output file...
-   ✅ Output file: analysis_results_20260128_153349.xlsx
-   ✅ Renamed sheet to 'AI Detailed Analysis'
-
-🔍 Validating Excel structure...
-   ✅ Excel structure is valid
-
-📊 Found 56 test cases in Excel.
-   How many tests to analyze? (Enter number or press Enter for all): 56
-   → Analyzing all 56 test cases...
-
-[====================] 100.0% | 56/56 | TC-056 | ETA: 0s
-✅ Analysis complete!
-
-📋 Creating Quality Issues Summary...
-   ✅ Created 'Quality Issues Summary' sheet
-📊 Creating Statistics Dashboard...
-   ✅ Created 'Statistics Dashboard' sheet
-
-===============================================
-📊 ANALYSIS SUMMARY
-===============================================
-
-💾 CACHE PERFORMANCE
-───────────────────────────────────────────────
-✅ Cache hits: 53 (94.6%)
-🤖 API calls: 3 (5.4%)
-💰 Tokens saved: ~7,950
-💵 Cost saved: ~$0.001193
-
-Tests analyzed: 56
-✅ Good tests: 3 (5%)
-⚠️  Tests with issues: 53 (95%)
-
-Total tokens: 6,932
-Total cost: $0.001040
-Avg tokens/test: 123
-⏱️  Time: 150.2 seconds
-
-📁 Output: analysis_results_20260128_153349.xlsx
-   Location: C:\Projects\...\output
-===============================================
-```
+**Output:**
+- Each input file generates a separate output file
+- Naming format: `{filename}_analysis_{timestamp}.xlsx`
+- All outputs saved to `./output/` folder
+- Aggregate summary displayed in console
 
 ---
 
@@ -412,16 +378,17 @@ The tool has been optimized through multiple iterations:
 - Time: ~5 seconds ⚡
 - Cache: 56 hits, 0 API calls
 
-**Scenario 3: Incremental Updates (Partial Cache)**
-- 56 test suite, 5 tests modified
-- Cost: ~$0.0001 (only 5 API calls)
-- Time: ~15 seconds
-- Cache: 51 hits, 5 API calls
+**Scenario 3: Batch Processing (2 files)**
+- 86 tests across 2 files
+- Cost: ~$0.0016 (first run)
+- Time: ~3 minutes
+- Separate reports per file
 
-**Scenario 4: Weekly Regression Testing (Typical Usage)**
-- Week 1: Analyze 56 tests ($0.001)
-- Week 2-4: Re-analyze same suite ($0.00 each week, 100% cached)
-- **Monthly cost: ~$0.001 instead of $0.004** (75% savings via cache)
+**Scenario 4: Batch with Cache (50% hit rate)**
+- 86 tests, half cached
+- Cost: ~$0.0008 (only uncached tests)
+- Time: ~1.5 minutes
+- Cache saves 50% of API calls
 
 ### Budget Projections
 
@@ -437,8 +404,6 @@ With current optimization + intelligent caching:
 - ~555,000 fresh analyses (no cache)
 - Virtually unlimited re-analyses (with cache)
 - Years of typical QA regression testing
-
-**Real-world example**: Analyzing 500 tests weekly for a year costs ~$2.40 with cache vs ~$9.60 without cache.
 
 ---
 
@@ -467,14 +432,17 @@ ai-test-suite-analyzer/
 │       ├── AIAnalyzer.cs             # OpenAI integration + retry
 │       ├── ProgressTracker.cs        # Progress display
 │       ├── SummaryDisplay.cs         # Console output
-│       ├── TestCaseCache.cs          # Cache system (NEW!)
+│       ├── TestCaseCache.cs          # Cache system
+│       ├── BatchProcessor.cs         # Multi-file batch processing (NEW!)
 │       ├── appsettings.json          # App settings (API key)
 │       └── PromptConfig.json         # Prompt templates
 ├── data/
 │   ├── requirements_shopease.md      # Sample requirements
-│   └── test_cases_shopease.xlsx      # Sample test cases (56 tests)
+│   ├── test_cases_shopease.xlsx      # Sample test cases (56 tests)
+│   ├── requirements_taskflow.md      # TaskFlow requirements (NEW!)
+│   └── test_cases_taskflow.xlsx      # TaskFlow test cases (30 tests, NEW!)
 ├── cache/                            # Cache storage (gitignored, auto-created)
-│   └── test_analysis_cache.json      # Persistent cache (NEW!)
+│   └── test_analysis_cache.json      # Persistent cache
 ├── output/                            # Generated analysis reports
 ├── docs/
 │   └── daily-logs/                   # Development progress logs
@@ -497,15 +465,15 @@ ai-test-suite-analyzer/
 - [x] Configurable worksheet index
 - [x] Professional code architecture (68% refactoring)
 - [x] CLI arguments (--help, --version, --all, --no-cache, --clear-cache)
-- [x] **Intelligent cache system with 30-day expiry** (NEW!)
+- [x] **Intelligent cache system with 30-day expiry**
 - [x] **Content-aware caching** (hash-based, not ID-based)
 - [x] **Cache statistics** in summary output
 
-### Week 2 (Days 10-16) - Planned
+### Week 2 ✅ IN PROGRESS (Days 10-16)
+- [x] **Batch processing** (multiple Excel files) ✅ COMPLETE
+- [x] **TaskFlow test data** (second test suite) ✅ COMPLETE
 - [ ] Enhanced error reporting
-- [ ] Batch processing (multiple Excel files)
-- [ ] Test case generation from requirements
-- [ ] Export to PDF/HTML
+- [ ] Export to PDF/HTML (optional)
 
 ### Weeks 5-8 - Advanced Features
 - [ ] **Coverage Gap Analysis**: Compare tests against requirements
@@ -564,12 +532,13 @@ This is a personal learning project built as part of a 90-day commitment (Januar
 2. Build practical AI-powered tooling
 3. Demonstrate ability to ship complete software from concept to production
 
-**Status (Day 9/10)**: Week 1 complete. Tool is production-ready with professional-grade features including intelligent caching.
+**Status (Day 10)**: Week 2 in progress. Batch processing complete. Tool is production-ready with professional-grade features.
 
 ### Development Progress
 - **Days 1-7**: Foundation (setup, data, basic processing)
 - **Day 8**: Major refactoring (68% code reduction), professional Git workflow
 - **Day 9**: CLI arguments + intelligent cache system (cost optimization up to 100%)
+- **Day 10**: Batch processing for multiple Excel files ✅
 
 ---
 
@@ -594,4 +563,4 @@ Special thanks to the open-source community for the excellent libraries.
 
 ---
 
-*Last Updated: January 30, 2026 (Day 9-10)*
+*Last Updated: January 31, 2026 (Day 10)*
