@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using static AITestAnalyzer.FileSelector;
 
 namespace AITestAnalyzer
 {
@@ -16,31 +17,92 @@ namespace AITestAnalyzer
     {
         private const string Version = "1.0.0";
         private const string AppName = "AI Test Suite Analyzer";
-
         private const int CACHE_MAX_AGE_DAYS = 30;
 
         static async Task Main(string[] args)
         {
             ExcelPackage.License.SetNonCommercialPersonal("Aravindhan Rajasekaran");
 
-            // Check for batch mode FIRST (before other argument handling)
-            if (args.Length > 0 && args[0].ToLower() == "--batch")
+            // ============================================================
+            // EARLY EXIT FLAGS — these don't need FileSelector at all
+            // ============================================================
+            if (args.Length > 0)
             {
-                await RunBatchMode(args);
-                return;
+                string firstArg = args[0].ToLower();
+
+                if (firstArg == "--help" || firstArg == "-h")
+                {
+                    DisplayHelp();
+                    return;
+                }
+                if (firstArg == "--version" || firstArg == "-v")
+                {
+                    DisplayVersion();
+                    return;
+                }
+                if (firstArg == "--clear-cache")
+                {
+                    WriteInfo("Clearing cache...");
+                    var tempCache = new TestCaseCache();
+                    tempCache.ClearCache();
+                    WriteSuccess("Cache cleared successfully!");
+                    Console.WriteLine();
+                    WriteInfo("All cached analysis results have been deleted.");
+                    WriteInfo("Next run will re-analyze all tests using OpenAI API.");
+                    return;
+                }
             }
+
+            // Check for --no-cache anywhere in args (still supported as CLI override)
+            bool useCache = !args.Any(a => a.ToLower() == "--no-cache");
 
             WriteHeader("===============================================");
             WriteHeader("AI Test Suite Analyzer - Week 1");
             WriteHeader("===============================================");
             Console.WriteLine();
 
-            // STEP 1: Load configurations
+            // ============================================================
+            // STEP 1: Load config (API key + prompt settings only)
+            // ============================================================
             var (appConfig, promptConfig) = LoadConfiguration();
             if (appConfig == null || promptConfig == null) return;
 
-            // STEP 1B: Validate configuration before proceeding
-            bool configIsValid = await ValidateConfiguration(appConfig, promptConfig);
+            // ============================================================
+            // STEP 2: FileSelector — user picks file, mode, sheet, limit
+            // ============================================================
+            var selection = FileSelector.ShowMainMenu();
+
+            // User quit out of the menu
+            if (selection == null || selection.SelectedMode == FileSelector.SelectionResult.Mode.Exit)
+            {
+                WriteInfo("Exited.");
+                return;
+            }
+
+            // ============================================================
+            // STEP 3: Route to batch or single based on selection
+            // ============================================================
+            if (selection.SelectedMode == FileSelector.SelectionResult.Mode.Batch)
+            {
+                await RunBatchMode(appConfig, promptConfig, selection);
+            }
+            else
+            {
+                await RunSingleMode(appConfig, promptConfig, selection, useCache);
+            }
+        }
+
+        // ============================================================
+        // SINGLE FILE MODE
+        // ============================================================
+        static async Task RunSingleMode(Configuration appConfig, PromptConfig promptConfig, SelectionResult selection, bool useCache)
+        {
+            string excelPath = selection.FilePath;
+            int worksheetIndex = selection.SheetIndex;
+            int testLimit = selection.TestLimit; // 0 = all
+
+            // Validate (API key + worksheet index against the chosen file)
+            bool configIsValid = await ValidateConfiguration(appConfig, promptConfig, excelPath, worksheetIndex);
             if (!configIsValid)
             {
                 WriteInfo("Press any key to exit...");
@@ -48,24 +110,20 @@ namespace AITestAnalyzer
                 return;
             }
 
-            // Create AI analyzer
             var aiAnalyzer = new AIAnalyzer(appConfig, promptConfig);
 
-            // STEP 2: Prepare output file
+            // Prepare output file
             WriteInfo("Preparing output file...");
             string outputDir = ExcelWriter.CreateOutputFolder();
-            string outputPath = ExcelWriter.PrepareOutputFile(appConfig.ExcelPath, outputDir);
+            string outputPath = ExcelWriter.PrepareOutputFile(excelPath, outputDir);
 
-            var excelWriter = new ExcelWriter(outputPath, appConfig.WorksheetIndex);
+            var excelWriter = new ExcelWriter(outputPath, worksheetIndex);
             excelWriter.RenameOriginalSheet();
             excelWriter.AddAnalysisColumnHeader();
             Console.WriteLine();
 
-            // STEP 3: Validate and process test cases
-            int startRow = 2;  // First data row (row 1 is header)
-
-            // Create Excel reader and validate structure
-            var excelReader = new ExcelReader(appConfig.ExcelPath, appConfig.WorksheetIndex);
+            // Validate Excel structure
+            var excelReader = new ExcelReader(excelPath, worksheetIndex);
 
             WriteInfo("Validating Excel structure...");
             var (excelIsValid, validationMessage) = excelReader.ValidateExcelStructure();
@@ -83,7 +141,7 @@ namespace AITestAnalyzer
             WriteSuccess($"{validationMessage}");
             Console.WriteLine();
 
-            // Count actual rows in Excel
+            // Count rows and resolve test limit
             int totalRowsInExcel = excelReader.CountTestRows();
 
             if (totalRowsInExcel == 0)
@@ -92,126 +150,15 @@ namespace AITestAnalyzer
                 return;
             }
 
-            // STEP 3B: Parse command-line arguments
-            int totalTests = 0;
-            bool useCache = true;  // Default: cache enabled
+            // testLimit == 0 means "all" from FileSelector
+            int totalTests = (testLimit == 0 || testLimit > totalRowsInExcel)
+                ? totalRowsInExcel
+                : testLimit;
 
-            if (args.Length > 0)
-            {
-                string arg = args[0].ToLower();
+            WriteInfo($"Analyzing {totalTests} of {totalRowsInExcel} tests");
+            Console.WriteLine();
 
-                // Handle help flag
-                if (arg == "--help" || arg == "-h")
-                {
-                    DisplayHelp();
-                    return;
-                }
-
-                // Handle version flag
-                if (arg == "--version" || arg == "-v")
-                {
-                    DisplayVersion();
-                    return;
-                }
-
-                // Handle clear cache command
-                if (arg == "--clear-cache")
-                {
-                    WriteInfo("Clearing cache...");
-                    var tempCache = new TestCaseCache();
-                    tempCache.ClearCache();
-                    WriteSuccess("Cache cleared successfully!");
-                    Console.WriteLine();
-                    WriteInfo("All cached analysis results have been deleted.");
-                    WriteInfo("Next run will re-analyze all tests using OpenAI API.");
-                    return;
-                }
-
-                // Handle --all flag
-                if (arg == "--all" || arg == "-a")
-                {
-                    totalTests = totalRowsInExcel;
-                    WriteInfo($"Analyzing all {totalTests} tests (--all flag)");
-                }
-                // Handle numeric argument
-                else if (int.TryParse(arg, out int requestedCount))
-                {
-                    if (requestedCount <= 0)
-                    {
-                        WriteError("Test count must be greater than 0");
-                        return;
-                    }
-
-                    if (requestedCount > totalRowsInExcel)
-                    {
-                        WriteWarning($"Requested {requestedCount} tests but only {totalRowsInExcel} available");
-                        totalTests = totalRowsInExcel;
-                        WriteInfo($"Analyzing all {totalTests} tests instead");
-                    }
-                    else
-                    {
-                        totalTests = requestedCount;
-                        WriteInfo($"Analyzing {totalTests} tests (from command-line)");
-                    }
-                }
-                // Handle unknown argument
-                else
-                {
-                    WriteError($"Unknown argument: {arg}");
-                    Console.WriteLine();
-                    WriteInfo("Use --help to see available options");
-                    return;
-                }
-
-                // Check for --no-cache flag (can be anywhere in args)
-                if (args.Any(a => a.ToLower() == "--no-cache"))
-                {
-                    useCache = false;
-                    WriteWarning("Cache disabled - all tests will use OpenAI API");
-                    Console.WriteLine();
-                }
-            }
-            else
-            {
-                // Interactive mode (no arguments provided)
-                WriteSuccess($"Found {totalRowsInExcel} test cases in Excel.");
-                Console.Write("   How many tests to analyze? (Enter number or press Enter for all): ");
-
-                string userInput = Console.ReadLine();
-
-                if (string.IsNullOrWhiteSpace(userInput))
-                {
-                    totalTests = totalRowsInExcel;
-                    WriteInfo($"Analyzing all {totalTests} tests");
-                }
-                else if (int.TryParse(userInput, out int userCount))
-                {
-                    if (userCount <= 0)
-                    {
-                        WriteError("Invalid input. Must be greater than 0");
-                        return;
-                    }
-
-                    if (userCount > totalRowsInExcel)
-                    {
-                        WriteWarning($"Requested {userCount} tests but only {totalRowsInExcel} available");
-                        totalTests = totalRowsInExcel;
-                    }
-                    else
-                    {
-                        totalTests = userCount;
-                    }
-
-                    WriteInfo($"Analyzing {totalTests} tests");
-                }
-                else
-                {
-                    WriteError("Invalid input. Please enter a number");
-                    return;
-                }
-            }
-
-            // NOW Initialize cache system (AFTER argument parsing)
+            // Initialize cache
             TestCaseCache cache = null;
             if (useCache)
             {
@@ -237,29 +184,24 @@ namespace AITestAnalyzer
             }
             else
             {
-                WriteWarning("Cache is disabled for this run");
+                WriteWarning("Cache is disabled for this run (--no-cache)");
                 Console.WriteLine();
             }
 
-            Console.WriteLine();
-
+            // Process tests
             var startTime = DateTime.Now;
             var results = new List<(string TestId, string Result, int Tokens)>();
             int processedCount = 0;
-
-            var progressTracker = new ProgressTracker(totalTests, startTime);
-
-            // Track cache statistics
             int cacheHits = 0;
             int apiCalls = 0;
+
+            var progressTracker = new ProgressTracker(totalTests, startTime);
+            int startRow = 2;
 
             for (int row = startRow; row < startRow + totalTests; row++)
             {
                 TestCase testCase = excelReader.ReadTestCase(rowNumber: row);
-                if (testCase == null)
-                {
-                    continue;
-                }
+                if (testCase == null) continue;
 
                 processedCount++;
                 progressTracker.DisplayProgress(processedCount, testCase.TestId);
@@ -267,36 +209,26 @@ namespace AITestAnalyzer
                 string result;
                 int tokens;
 
-                // Check cache if enabled
                 if (useCache && cache != null)
                 {
-                    // Generate hash for this test case
                     string hash = cache.GenerateHash(testCase);
 
-                    // Try to get from cache
                     if (cache.TryGetCached(hash, out CachedResult cachedResult, CACHE_MAX_AGE_DAYS))
                     {
-                        // CACHE HIT! Use cached result
                         result = cachedResult.AnalysisResult;
-                        tokens = 0; // No tokens used (cached)
+                        tokens = 0;
                         cacheHits++;
                     }
                     else
                     {
-                        // CACHE MISS - Call OpenAI API
                         (result, tokens) = await aiAnalyzer.AnalyzeTestCase(testCase);
-
-                        // Save to cache for next time
                         cache.AddToCache(testCase.TestId, hash, result, tokens);
                         apiCalls++;
-
-                        // Rate limiting only for API calls
                         await Task.Delay(1000);
                     }
                 }
                 else
                 {
-                    // Cache disabled - always call API
                     (result, tokens) = await aiAnalyzer.AnalyzeTestCase(testCase);
                     apiCalls++;
                     await Task.Delay(1000);
@@ -309,33 +241,26 @@ namespace AITestAnalyzer
             var endTime = DateTime.Now;
             progressTracker.Complete();
 
-            // Save cache to disk (if enabled)
+            // Save cache
             if (useCache && cache != null)
             {
                 Console.WriteLine();
                 WriteInfo("Saving cache...");
-
-                // Clean expired entries before saving
                 int cleaned = cache.CleanExpiredEntries(CACHE_MAX_AGE_DAYS);
-                if (cleaned > 0)
-                {
-                    WriteInfo($"Cleaned {cleaned} expired cache entries");
-                }
-
+                if (cleaned > 0) WriteInfo($"Cleaned {cleaned} expired cache entries");
                 cache.SaveCache();
                 WriteSuccess("Cache saved successfully");
             }
 
-            // STEP 4: Create Quality Issues Sheet
+            // Create summary sheets
             Console.WriteLine();
             WriteInfo("Creating Quality Issues Summary...");
             excelWriter.CreateQualityIssuesSheet(results);
 
-            // STEP 5: Create Statistics Dashboard
             WriteInfo("Creating Statistics Dashboard...");
             excelWriter.CreateStatisticsDashboard(results, startTime, endTime);
 
-            // STEP 6: Display summary
+            // Display summary
             Console.WriteLine();
             SummaryDisplay.Display(results, startTime, endTime, outputPath, cacheHits, apiCalls, useCache);
 
@@ -345,77 +270,21 @@ namespace AITestAnalyzer
         }
 
         // ============================================================
-        // STEP 2: Add this NEW METHOD to Program.cs (after Main method)
+        // BATCH MODE — receives everything from FileSelector.
+        // No arg parsing here. BatchProcessor gets what it needs directly.
         // ============================================================
-
-        /// <summary>
-        /// Handles batch processing of multiple Excel files
-        /// </summary>
-        static async Task RunBatchMode(string[] args)
+        static async Task RunBatchMode(Configuration appConfig, PromptConfig promptConfig, SelectionResult selection)
         {
-            ExcelPackage.License.SetNonCommercialPersonal("Aravindhan Rajasekaran");
+            string folderPath = selection.FilePath;
+            int worksheetIndex = selection.SheetIndex;
+            int testLimit = selection.TestLimit;
+            bool useCache = true;
 
             WriteHeader("═══════════════════════════════════════════════════════════════════════");
             WriteHeader("   AI TEST SUITE ANALYZER - BATCH MODE");
             WriteHeader("═══════════════════════════════════════════════════════════════════════\n");
 
-            // Parse batch arguments
-            string folderPath = null;
-            int? testLimit = null;
-            int worksheetIndex = 0;
-            bool useCache = true;
-
-            for (int i = 1; i < args.Length; i++)
-            {
-                string arg = args[i].ToLower();
-
-                if (arg.StartsWith("--folder="))
-                {
-                    folderPath = args[i].Substring("--folder=".Length);
-                }
-                else if (arg.StartsWith("--limit="))
-                {
-                    if (int.TryParse(args[i].Substring("--limit=".Length), out int limit))
-                    {
-                        testLimit = limit;
-                    }
-                }
-                else if (arg.StartsWith("--sheet="))
-                {
-                    if (int.TryParse(args[i].Substring("--sheet=".Length), out int sheet))
-                    {
-                        worksheetIndex = sheet;
-                    }
-                }
-                else if (arg == "--no-cache")
-                {
-                    useCache = false;
-                }
-                else if (!arg.StartsWith("--"))
-                {
-                    // Positional argument = folder path
-                    folderPath = args[i];
-                }
-            }
-
-            // Validate folder path
-            if (string.IsNullOrEmpty(folderPath))
-            {
-                WriteError("Batch mode requires a folder path.");
-                Console.WriteLine();
-                DisplayBatchHelp();
-                return;
-            }
-
-            // Load configuration
-            var (appConfig, promptConfig) = LoadConfiguration();
-            if (appConfig == null || promptConfig == null)
-            {
-                WriteError("Failed to load configuration. Exiting.");
-                return;
-            }
-
-            // Validate API key only (skip Excel validation since we'll process multiple files)
+            // Validate API key only (individual files validated inside BatchProcessor)
             var validator = new ConfigurationValidator(appConfig, promptConfig);
             var apiKeyResult = validator.ValidateApiKey();
             if (!apiKeyResult.IsValid)
@@ -435,14 +304,16 @@ namespace AITestAnalyzer
             WriteSuccess("OpenAI API connection successful");
             Console.WriteLine();
 
-            // Run batch processing
+            // Run batch — pass testLimit as nullable (null = no limit)
             var batchProcessor = new BatchProcessor(appConfig, promptConfig);
 
             try
             {
+                int? limitParam = (testLimit == 0) ? null : (int?)testLimit;
+
                 var results = await batchProcessor.ProcessBatchAsync(
                     folderPath,
-                    testLimit,
+                    limitParam,
                     worksheetIndex,
                     useCache);
 
@@ -465,31 +336,9 @@ namespace AITestAnalyzer
             Console.ReadKey();
         }
 
-        /// <summary>
-        /// Display help specifically for batch mode
-        /// </summary>
-        static void DisplayBatchHelp()
-        {
-            WriteInfo("BATCH MODE USAGE:");
-            Console.WriteLine("  dotnet run -- --batch --folder=<path>");
-            Console.WriteLine("  dotnet run -- --batch <path>");
-            Console.WriteLine();
-            WriteInfo("OPTIONS:");
-            Console.WriteLine("  --folder=<path>  Folder containing Excel files to process");
-            Console.WriteLine("  --limit=<n>      Limit number of tests per file (optional)");
-            Console.WriteLine("  --sheet=<n>      Worksheet index to analyze (default: 0)");
-            Console.WriteLine("  --no-cache       Disable caching (force fresh analysis)");
-            Console.WriteLine();
-            WriteInfo("EXAMPLES:");
-            Console.WriteLine("  dotnet run -- --batch --folder=./data");
-            Console.WriteLine("  dotnet run -- --batch ./data --limit=5");
-            Console.WriteLine("  dotnet run -- --batch C:\\TestCases --limit=10 --sheet=0");
-            Console.WriteLine("  dotnet run -- --batch ./data --no-cache");
-        }
-
-
         // ============================================================
-        // METHOD 1: Load Configuration
+        // Load Configuration — API key + prompt settings only.
+        // No ExcelPath. No WorksheetIndex. FileSelector provides those.
         // ============================================================
         static (Configuration appConfig, PromptConfig promptConfig) LoadConfiguration()
         {
@@ -503,7 +352,6 @@ namespace AITestAnalyzer
 
             string apiKey = configBuilder["OpenAI:ApiKey"];
             string model = configBuilder["OpenAI:Model"] ?? "gpt-4o-mini";
-            string excelPath = configBuilder["Excel:FilePath"];
 
             if (string.IsNullOrEmpty(apiKey) || apiKey == "YOUR-ACTUAL-API-KEY-HERE")
             {
@@ -515,9 +363,7 @@ namespace AITestAnalyzer
             var appConfig = new Configuration
             {
                 ApiKey = apiKey,
-                Model = model,
-                ExcelPath = excelPath,
-                WorksheetIndex = int.Parse(configBuilder["Excel:WorksheetIndex"] ?? "0")
+                Model = model
             };
 
             var promptConfig = new PromptConfig
@@ -537,17 +383,17 @@ namespace AITestAnalyzer
         }
 
         // ============================================================
-        // METHOD 1B: Validate Configuration
+        // Validate Configuration
+        // excelPath and worksheetIndex come from FileSelector now
         // ============================================================
-        static async Task<bool> ValidateConfiguration(Configuration appConfig, PromptConfig promptConfig)
+        static async Task<bool> ValidateConfiguration(Configuration appConfig, PromptConfig promptConfig, string excelPath, int worksheetIndex)
         {
             WriteInfo("Validating configuration...");
             Console.WriteLine();
 
             var validator = new ConfigurationValidator(appConfig, promptConfig);
 
-            // Run all validations
-            var (isValid, errorMessage) = await validator.ValidateAll();
+            var (isValid, errorMessage) = await validator.ValidateAll(excelPath, worksheetIndex);
 
             if (!isValid)
             {
@@ -561,12 +407,10 @@ namespace AITestAnalyzer
                 return false;
             }
 
-            // All checks passed - show success messages
             WriteSuccess("API key format valid");
             WriteSuccess("Excel file exists and is accessible");
 
-            // Get worksheet name for display
-            var worksheetResult = validator.ValidateWorksheetIndex();
+            var worksheetResult = validator.ValidateWorksheetIndex(excelPath, worksheetIndex);
             if (worksheetResult.IsValid && !string.IsNullOrEmpty(worksheetResult.DetailedInfo))
             {
                 WriteSuccess(worksheetResult.DetailedInfo);
@@ -579,66 +423,41 @@ namespace AITestAnalyzer
         }
 
         // ============================================================
-        // METHOD 2: Display Help Text
+        // Display Help
         // ============================================================
         static void DisplayHelp()
         {
             WriteHeader($"{AppName} v{Version}");
             Console.WriteLine();
             WriteInfo("USAGE:");
-            Console.WriteLine("  dotnet run                    # Interactive mode (prompts for test count)");
-            Console.WriteLine("  dotnet run -- <number>        # Analyze specific number of tests");
-            Console.WriteLine("  dotnet run -- --all           # Analyze all tests without prompting");
+            Console.WriteLine("  dotnet run                    # Launch interactive menu");
             Console.WriteLine("  dotnet run -- --help          # Show this help message");
             Console.WriteLine("  dotnet run -- --version       # Show version information");
+            Console.WriteLine("  dotnet run -- --clear-cache   # Clear all cached results");
+            Console.WriteLine("  dotnet run -- --no-cache      # Disable cache for this run");
+            Console.WriteLine();
+            WriteInfo("The interactive menu lets you:");
+            Console.WriteLine("  - Pick single file or batch mode");
+            Console.WriteLine("  - Select which Excel file to analyze");
+            Console.WriteLine("  - Choose worksheet index");
+            Console.WriteLine("  - Set how many tests to run");
             Console.WriteLine();
             WriteInfo("OPTIONS:");
             Console.WriteLine("  --help, -h                    Show this help message");
             Console.WriteLine("  --version, -v                 Show version information");
-            Console.WriteLine("  --all, -a                     Analyze all tests without prompting");
-            Console.WriteLine("  --no-cache                    Disable cache (force fresh analysis)");
             Console.WriteLine("  --clear-cache                 Clear all cached results");
+            Console.WriteLine("  --no-cache                    Disable cache (force fresh analysis)");
             Console.WriteLine();
-
-            WriteInfo("EXAMPLES:");
-            Console.WriteLine("  dotnet run -- 5               # Analyze first 5 test cases");
-            Console.WriteLine("  dotnet run -- --all           # Analyze all test cases");
-            Console.WriteLine("  dotnet run                    # Interactive: prompts for test count");
-            Console.WriteLine("  dotnet run -- 10 --no-cache   # Analyze 10 tests without cache");
-            Console.WriteLine("  dotnet run -- --clear-cache   # Clear cache and exit");
-            Console.WriteLine();
-
             WriteInfo("CACHE SYSTEM:");
             Console.WriteLine("  - Analysis results are cached to save API costs");
             Console.WriteLine("  - Cache expires after 30 days automatically");
             Console.WriteLine("  - Unchanged tests use cached results (instant + free!)");
             Console.WriteLine("  - Changed tests are automatically re-analyzed");
-            Console.WriteLine("  - Use --no-cache to force fresh analysis");
             Console.WriteLine("  - Use --clear-cache to reset all cached data");
-            Console.WriteLine();
-
-            WriteInfo("CONFIGURATION:");
-            Console.WriteLine("  Edit appsettings.json to configure:");
-            Console.WriteLine("    - OpenAI API key");
-            Console.WriteLine("    - Excel file path");
-            Console.WriteLine("    - Worksheet index");
-            Console.WriteLine();
-
-            WriteInfo("BATCH MODE:");
-            Console.WriteLine("  --batch                       Enable batch processing mode");
-            Console.WriteLine("  --batch --folder=<path>       Process all Excel files in folder");
-            Console.WriteLine("  --batch <path> --limit=<n>    Limit tests per file");
-            Console.WriteLine("  --batch <path> --sheet=<n>    Specify worksheet index");
-            Console.WriteLine("  --batch <path> --no-cache     Disable caching");
-            Console.WriteLine();
-            WriteInfo("BATCH EXAMPLES:");
-            Console.WriteLine("  dotnet run -- --batch --folder=./data");
-            Console.WriteLine("  dotnet run -- --batch ./data --limit=5");
-            Console.WriteLine("  dotnet run -- --batch C:\\TestCases --sheet=1 --no-cache");
         }
 
         // ============================================================
-        // METHOD 3: Display Version
+        // Display Version
         // ============================================================
         static void DisplayVersion()
         {
@@ -648,7 +467,6 @@ namespace AITestAnalyzer
             Console.WriteLine();
             WriteInfo("GitHub: https://github.com/arvindhanqa/ai-test-suite-analyzer");
         }
-
 
         // ============================================================
         // COLOR HELPER METHODS
@@ -691,6 +509,5 @@ namespace AITestAnalyzer
             Console.WriteLine(message);
             Console.ResetColor();
         }
-
     }
 }

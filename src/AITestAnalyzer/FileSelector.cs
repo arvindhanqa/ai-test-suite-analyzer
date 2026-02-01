@@ -1,0 +1,580 @@
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+
+namespace AITestAnalyzer
+{
+    /// <summary>
+    /// Handles all interactive file/folder selection for the analyzer.
+    /// Replaces command-line arguments and hardcoded appsettings paths
+    /// with a menu-driven experience — just hit Play and pick what you want.
+    /// </summary>
+    public class FileSelector
+    {
+        // ============================================================
+        // RESULT CLASS - holds whatever the user selected
+        // ============================================================
+        public class SelectionResult
+        {
+            public enum Mode { Single, Batch, Exit }
+
+            public Mode SelectedMode { get; set; }
+            public string FilePath { get; set; }       // Single mode: path to .xlsx
+            public string FolderPath { get; set; }     // Batch mode: path to folder
+            public int TestLimit { get; set; } = 0;    // 0 = all tests
+            public int SheetIndex { get; set; } = 1;   // Default sheet index
+        }
+
+        // ============================================================
+        // MAIN ENTRY POINT - shows the top-level menu
+        // ============================================================
+        public static SelectionResult ShowMainMenu()
+        {
+            while (true)
+            {
+                Console.Clear();
+                WriteHeader("AI TEST SUITE ANALYZER");
+                Console.WriteLine();
+                Console.WriteLine("  What would you like to do?");
+                Console.WriteLine();
+                WriteMenItem("1", "Analyze a single Excel file");
+                WriteMenItem("2", "Batch analyze all Excel files in a folder");
+                WriteMenItem("3", "Exit");
+                Console.WriteLine();
+                WritePrompt("Enter your choice (1-3): ");
+
+                string choice = Console.ReadLine()?.Trim();
+
+                switch (choice)
+                {
+                    case "1":
+                        return SelectSingleFile();
+                    case "2":
+                        return SelectBatchFolder();
+                    case "3":
+                        return new SelectionResult { SelectedMode = SelectionResult.Mode.Exit };
+                    default:
+                        WriteWarning("Invalid choice. Please enter 1, 2, or 3.");
+                        PauseForUser();
+                        break;
+                }
+            }
+        }
+
+        // ============================================================
+        // SINGLE FILE SELECTION
+        // Scans common locations, lets user pick from a list
+        // ============================================================
+        private static SelectionResult SelectSingleFile()
+        {
+            while (true)
+            {
+                Console.Clear();
+                WriteHeader("SELECT EXCEL FILE");
+                Console.WriteLine();
+
+                // Find all .xlsx files in known locations
+                var files = FindExcelFiles();
+
+                if (files.Count == 0)
+                {
+                    WriteWarning("No .xlsx files found in common locations.");
+                    Console.WriteLine();
+                    Console.WriteLine("  Common locations checked:");
+                    foreach (var loc in GetSearchLocations())
+                        Console.WriteLine($"    - {loc}");
+                    Console.WriteLine();
+                    WriteMenItem("1", "Type a file path manually");
+                    WriteMenItem("B", "Back to main menu");
+                    Console.WriteLine();
+                    WritePrompt("Your choice: ");
+
+                    string input = Console.ReadLine()?.Trim();
+                    if (input?.ToUpper() == "B") return ShowMainMenu();
+                    if (input == "1") return ManualFilePath();
+                    continue;
+                }
+
+                // Show numbered list of files
+                Console.WriteLine("  Available Excel files:");
+                Console.WriteLine();
+                for (int i = 0; i < files.Count; i++)
+                {
+                    string fileName = Path.GetFileName(files[i]);
+                    string folder = GetShortPath(Path.GetDirectoryName(files[i]));
+                    Console.WriteLine($"    [{i + 1}] {fileName}");
+                    Console.WriteLine($"        {folder}");
+                    Console.WriteLine();
+                }
+
+                WriteMenItem("T", "Type a file path manually");
+                WriteMenItem("B", "Back to main menu");
+                Console.WriteLine();
+                WritePrompt($"Select file (1-{files.Count}, T, or B): ");
+
+                string choice = Console.ReadLine()?.Trim();
+
+                // Back
+                if (choice?.ToUpper() == "B") return ShowMainMenu();
+
+                // Type manually
+                if (choice?.ToUpper() == "T") return ManualFilePath();
+
+                // Number selection
+                if (int.TryParse(choice, out int index) && index >= 1 && index <= files.Count)
+                {
+                    string selectedFile = files[index - 1];
+                    return ConfirmAndConfigureSingle(selectedFile);
+                }
+
+                WriteWarning("Invalid selection. Try again.");
+                PauseForUser();
+            }
+        }
+
+        // ============================================================
+        // BATCH FOLDER SELECTION
+        // ============================================================
+        private static SelectionResult SelectBatchFolder()
+        {
+            while (true)
+            {
+                Console.Clear();
+                WriteHeader("SELECT FOLDER FOR BATCH PROCESSING");
+                Console.WriteLine();
+
+                // Find folders that contain .xlsx files
+                var folders = FindExcelFolders();
+
+                if (folders.Count > 0)
+                {
+                    Console.WriteLine("  Folders with Excel files:");
+                    Console.WriteLine();
+                    for (int i = 0; i < folders.Count; i++)
+                    {
+                        int fileCount = Directory.GetFiles(folders[i], "*.xlsx").Length;
+                        string shortPath = GetShortPath(folders[i]);
+                        Console.WriteLine($"    [{i + 1}] {shortPath}  ({fileCount} files)");
+                    }
+                    Console.WriteLine();
+                }
+
+                WriteMenItem("T", "Type a folder path manually");
+                WriteMenItem("B", "Back to main menu");
+                Console.WriteLine();
+
+                string prompt = folders.Count > 0
+                    ? $"Select folder (1-{folders.Count}, T, or B): "
+                    : "Your choice (T or B): ";
+                WritePrompt(prompt);
+
+                string choice = Console.ReadLine()?.Trim();
+
+                if (choice?.ToUpper() == "B") return ShowMainMenu();
+                if (choice?.ToUpper() == "T") return ManualFolderPath();
+
+                if (folders.Count > 0 && int.TryParse(choice, out int index) && index >= 1 && index <= folders.Count)
+                {
+                    return ConfirmAndConfigureBatch(folders[index - 1]);
+                }
+
+                WriteWarning("Invalid selection. Try again.");
+                PauseForUser();
+            }
+        }
+
+        // ============================================================
+        // CONFIRMATION + OPTIONS SCREEN (Single)
+        // Lets user set test limit and sheet before running
+        // ============================================================
+        private static SelectionResult ConfirmAndConfigureSingle(string filePath)
+        {
+            int testCount = CountTestsInFile(filePath);
+            int testLimit = 0;    // 0 = all tests — persists across loop iterations
+            int sheetIndex = 1;   // default sheet — persists across loop iterations
+
+            while (true)
+            {
+                Console.Clear();
+                WriteHeader("CONFIGURE ANALYSIS");
+                Console.WriteLine();
+                Console.WriteLine($"  📄 File: {Path.GetFileName(filePath)}");
+                Console.WriteLine($"      Path: {GetShortPath(Path.GetDirectoryName(filePath))}");
+                Console.WriteLine($"      Tests found: {testCount}");
+                Console.WriteLine();
+
+                // Show current settings so user knows what's actually set
+                Console.WriteLine("  Current settings:");
+                Console.WriteLine($"      Tests to analyze: {(testLimit == 0 ? $"ALL ({testCount})" : testLimit.ToString())}");
+                Console.WriteLine($"      Sheet index:      {sheetIndex}");
+                Console.WriteLine();
+
+                Console.WriteLine("  Options:");
+                Console.WriteLine($"    [1] Analyze ALL {testCount} tests");
+                Console.WriteLine($"    [2] Analyze first N tests");
+                Console.WriteLine($"    [3] Change sheet index");
+                Console.WriteLine($"    [R] Run with current settings");
+                Console.WriteLine($"    [B] Back");
+                Console.WriteLine();
+                WritePrompt("Your choice: ");
+
+                string choice = Console.ReadLine()?.Trim().ToUpper();
+
+                switch (choice)
+                {
+                    case "1":
+                        testLimit = 0; // Reset to all
+                        WriteSuccess("  ✅ Set to analyze all tests.");
+                        PauseForUser();
+                        continue; // Back to config screen to confirm before running
+
+                    case "R":
+                        return new SelectionResult
+                        {
+                            SelectedMode = SelectionResult.Mode.Single,
+                            FilePath = filePath,
+                            TestLimit = testLimit,
+                            SheetIndex = sheetIndex
+                        };
+
+                    case "2":
+                        Console.WriteLine();
+                        WritePrompt($"  How many tests? (1-{testCount}): ");
+                        string limitInput = Console.ReadLine()?.Trim();
+                        if (int.TryParse(limitInput, out int limit) && limit >= 1 && limit <= testCount)
+                        {
+                            testLimit = limit;
+                            WriteSuccess($"  ✅ Will analyze first {limit} tests.");
+                            PauseForUser();
+                        }
+                        else
+                        {
+                            WriteWarning($"  Invalid number. Must be 1-{testCount}.");
+                            PauseForUser();
+                        }
+                        continue; // Back to config screen, testLimit is saved
+
+                    case "3":
+                        Console.WriteLine();
+                        WritePrompt($"  Enter sheet index (current: {sheetIndex}) — 0=Sheet1, 1=Sheet2, etc.: ");
+                        string sheetInput = Console.ReadLine()?.Trim();
+                        if (int.TryParse(sheetInput, out int sheet) && sheet >= 0)
+                        {
+                            sheetIndex = sheet;
+                            WriteSuccess($"  ✅ Sheet index set to {sheet}.");
+                            PauseForUser();
+                        }
+                        else
+                        {
+                            WriteWarning("  Invalid sheet index. Must be 0 or higher.");
+                            PauseForUser();
+                        }
+                        continue; // Back to config screen, sheetIndex is saved
+
+                    case "B":
+                        return ShowMainMenu();
+
+                    default:
+                        WriteWarning("  Invalid choice.");
+                        PauseForUser();
+                        continue;
+                }
+            }
+        }
+
+        // ============================================================
+        // CONFIRMATION + OPTIONS SCREEN (Batch)
+        // ============================================================
+        private static SelectionResult ConfirmAndConfigureBatch(string folderPath)
+        {
+            Console.Clear();
+            WriteHeader("CONFIGURE BATCH PROCESSING");
+            Console.WriteLine();
+
+            var files = Directory.GetFiles(folderPath, "*.xlsx");
+            Console.WriteLine($"  📂 Folder: {GetShortPath(folderPath)}");
+            Console.WriteLine($"      Files found: {files.Length}");
+            Console.WriteLine();
+            Console.WriteLine("  Files to process:");
+            foreach (var f in files)
+                Console.WriteLine($"    • {Path.GetFileName(f)}");
+            Console.WriteLine();
+
+            // Ask for test limit
+            WritePrompt("  Analyze how many tests per file? (Enter for ALL): ");
+            string limitInput = Console.ReadLine()?.Trim();
+            int testLimit = 0;
+            if (!string.IsNullOrEmpty(limitInput) && int.TryParse(limitInput, out int limit) && limit > 0)
+            {
+                testLimit = limit;
+            }
+
+            // Ask for sheet index
+            WritePrompt("  Sheet index (Enter for default=1): ");
+            string sheetInput = Console.ReadLine()?.Trim();
+            int sheetIndex = 1;
+            if (!string.IsNullOrEmpty(sheetInput) && int.TryParse(sheetInput, out int sheet) && sheet >= 0)
+            {
+                sheetIndex = sheet;
+            }
+
+            // Summary before running
+            Console.WriteLine();
+            Console.WriteLine("  ─── Ready to run ───");
+            Console.WriteLine($"    📂 Folder:      {GetShortPath(folderPath)}");
+            Console.WriteLine($"    📄 Files:       {files.Length}");
+            Console.WriteLine($"    🔢 Tests/file:  {(testLimit == 0 ? "ALL" : testLimit.ToString())}");
+            Console.WriteLine($"    📋 Sheet index: {sheetIndex}");
+            Console.WriteLine();
+            WritePrompt("  Press Enter to start, or B to go back: ");
+
+            string confirm = Console.ReadLine()?.Trim().ToUpper();
+            if (confirm == "B") return ShowMainMenu();
+
+            return new SelectionResult
+            {
+                SelectedMode = SelectionResult.Mode.Batch,
+                FolderPath = folderPath,
+                TestLimit = testLimit,
+                SheetIndex = sheetIndex
+            };
+        }
+
+        // ============================================================
+        // MANUAL PATH INPUT (File)
+        // ============================================================
+        private static SelectionResult ManualFilePath()
+        {
+            Console.WriteLine();
+            WritePrompt("  Type the full path to your .xlsx file: ");
+            string path = Console.ReadLine()?.Trim();
+
+            if (string.IsNullOrEmpty(path))
+            {
+                WriteWarning("  No path entered.");
+                PauseForUser();
+                return ShowMainMenu();
+            }
+
+            // Strip quotes if user copy-pasted with them
+            path = path.Trim('"').Trim('\'');
+
+            if (!File.Exists(path))
+            {
+                WriteWarning($"  File not found: {path}");
+                PauseForUser();
+                return ShowMainMenu();
+            }
+
+            if (!path.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+            {
+                WriteWarning("  File must be an .xlsx file.");
+                PauseForUser();
+                return ShowMainMenu();
+            }
+
+            return ConfirmAndConfigureSingle(path);
+        }
+
+        // ============================================================
+        // MANUAL PATH INPUT (Folder)
+        // ============================================================
+        private static SelectionResult ManualFolderPath()
+        {
+            Console.WriteLine();
+            WritePrompt("  Type the full path to your folder: ");
+            string path = Console.ReadLine()?.Trim();
+
+            if (string.IsNullOrEmpty(path))
+            {
+                WriteWarning("  No path entered.");
+                PauseForUser();
+                return ShowMainMenu();
+            }
+
+            path = path.Trim('"').Trim('\'');
+
+            if (!Directory.Exists(path))
+            {
+                WriteWarning($"  Folder not found: {path}");
+                PauseForUser();
+                return ShowMainMenu();
+            }
+
+            var xlsxFiles = Directory.GetFiles(path, "*.xlsx");
+            if (xlsxFiles.Length == 0)
+            {
+                WriteWarning("  No .xlsx files found in that folder.");
+                PauseForUser();
+                return ShowMainMenu();
+            }
+
+            return ConfirmAndConfigureBatch(path);
+        }
+
+        // ============================================================
+        // HELPER: Find .xlsx files in common project locations
+        // ============================================================
+        private static List<string> FindExcelFiles()
+        {
+            var files = new List<string>();
+            foreach (var location in GetSearchLocations())
+            {
+                if (Directory.Exists(location))
+                {
+                    files.AddRange(
+                        Directory.GetFiles(location, "*.xlsx", SearchOption.TopDirectoryOnly)
+                    );
+                }
+            }
+            return files.Distinct().ToList();
+        }
+
+        // ============================================================
+        // HELPER: Find folders that contain .xlsx files
+        // ============================================================
+        private static List<string> FindExcelFolders()
+        {
+            var folders = new List<string>();
+            foreach (var location in GetSearchLocations())
+            {
+                if (Directory.Exists(location))
+                {
+                    var xlsxFiles = Directory.GetFiles(location, "*.xlsx", SearchOption.TopDirectoryOnly);
+                    if (xlsxFiles.Length > 0 && !folders.Contains(location))
+                    {
+                        folders.Add(location);
+                    }
+                }
+            }
+            return folders;
+        }
+
+        // ============================================================
+        // HELPER: Locations to scan for .xlsx files
+        // These cover typical project layouts — adjust if needed
+        // ============================================================
+        private static List<string> GetSearchLocations()
+        {
+            var locations = new List<string>();
+
+            // Relative to where the app runs (bin/Debug or bin/Release)
+            // Go up to project root, then into data/
+            string appDir = Directory.GetCurrentDirectory();
+
+            locations.Add(Path.Combine(appDir, "data"));                          // ./data/
+            locations.Add(Path.Combine(appDir, "..", "data"));                    // ../data/
+            locations.Add(Path.Combine(appDir, "..", "..", "data"));              // ../../data/
+            locations.Add(Path.Combine(appDir, "..", "..", "..", "data"));        // ../../../data/ (bin/Debug/net10.0)
+            locations.Add(appDir);                                                 // current dir itself
+            locations.Add(Path.Combine(appDir, ".."));                            // parent dir
+
+            // Also check the known project path directly
+            string knownDataPath = @"C:\Projects\ai-test-analyzer\ai-test-suite-analyzer\data";
+            if (Directory.Exists(knownDataPath))
+                locations.Add(knownDataPath);
+
+            // Normalize all paths
+            return locations.Select(l => Path.GetFullPath(l)).Distinct().ToList();
+        }
+
+        // ============================================================
+        // HELPER: Count test rows in an Excel file (without EPPlus dependency here)
+        // Returns -1 if it can't read the file
+        // ============================================================
+        private static int CountTestsInFile(string filePath)
+        {
+            try
+            {
+                using (var package = new OfficeOpenXml.ExcelPackage(new System.IO.FileInfo(filePath)))
+                {
+                    // Try sheet index 1 first (Sheet2), fall back to 0 (Sheet1)
+                    var worksheet = package.Workbook.Worksheets.Count > 1
+                        ? package.Workbook.Worksheets[1]
+                        : package.Workbook.Worksheets[0];
+
+                    // Count rows that have a Test ID in column 1 (skip header)
+                    int count = 0;
+                    for (int row = 2; row <= worksheet.Dimension.End.Row; row++)
+                    {
+                        var cellValue = worksheet.Cells[row, 1].Value?.ToString();
+                        if (!string.IsNullOrWhiteSpace(cellValue))
+                            count++;
+                    }
+                    return count;
+                }
+            }
+            catch
+            {
+                return -1; // Couldn't read file
+            }
+        }
+
+        // ============================================================
+        // HELPER: Shorten long paths for display
+        // ============================================================
+        private static string GetShortPath(string fullPath)
+        {
+            if (string.IsNullOrEmpty(fullPath)) return "";
+
+            // If path is short enough, show it all
+            if (fullPath.Length <= 60) return fullPath;
+
+            // Otherwise show first part ... last part
+            string root = Path.GetPathRoot(fullPath);     // e.g., "C:\"
+            string end = fullPath.Substring(fullPath.Length - 40);
+            return root + "..." + end;
+        }
+
+        // ============================================================
+        // CONSOLE FORMATTING HELPERS (matches project style)
+        // ============================================================
+        private static void WriteHeader(string text)
+        {
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine($"  ╔══════════════════════════════════════════╗");
+            Console.WriteLine($"  ║  {text.PadRight(42)}║");
+            Console.WriteLine($"  ╚══════════════════════════════════════════╝");
+            Console.ResetColor();
+        }
+
+        private static void WriteMenItem(string key, string description)
+        {
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.Write($"    [{key}] ");
+            Console.ResetColor();
+            Console.WriteLine(description);
+        }
+
+        private static void WritePrompt(string text)
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.Write(text);
+            Console.ResetColor();
+        }
+
+        private static void WriteSuccess(string text)
+        {
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine(text);
+            Console.ResetColor();
+        }
+
+        private static void WriteWarning(string text)
+        {
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.WriteLine(text);
+            Console.ResetColor();
+        }
+
+        private static void PauseForUser()
+        {
+            Console.WriteLine();
+            Console.ForegroundColor = ConsoleColor.DarkGray;
+            Console.Write("  Press any key to continue...");
+            Console.ResetColor();
+            Console.ReadKey();
+        }
+    }
+}

@@ -37,7 +37,8 @@ namespace AITestAnalyzer
         }
 
         // Master validation method - runs all checks
-        public async Task<(bool IsValid, string ErrorMessage)> ValidateAll()
+        // excelPath and worksheetIndex come from FileSelector, not from config
+        public async Task<(bool IsValid, string ErrorMessage)> ValidateAll(string excelPath, int worksheetIndex)
         {
             // 1. Validate API Key
             var apiKeyResult = ValidateApiKey();
@@ -46,21 +47,14 @@ namespace AITestAnalyzer
                 return (false, apiKeyResult.ErrorMessage);
             }
 
-            // 2. Validate Excel File
-            var excelResult = ValidateExcelFile();
-            if (!excelResult.IsValid)
-            {
-                return (false, excelResult.ErrorMessage);
-            }
-
-            // 3. Validate Worksheet Index
-            var worksheetResult = ValidateWorksheetIndex();
+            // 2. Validate Worksheet Index against the file FileSelector picked
+            var worksheetResult = ValidateWorksheetIndex(excelPath, worksheetIndex);
             if (!worksheetResult.IsValid)
             {
                 return (false, worksheetResult.ErrorMessage);
             }
 
-            // 4. Validate OpenAI Connection (optional but recommended)
+            // 3. Validate OpenAI Connection (optional but recommended)
             var connectionResult = await ValidateOpenAIConnection();
             if (!connectionResult.IsValid)
             {
@@ -99,65 +93,31 @@ namespace AITestAnalyzer
             return ValidationResult.Success("API key format valid");
         }
 
-        // Validate Excel file exists and is accessible
-        public ValidationResult ValidateExcelFile()
-        {
-            if (string.IsNullOrWhiteSpace(_config.ExcelPath))
-            {
-                return ValidationResult.Failure("Excel file path is not configured in appsettings.json");
-            }
+        // ValidateExcelFile() REMOVED — FileSelector already confirms the file
+        // exists and is selectable before this code ever runs.
 
-            if (!File.Exists(_config.ExcelPath))
-            {
-                return ValidationResult.Failure($"Excel file not found at: {_config.ExcelPath}\n" +
-                    $"   Please verify the path in appsettings.json or create the file");
-            }
-
-            // Try to open the file to ensure it's accessible
-            try
-            {
-                using (var package = new ExcelPackage(new FileInfo(_config.ExcelPath)))
-                {
-                    if (package.Workbook.Worksheets.Count == 0)
-                    {
-                        return ValidationResult.Failure($"Excel file has no worksheets: {_config.ExcelPath}");
-                    }
-                }
-            }
-            catch (IOException ex)
-            {
-                return ValidationResult.Failure($"Excel file is locked or cannot be accessed: {ex.Message}\n" +
-                    $"   Please close the file in Excel and try again");
-            }
-            catch (Exception ex)
-            {
-                return ValidationResult.Failure($"Excel file is corrupted or invalid: {ex.Message}");
-            }
-
-            return ValidationResult.Success($"Excel file exists and is accessible");
-        }
-
-        // Validate worksheet index
-        public ValidationResult ValidateWorksheetIndex()
+        // Validate worksheet index against the actual file
+        // excelPath and worksheetIndex are passed in from FileSelector's selection
+        public ValidationResult ValidateWorksheetIndex(string excelPath, int worksheetIndex)
         {
             try
             {
-                using (var package = new ExcelPackage(new FileInfo(_config.ExcelPath)))
+                using (var package = new ExcelPackage(new FileInfo(excelPath)))
                 {
                     int worksheetCount = package.Workbook.Worksheets.Count;
 
-                    if (_config.WorksheetIndex < 0)
+                    if (worksheetIndex < 0)
                     {
-                        return ValidationResult.Failure($"Worksheet index cannot be negative (configured: {_config.WorksheetIndex})");
+                        return ValidationResult.Failure($"Worksheet index cannot be negative (selected: {worksheetIndex})");
                     }
 
-                    if (_config.WorksheetIndex >= worksheetCount)
+                    if (worksheetIndex >= worksheetCount)
                     {
-                        return ValidationResult.Failure($"Worksheet index {_config.WorksheetIndex} is out of range.\n" +
-                            $"   Excel file has {worksheetCount} worksheet(s) (valid indexes: 0-{worksheetCount - 1})");
+                        return ValidationResult.Failure($"Worksheet index {worksheetIndex} is out of range.\n" +
+                            $"   '{Path.GetFileName(excelPath)}' has {worksheetCount} worksheet(s) (valid indexes: 0-{worksheetCount - 1})");
                     }
 
-                    var worksheet = package.Workbook.Worksheets[_config.WorksheetIndex];
+                    var worksheet = package.Workbook.Worksheets[worksheetIndex];
                     string worksheetName = worksheet.Name;
 
                     return ValidationResult.Success($"Worksheet index valid (Sheet: '{worksheetName}')");
@@ -211,14 +171,15 @@ namespace AITestAnalyzer
         }
 
         // Get detailed configuration info for troubleshooting
-        public string GetConfigurationSummary()
+        // excelPath and worksheetIndex passed in since they come from FileSelector now
+        public string GetConfigurationSummary(string excelPath, int worksheetIndex)
         {
             return $"Configuration Summary:\n" +
                    $"  Model: {_promptConfig.Model}\n" +
                    $"  Max Tokens: {_promptConfig.MaxTokens}\n" +
                    $"  Temperature: {_promptConfig.Temperature}\n" +
-                   $"  Excel Path: {_config.ExcelPath}\n" +
-                   $"  Worksheet Index: {_config.WorksheetIndex}\n" +
+                   $"  Excel File: {Path.GetFileName(excelPath)}\n" +
+                   $"  Worksheet Index: {worksheetIndex}\n" +
                    $"  API Key: {(_config.ApiKey?.Length > 10 ? _config.ApiKey.Substring(0, 7) + "..." : "Not set")}";
         }
     }
