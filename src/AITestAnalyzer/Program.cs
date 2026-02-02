@@ -275,7 +275,7 @@ namespace AITestAnalyzer
         // ============================================================
         static async Task RunBatchMode(Configuration appConfig, PromptConfig promptConfig, SelectionResult selection)
         {
-            string folderPath = selection.FilePath;
+            string folderPath = selection.FolderPath;
             int worksheetIndex = selection.SheetIndex;
             int testLimit = selection.TestLimit;
             bool useCache = true;
