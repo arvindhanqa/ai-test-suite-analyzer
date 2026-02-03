@@ -86,7 +86,22 @@ namespace AITestAnalyzer
             return (true, "All validations passed");
         }
 
-        // Validate API Key format
+        /// <summary>
+        /// Validates OpenAI API key format and configuration
+        /// </summary>
+        /// <returns>
+        /// ValidationResult with IsValid=true if key passes all checks, IsValid=false with error message if any check fails
+        /// </returns>
+        /// <remarks>
+        /// VALIDATION CHECKS:
+        /// 1. Key exists and not empty
+        /// 2. Not placeholder value ("YOUR-ACTUAL-API-KEY-HERE")
+        /// 3. Starts with "sk-" (OpenAI secret key prefix)
+        /// 4. Minimum length 40 characters (typical OpenAI key length: 48-51)
+        /// 
+        /// Does NOT validate key authenticity (doesn't call API).
+        /// Use ValidateOpenAIConnection() to test actual API access.
+        /// </remarks>
         public ValidationResult ValidateApiKey()
         {
             if (string.IsNullOrWhiteSpace(_config.ApiKey))
@@ -115,11 +130,29 @@ namespace AITestAnalyzer
             return ValidationResult.Success("API key format valid");
         }
 
-        // ValidateExcelFile() REMOVED — FileSelector already confirms the file
-        // exists and is selectable before this code ever runs.
-
-        // Validate worksheet index against the actual file
-        // excelPath and worksheetIndex are passed in from FileSelector's selection
+        /// <summary>
+        /// Validates that the specified worksheet index exists in the Excel file
+        /// </summary>
+        /// <param name="excelPath">Path to Excel file selected by user via FileSelector</param>
+        /// <param name="worksheetIndex">Zero-based worksheet index to validate (0=Sheet1, 1=Sheet2, etc.)</param>
+        /// <returns>
+        /// ValidationResult containing:
+        /// - IsValid=true with sheet name in DetailedInfo if index is valid
+        /// - IsValid=false with error message if index is negative or exceeds worksheet count
+        /// </returns>
+        /// <remarks>
+        /// VALIDATION CHECKS:
+        /// - Opens Excel file using EPPlus
+        /// - Checks if worksheetIndex is negative (invalid)
+        /// - Checks if worksheetIndex >= total worksheet count (out of range)
+        /// - Returns worksheet name if valid (e.g., "Sheet: 'Sheet2'")
+        /// 
+        /// EXAMPLE ERROR MESSAGES:
+        /// - worksheetIndex=-1 → "Worksheet index cannot be negative (selected: -1)"
+        /// - worksheetIndex=5, file has 2 sheets → "Worksheet index 5 is out of range. 'test.xlsx' has 2 worksheet(s) (valid indexes: 0-1)"
+        /// 
+        /// Called during startup validation before any test processing begins.
+        /// </remarks>
         public ValidationResult ValidateWorksheetIndex(string excelPath, int worksheetIndex)
         {
             try

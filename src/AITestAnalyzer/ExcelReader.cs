@@ -16,9 +16,25 @@ namespace AITestAnalyzer
             _worksheetIndex = worksheetIndex;
         }
 
-        // ============================================================
-        // METHOD: Count Total Test Rows in Excel
-        // ============================================================
+        /// <summary>
+        /// Counts the number of test case rows in the Excel worksheet
+        /// </summary>
+        /// <returns>
+        /// Number of test cases found (rows with non-empty Test ID in column 1).
+        /// Returns 0 if no tests found or if an error occurs during counting.
+        /// </returns>
+        /// <remarks>
+        /// BEHAVIOR:
+        /// - Starts counting from row 2 (row 1 is header)
+        /// - Continues until finding empty Test ID in column 1
+        /// - Stops at first empty row (doesn't scan entire sheet)
+        /// - Returns 0 on error (logs error message to console)
+        /// 
+        /// EXAMPLE:
+        /// - Rows 1-57: Test ID present → returns 56
+        /// - Rows 1-2 only (header + 1 test) → returns 1
+        /// - Empty sheet or header only → returns 0
+        /// </remarks>
         public int CountTestRows()
         {
             try
@@ -47,10 +63,30 @@ namespace AITestAnalyzer
             }
         }
 
-        // ============================================================
-        // METHOD 2: Read Test Case from Excel
-        // ============================================================
-        // Read a single test case from specified row
+        /// <summary>
+        /// Reads a single test case from specified Excel row
+        /// </summary>
+        /// <param name="rowNumber">Excel row number to read (1-based indexing). Row 1 is header, row 2 is first test case. Example: rowNumber=2 reads first data row.</param>
+        /// <returns>
+        /// TestCase object populated with data from the specified row.
+        /// Returns null if row is empty (no Test ID), beyond last row, or if error occurs during reading.
+        /// </returns>
+        /// <remarks>
+        /// BEHAVIOR:
+        /// - Checks for null or empty values in each Excel cell
+        /// - Assigns default values if data missing (e.g., "Not Specified" for empty Feature)
+        /// - Returns null if Test ID cell is empty (indicates empty row)
+        /// - Handles exceptions gracefully and logs errors to console
+        /// 
+        /// COLUMN MAPPING:
+        /// - Column 1: Test ID (required - null if empty)
+        /// - Column 2: Feature (default: "Not Specified")
+        /// - Column 3: Scenario (default: "Not Specified")
+        /// - Column 4: Priority (default: "Medium")
+        /// - Column 5: Steps (default: "Not Specified")
+        /// - Column 6: Expected Result (default: "Not Specified")
+        /// - Column 7: Status (default: "Not Run")
+        /// </remarks>
         public TestCase ReadTestCase(int rowNumber)
         {
             try

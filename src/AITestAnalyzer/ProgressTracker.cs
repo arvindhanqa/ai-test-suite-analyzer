@@ -13,6 +13,23 @@ namespace AITestAnalyzer
             _startTime = startTime;
         }
 
+        /// <summary>
+        /// Displays real-time progress bar with percentage, test count, and estimated time remaining
+        /// </summary>
+        /// <param name="processedCount">Number of tests analyzed so far (used to calculate percentage and ETA)</param>
+        /// <param name="currentTestId">Test ID currently being processed (e.g., "TC-038"). Displayed in progress bar for user visibility.</param>
+        /// <remarks>
+        /// BEHAVIOR:
+        /// - Updates single line using \r carriage return (overwrites previous progress)
+        /// - Calculates percentage: (processedCount * 100.0) / totalTests
+        /// - Estimates time remaining: (totalTests - processedCount) * avgTimePerTest
+        /// - Formats time: "Xm Ys" if ≥1 minute, else "Xs"
+        /// - Visual progress bar: [=====>.......] (20 chars wide, filled vs empty)
+        /// 
+        /// EXAMPLE:
+        /// - processedCount=38, totalTests=56, currentTestId="TC-038"
+        /// - Output: "[============>.......] 67.9% | 38/56 | TC-038 | ETA: 35s"
+        /// </remarks>
         public void DisplayProgress(int processedCount, string currentTestId)
         {
             // Calculate progress

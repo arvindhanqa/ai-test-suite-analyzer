@@ -115,9 +115,23 @@ namespace AITestAnalyzer
             }
         }
 
-        // ============================================================
-        // METHOD 5: Write Analysis to Excel with Color Coding
-        // ============================================================
+        /// <summary>
+        /// Writes AI analysis feedback to Excel file with color-coded formatting
+        /// </summary>
+        /// <param name="rowNumber">Excel row number to write to (1-based indexing, same as ReadTestCase). Row 1 is header, row 2 is first test.</param>
+        /// <param name="analysis">AI-generated feedback string. Expected formats: "GOOD" (green), "Issue: [description]" (orange), or "ERROR: [message]" (red)</param>
+        /// <remarks>
+        /// BEHAVIOR:
+        /// - Writes to column 8 (AI Analysis column)
+        /// - Applies color coding based on analysis content:
+        ///   * "GOOD" → Green text
+        ///   * Starts with "Issue:" → Orange text
+        ///   * Starts with "ERROR:" → Red text
+        /// - Enables text wrapping for long feedback
+        /// - Adds thin border around cell
+        /// - Sets column width to 50 characters
+        /// - Handles exceptions gracefully (logs warning, continues processing)
+        /// </remarks>
         public void WriteAnalysis(int rowNumber, string analysis)
         {
             try
@@ -163,9 +177,32 @@ namespace AITestAnalyzer
         }
 
 
-        // ============================================================
-        // METHOD 6: Create Quality Issues Summary Sheet
-        // ============================================================
+        /// <summary>
+        /// Creates the "Quality Issues Summary" sheet containing only test cases that need improvement
+        /// </summary>
+        /// <param name="results">
+        /// List of analysis results (one tuple per test analyzed):
+        /// - TestId: Test case identifier
+        /// - Result: AI analysis feedback ("GOOD" or "Issue: ...")
+        /// - Tokens: OpenAI API tokens used (not used in this sheet)
+        /// </param>
+        /// <remarks>
+        /// SHEET STRUCTURE:
+        /// - Deletes existing "Quality Issues Summary" sheet if present
+        /// - Creates new sheet with 3 columns: Test ID, Issue Found, Status
+        /// - Only includes tests where Result != "GOOD" and doesn't start with "ERROR:"
+        /// - Adds summary row at bottom with total issue count
+        /// 
+        /// FORMATTING:
+        /// - Light blue header with bold text
+        /// - Freeze panes (header row stays visible when scrolling)
+        /// - Auto-filter enabled on all columns
+        /// - Column widths: Test ID=15, Issue Found=60, Status=15
+        /// - Orange text color for Test ID column (visual warning)
+        /// 
+        /// EXAMPLE OUTPUT:
+        /// - 56 tests analyzed, 52 have issues → sheet contains 52 rows + header + summary = 54 rows total
+        /// </remarks>
         public void CreateQualityIssuesSheet(List<(string TestId, string Result, int Tokens)> results)
         {
             try
