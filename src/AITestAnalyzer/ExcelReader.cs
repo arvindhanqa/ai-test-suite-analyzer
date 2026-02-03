@@ -99,7 +99,26 @@ namespace AITestAnalyzer
             }
         }
 
-        // Validate Excel file structure
+        /// <summary>
+        /// Validates that the Excel file has correct structure for test case analysis
+        /// </summary>
+        /// <returns>
+        /// Tuple containing:
+        /// - isValid: true if file structure is valid, false otherwise
+        /// - errorMessage: descriptive error message if invalid, "Excel structure is valid" if valid
+        /// </returns>
+        /// <remarks>
+        /// Validation checks performed:
+        /// - File has at least one worksheet
+        /// - Worksheet has data (not empty)
+        /// - Minimum 5 columns present (Test ID, Feature, Scenario, Steps, Expected Result)
+        /// - Header row exists (row 1)
+        /// - At least one data row exists (row 2+)
+        /// 
+        /// This method does NOT validate test case content, only file structure.
+        /// Call before processing to fail fast on malformed files.
+        /// </remarks>
+        /// <exception cref="IOException">Thrown if file is locked by another program</exception>
         public (bool isValid, string errorMessage) ValidateExcelStructure()
         {
             try

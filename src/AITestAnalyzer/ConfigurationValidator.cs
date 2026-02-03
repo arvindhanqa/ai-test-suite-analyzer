@@ -38,6 +38,28 @@ namespace AITestAnalyzer
 
         // Master validation method - runs all checks
         // excelPath and worksheetIndex come from FileSelector, not from config
+        /// <summary>
+        /// Validates all configuration requirements before starting test analysis
+        /// </summary>
+        /// <param name="excelPath">Path to Excel file selected by user via FileSelector</param>
+        /// <param name="worksheetIndex">Zero-based worksheet index to read from (0=Sheet1, 1=Sheet2, etc.)</param>
+        /// <returns>
+        /// Tuple containing:
+        /// - IsValid: true if all validations pass, false if any validation fails
+        /// - ErrorMessage: Descriptive error message if IsValid=false, "All validations passed" if IsValid=true
+        /// </returns>
+        /// <remarks>
+        /// Performs three validation checks in order:
+        /// 1. API key format validation (starts with "sk-", minimum length)
+        /// 2. Worksheet index validation (exists in selected Excel file)
+        /// 3. OpenAI API connection test (makes test API request to verify key works)
+        /// 
+        /// This is the first validation step in the application lifecycle, called before
+        /// any test processing begins. Designed to fail fast with clear error messages.
+        /// 
+        /// NOTE: This method never throws exceptions. All validation failures are caught
+        /// internally and returned as (false, errorMessage) tuples for graceful error handling.
+        /// </remarks>
         public async Task<(bool IsValid, string ErrorMessage)> ValidateAll(string excelPath, int worksheetIndex)
         {
             // 1. Validate API Key

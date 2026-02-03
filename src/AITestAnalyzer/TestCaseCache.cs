@@ -72,7 +72,36 @@ namespace AITestAnalyzer
             File.WriteAllText(_cacheFilePath, json);
         }
 
-        // Generate hash from test case content
+
+        /// <summary>
+        /// Generates a content-based hash for cache deduplication and change detection
+        /// </summary>
+        /// <param name="testCase">Test case to hash. Only Feature, Scenario, Steps, and ExpectedResult fields are used (TestId and Priority are ignored)</param>
+        /// <returns>
+        /// 16-character SHA256 hash string used as cache key.
+        /// Same test content always produces same hash (deterministic).
+        /// Different content always produces different hash.
+        /// </returns>
+        /// <remarks>
+        /// Uses SHA256 hashing algorithm on concatenated test case fields.
+        /// 
+        /// HASH FORMAT: "{Feature}|{Scenario}|{Steps}|{ExpectedResult}"
+        /// Example: "User Auth|Valid login|1. Enter user...|User logged in" → hash: "a3f5b2c8d1e9f7a4"
+        /// 
+        /// WHY CONTENT-BASED (not ID-based):
+        /// - TestId can differ across files (TC-001 vs TEST-001) for identical tests
+        /// - Priority can change without affecting test quality
+        /// - Only actual test content matters for determining cache validity
+        /// 
+        /// CROSS-FILE DEDUPLICATION:
+        /// If File1 and File2 both contain "Login with valid credentials" test with
+        /// identical steps, they generate the same hash → second file uses cached result
+        /// (instant analysis + $0.00 API cost).
+        /// 
+        /// CHANGE DETECTION:
+        /// Any modification to Feature, Scenario, Steps, or ExpectedResult generates
+        /// new hash → automatic re-analysis with fresh AI feedback.
+        /// </remarks>
         public string GenerateHash(TestCase testCase)
         {
             // Combine all relevant fields that define the test
@@ -90,7 +119,20 @@ namespace AITestAnalyzer
             }
         }
 
-        // Check if test is in cache (with expiry check)
+        /// <summary>
+        /// Attempts to retrieve a cached analysis result for the given test case hash
+        /// </summary>
+        /// <param name="hash">Content hash generated from test case fields (Feature, Scenario, Steps, ExpectedResult)</param>
+        /// <param name="cachedResult">Output parameter containing cached result if found, null otherwise</param>
+        /// <param name="maxAgeDays">Maximum age in days before cache entry expires (default: 30 days)</param>
+        /// <returns>
+        /// True if valid cached result found, false if not found or expired.
+        /// When returning false, cachedResult is set to null.
+        /// </returns>
+        /// <remarks>
+        /// Automatically removes expired cache entries when detected.
+        /// Cache expiry ensures analysis stays current with evolving test quality standards.
+        /// </remarks>
         public bool TryGetCached(string hash, out CachedResult cachedResult, int maxAgeDays = DEFAULT_MAX_AGE_DAYS)
         {
             if (_cache.TryGetValue(hash, out cachedResult))

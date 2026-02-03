@@ -221,6 +221,33 @@ namespace AITestAnalyzer
         // ============================================================
         // METHOD 3: Process all files in a folder (BATCH MODE)
         // ============================================================
+        /// <summary>
+        /// Processes all Excel test files in a folder and generates individual analysis reports with aggregate statistics
+        /// </summary>
+        /// <param name="folderPath">Path to folder containing Excel test files (.xlsx format)</param>
+        /// <param name="testLimitPerFile">Number of tests to analyze per file (null = analyze all tests in each file)</param>
+        /// <param name="worksheetIndex">Zero-based worksheet index to read from (0=Sheet1, 1=Sheet2, etc.)</param>
+        /// <param name="useCache">If true, uses cached results for unchanged tests to save API costs. If false, forces re-analysis of all tests</param>
+        /// <returns>
+        /// List of FileResult objects, one per processed Excel file.
+        /// Each FileResult contains: FileName, OutputPath, TotalTests, TotalTokens, TotalCost, TimeTaken, CacheHits, ApiCalls, QualityScore.
+        /// Returns empty list if no Excel files found in folder.
+        /// </returns>
+        /// <remarks>
+        /// PERFORMANCE: Files are processed sequentially (not parallel) to avoid OpenAI rate limits.
+        /// Each file gets 2-second pause before next file starts.
+        /// 
+        /// CACHING: Uses shared cache across all files. If File1 has TC-001 and File2 also has TC-001
+        /// with same content, the second one is instant + free (cache hit).
+        /// 
+        /// OUTPUT: Each input file gets separate timestamped output file in ./output/ folder.
+        /// Original input files are NEVER modified. Format: {originalname}_analysis_{timestamp}.xlsx
+        /// 
+        /// FAILURE HANDLING: If one file fails validation, it's skipped and processing continues
+        /// with remaining files. Batch summary shows which files succeeded/failed.
+        /// </remarks>
+        /// <exception cref="DirectoryNotFoundException">Thrown when folderPath doesn't exist</exception>
+        /// <exception cref="UnauthorizedAccessException">Thrown when folder access is denied (permissions issue)</exception>
         public async Task<List<FileResult>> ProcessBatchAsync(
             string folderPath,
             int? testLimitPerFile = null,

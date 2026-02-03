@@ -30,7 +30,21 @@ namespace AITestAnalyzer
             });
         }
 
-        // Analyze test case with AI (with retry logic)
+        /// <summary>
+        /// Analyzes a test case using OpenAI GPT-4o-mini and returns quality feedback with token usage
+        /// </summary>
+        /// <param name="testCase">Test case to analyze (must have Feature, Scenario, Steps, ExpectedResult populated)</param>
+        /// <returns>
+        /// Tuple containing:
+        /// - result: AI analysis feedback ("GOOD" or "Issue: [specific problem]")
+        /// - tokens: Number of tokens used (0 if error occurred)
+        /// </returns>
+        /// <remarks>
+        /// Implements automatic retry logic with exponential backoff (1s, 2s, 4s delays).
+        /// Uses GPT-4o-mini model at temperature 0.2 for consistent results.
+        /// Skips Priority, Status, and TestId fields to minimize token usage (84% reduction vs verbose mode).
+        /// </remarks>
+        /// <exception cref="Exception">Returns error message in result string after 3 failed retry attempts</exception>
         public async Task<(string result, int tokens)> AnalyzeTestCase(TestCase testCase)
         {
             int maxRetries = 3;

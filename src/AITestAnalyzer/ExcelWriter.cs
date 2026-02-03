@@ -246,9 +246,44 @@ namespace AITestAnalyzer
         }
 
 
-        // ============================================================
-        // METHOD 7: Create Statistics Dashboard Sheet
-        // ============================================================
+        /// <summary>
+        /// Creates the "Statistics Dashboard" sheet with executive-level test suite quality metrics and recommendations
+        /// </summary>
+        /// <param name="results">
+        /// List of analysis results (one tuple per test analyzed):
+        /// - TestId: Test case identifier
+        /// - Result: AI analysis feedback ("GOOD" or "Issue: ...")
+        /// - Tokens: OpenAI API tokens used for this test (0 if cached)
+        /// </param>
+        /// <param name="startTime">Analysis start time (used to calculate total duration)</param>
+        /// <param name="endTime">Analysis end time (used to calculate total duration)</param>
+        /// <remarks>
+        /// Creates a new "Statistics Dashboard" sheet (deletes existing if present).
+        /// 
+        /// SECTIONS CREATED:
+        /// 1. QUALITY OVERVIEW - Overall quality score with color coding
+        /// 2. TEST BREAKDOWN - Table showing good tests, issues, errors (counts + percentages)
+        /// 3. COST & PERFORMANCE METRICS - Total tokens, cost breakdown, time taken, averages
+        /// 4. RECOMMENDATIONS - Dynamic advice based on quality score threshold
+        /// 
+        /// QUALITY SCORE COLOR CODING:
+        /// - Green: >= 80% → "Excellent - maintain quality standards"
+        /// - Yellow: >= 50% → "Moderate - address issues in Quality Issues Summary sheet"  
+        /// - Red: < 50% → "Critical - less than half of tests meet standards"
+        /// 
+        /// BUDGET PROJECTIONS:
+        /// Calculates:
+        /// - "Tests you can analyze with $10" (based on current avg cost/test)
+        /// - "Cost to analyze 500 tests" (realistic scaling estimate)
+        /// Helps users understand ongoing API costs for regular use.
+        /// 
+        /// PROFESSIONAL FORMATTING:
+        /// - Merged cells for section headers (visual hierarchy)
+        /// - Bold fonts and color coding for emphasis
+        /// - Auto-sized columns for readability (15-50 char range)
+        /// - Freeze panes (keeps title visible when scrolling)
+        /// - Medium borders around entire used range
+        /// </remarks>
         public void CreateStatisticsDashboard(List<(string TestId, string Result, int Tokens)> results, DateTime startTime, DateTime endTime)
         {
             try

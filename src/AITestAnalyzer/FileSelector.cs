@@ -26,9 +26,35 @@ namespace AITestAnalyzer
             public int SheetIndex { get; set; } = 1;   // Default sheet index
         }
 
-        // ============================================================
-        // MAIN ENTRY POINT - shows the top-level menu
-        // ============================================================
+
+        /// <summary>
+        /// Displays the interactive main menu to select analysis mode and configure options.
+        /// Replaces command-line arguments with guided user interface.
+        /// </summary>
+        /// <returns>
+        /// SelectionResult containing:
+        /// - SelectedMode: Single (analyze one file), Batch (analyze folder), or Exit
+        /// - FilePath: Set for Single mode only
+        /// - FolderPath: Set for Batch mode only  
+        /// - TestLimit: 0 for all tests, or user-specified number
+        /// - SheetIndex: Excel worksheet index to analyze
+        /// </returns>
+        /// <remarks>
+        /// MENU OPTIONS:
+        /// [1] Analyze single file → calls SelectSingleFile()
+        /// [2] Batch analyze folder → calls SelectBatchFolder()
+        /// [3] Exit → returns SelectedMode.Exit
+        /// 
+        /// BEHAVIOR:
+        /// - Loops until valid choice entered (1, 2, or 3)
+        /// - Invalid input shows warning and re-displays menu  
+        /// - Clears screen each iteration for clean UX
+        /// 
+        /// DESIGN PURPOSE:
+        /// Entry point for interactive mode that replaces CLI argument parsing.
+        /// Users no longer need to edit appsettings.json or remember command-line flags.
+        /// Just run the app and follow the prompts.
+        /// </remarks>
         public static SelectionResult ShowMainMenu()
         {
             while (true)
