@@ -64,30 +64,35 @@ namespace AITestAnalyzer
         }
 
         /// <summary>
-        /// Reads a single test case from specified Excel row
+        /// Reads a single test case from specified row in Excel worksheet
         /// </summary>
-        /// <param name="rowNumber">Excel row number to read (1-based indexing). Row 1 is header, row 2 is first test case. Example: rowNumber=2 reads first data row.</param>
+        /// <param name="rowNumber">Excel row number to read (1-based, row 1 is header, data starts row 2)</param>
         /// <returns>
-        /// TestCase object populated with data from the specified row.
-        /// Returns null if row is empty (no Test ID), beyond last row, or if error occurs during reading.
+        /// TestCase object populated with values from Excel row, or null if:
+        /// - rowNumber exceeds worksheet rows
+        /// - Test ID cell (column 1) is empty/whitespace
+        /// - Exception occurs reading the row
         /// </returns>
         /// <remarks>
-        /// BEHAVIOR:
-        /// - Checks for null or empty values in each Excel cell
-        /// - Assigns default values if data missing (e.g., "Not Specified" for empty Feature)
-        /// - Returns null if Test ID cell is empty (indicates empty row)
-        /// - Handles exceptions gracefully and logs errors to console
+        /// EXCEL COLUMN MAPPING (assumes 7-column structure):
+        /// - Column 1: Test ID (required, row skipped if empty)
+        /// - Column 2: Feature (defaults to "Not Specified" if null)
+        /// - Column 3: Scenario (defaults to "Not Specified" if null)
+        /// - Column 4: Priority (defaults to "Medium" if null)
+        /// - Column 5: Steps (defaults to "Not Specified" if null)
+        /// - Column 6: Expected Result (defaults to "Not Specified" if null)
+        /// - Column 7: Status (defaults to "Not Run" if null)
         /// 
-        /// COLUMN MAPPING:
-        /// - Column 1: Test ID (required - null if empty)
-        /// - Column 2: Feature (default: "Not Specified")
-        /// - Column 3: Scenario (default: "Not Specified")
-        /// - Column 4: Priority (default: "Medium")
-        /// - Column 5: Steps (default: "Not Specified")
-        /// - Column 6: Expected Result (default: "Not Specified")
-        /// - Column 7: Status (default: "Not Run")
+        /// NULL HANDLING: Uses null-coalescing operator (??) to provide default values for empty cells.
+        /// Excel cells with no value return null from EPPlus library.
+        /// 
+        /// ERROR HANDLING: Returns null on exceptions with console warning.
+        /// Allows batch processing to continue if individual test read fails.
+        /// 
+        /// EXAMPLE: ReadTestCase(2) reads first data row (row 1 is header).
+        /// Test ID "TC-001" with empty Priority → TestCase with Priority="Medium"
         /// </remarks>
-        public TestCase ReadTestCase(int rowNumber)
+        public TestCase? ReadTestCase(int rowNumber)
         {
             try
             {
@@ -102,13 +107,13 @@ namespace AITestAnalyzer
                     }
 
                     // Read values with null safety
-                    string testId = worksheet.Cells[rowNumber, 1].Value?.ToString()?.Trim();
-                    string feature = worksheet.Cells[rowNumber, 2].Value?.ToString()?.Trim();
-                    string scenario = worksheet.Cells[rowNumber, 3].Value?.ToString()?.Trim();
-                    string priority = worksheet.Cells[rowNumber, 4].Value?.ToString()?.Trim();
-                    string steps = worksheet.Cells[rowNumber, 5].Value?.ToString()?.Trim();
-                    string expectedResult = worksheet.Cells[rowNumber, 6].Value?.ToString()?.Trim();
-                    string status = worksheet.Cells[rowNumber, 7].Value?.ToString()?.Trim();
+                    string? testId = worksheet.Cells[rowNumber, 1].Value?.ToString()?.Trim();
+                    string? feature = worksheet.Cells[rowNumber, 2].Value?.ToString()?.Trim();
+                    string? scenario = worksheet.Cells[rowNumber, 3].Value?.ToString()?.Trim();
+                    string? priority = worksheet.Cells[rowNumber, 4].Value?.ToString()?.Trim();
+                    string? steps = worksheet.Cells[rowNumber, 5].Value?.ToString()?.Trim();
+                    string? expectedResult = worksheet.Cells[rowNumber, 6].Value?.ToString()?.Trim();
+                    string? status = worksheet.Cells[rowNumber, 7].Value?.ToString()?.Trim();
 
                     // Skip if Test ID is empty (empty row)
                     if (string.IsNullOrWhiteSpace(testId))
@@ -155,7 +160,7 @@ namespace AITestAnalyzer
         /// Call before processing to fail fast on malformed files.
         /// </remarks>
         /// <exception cref="IOException">Thrown if file is locked by another program</exception>
-        public (bool isValid, string errorMessage) ValidateExcelStructure()
+        public (bool isValid, string? errorMessage) ValidateExcelStructure()
         {
             try
             {

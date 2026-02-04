@@ -9,9 +9,9 @@ namespace AITestAnalyzer
 {
     public class CachedResult
     {
-        public string TestId { get; set; }
-        public string Hash { get; set; }
-        public string AnalysisResult { get; set; }
+        public string TestId { get; set; } = "";
+        public string Hash { get; set; } = "";
+        public string AnalysisResult { get; set; } = "";
         public int Tokens { get; set; }
         public DateTime CachedAt { get; set; }
     }
@@ -31,6 +31,7 @@ namespace AITestAnalyzer
             }
 
             _cacheFilePath = Path.Combine(cacheDirectory, "test_analysis_cache.json");
+            _cache = new Dictionary<string, CachedResult>(); // Initialize before LoadCache
             LoadCache();
         }
 

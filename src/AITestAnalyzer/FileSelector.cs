@@ -20,8 +20,8 @@ namespace AITestAnalyzer
             public enum Mode { Single, Batch, Exit }
 
             public Mode SelectedMode { get; set; }
-            public string FilePath { get; set; }       // Single mode: path to .xlsx
-            public string FolderPath { get; set; }     // Batch mode: path to folder
+            public string FilePath { get; set; } = "";      // Single mode: path to .xlsx
+            public string FolderPath { get; set; } = "";    // Batch mode: path to folder
             public int TestLimit { get; set; } = 0;    // 0 = all tests
             public int SheetIndex { get; set; } = 1;   // Default sheet index
         }
