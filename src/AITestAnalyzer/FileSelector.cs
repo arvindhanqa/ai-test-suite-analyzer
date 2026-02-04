@@ -70,7 +70,7 @@ namespace AITestAnalyzer
                 Console.WriteLine();
                 WritePrompt("Enter your choice (1-3): ");
 
-                string choice = Console.ReadLine()?.Trim();
+                string? choice = Console.ReadLine()?.Trim();
 
                 switch (choice)
                 {
@@ -116,7 +116,7 @@ namespace AITestAnalyzer
                     Console.WriteLine();
                     WritePrompt("Your choice: ");
 
-                    string input = Console.ReadLine()?.Trim();
+                    string? input = Console.ReadLine()?.Trim();
                     if (input?.ToUpper() == "B") return ShowMainMenu();
                     if (input == "1") return ManualFilePath();
                     continue;
@@ -128,7 +128,7 @@ namespace AITestAnalyzer
                 for (int i = 0; i < files.Count; i++)
                 {
                     string fileName = Path.GetFileName(files[i]);
-                    string folder = GetShortPath(Path.GetDirectoryName(files[i]));
+                    string? folder = GetShortPath(Path.GetDirectoryName(files[i]));
                     Console.WriteLine($"    [{i + 1}] {fileName}");
                     Console.WriteLine($"        {folder}");
                     Console.WriteLine();
@@ -139,7 +139,7 @@ namespace AITestAnalyzer
                 Console.WriteLine();
                 WritePrompt($"Select file (1-{files.Count}, T, or B): ");
 
-                string choice = Console.ReadLine()?.Trim();
+                string? choice = Console.ReadLine()?.Trim();
 
                 // Back
                 if (choice?.ToUpper() == "B") return ShowMainMenu();
@@ -150,7 +150,7 @@ namespace AITestAnalyzer
                 // Number selection
                 if (int.TryParse(choice, out int index) && index >= 1 && index <= files.Count)
                 {
-                    string selectedFile = files[index - 1];
+                    string? selectedFile = files[index - 1];
                     return ConfirmAndConfigureSingle(selectedFile);
                 }
 
@@ -195,7 +195,7 @@ namespace AITestAnalyzer
                     : "Your choice (T or B): ";
                 WritePrompt(prompt);
 
-                string choice = Console.ReadLine()?.Trim();
+                string? choice = Console.ReadLine()?.Trim();
 
                 if (choice?.ToUpper() == "B") return ShowMainMenu();
                 if (choice?.ToUpper() == "T") return ManualFolderPath();
@@ -245,7 +245,7 @@ namespace AITestAnalyzer
                 Console.WriteLine();
                 WritePrompt("Your choice: ");
 
-                string choice = Console.ReadLine()?.Trim().ToUpper();
+                string? choice = Console.ReadLine()?.Trim().ToUpper();
 
                 switch (choice)
                 {
@@ -267,7 +267,7 @@ namespace AITestAnalyzer
                     case "2":
                         Console.WriteLine();
                         WritePrompt($"  How many tests? (1-{testCount}): ");
-                        string limitInput = Console.ReadLine()?.Trim();
+                        string? limitInput = Console.ReadLine()?.Trim();
                         if (int.TryParse(limitInput, out int limit) && limit >= 1 && limit <= testCount)
                         {
                             testLimit = limit;
@@ -284,7 +284,7 @@ namespace AITestAnalyzer
                     case "3":
                         Console.WriteLine();
                         WritePrompt($"  Enter sheet index (current: {sheetIndex}) — 0=Sheet1, 1=Sheet2, etc.: ");
-                        string sheetInput = Console.ReadLine()?.Trim();
+                        string? sheetInput = Console.ReadLine()?.Trim();
                         if (int.TryParse(sheetInput, out int sheet) && sheet >= 0)
                         {
                             sheetIndex = sheet;
@@ -329,7 +329,7 @@ namespace AITestAnalyzer
 
             // Ask for test limit
             WritePrompt("  Analyze how many tests per file? (Enter for ALL): ");
-            string limitInput = Console.ReadLine()?.Trim();
+            string? limitInput = Console.ReadLine()?.Trim();
             int testLimit = 0;
             if (!string.IsNullOrEmpty(limitInput) && int.TryParse(limitInput, out int limit) && limit > 0)
             {
@@ -338,7 +338,7 @@ namespace AITestAnalyzer
 
             // Ask for sheet index
             WritePrompt("  Sheet index (Enter for default=1): ");
-            string sheetInput = Console.ReadLine()?.Trim();
+            string? sheetInput = Console.ReadLine()?.Trim();
             int sheetIndex = 1;
             if (!string.IsNullOrEmpty(sheetInput) && int.TryParse(sheetInput, out int sheet) && sheet >= 0)
             {
@@ -355,7 +355,7 @@ namespace AITestAnalyzer
             Console.WriteLine();
             WritePrompt("  Press Enter to start, or B to go back: ");
 
-            string confirm = Console.ReadLine()?.Trim().ToUpper();
+            string? confirm = Console.ReadLine()?.Trim().ToUpper();
             if (confirm == "B") return ShowMainMenu();
 
             return new SelectionResult
@@ -374,7 +374,7 @@ namespace AITestAnalyzer
         {
             Console.WriteLine();
             WritePrompt("  Type the full path to your .xlsx file: ");
-            string path = Console.ReadLine()?.Trim();
+            string? path = Console.ReadLine()?.Trim();
 
             if (string.IsNullOrEmpty(path))
             {
@@ -410,7 +410,7 @@ namespace AITestAnalyzer
         {
             Console.WriteLine();
             WritePrompt("  Type the full path to your folder: ");
-            string path = Console.ReadLine()?.Trim();
+            string? path = Console.ReadLine()?.Trim();
 
             if (string.IsNullOrEmpty(path))
             {
@@ -540,7 +540,7 @@ namespace AITestAnalyzer
         // ============================================================
         // HELPER: Shorten long paths for display
         // ============================================================
-        private static string GetShortPath(string fullPath)
+        private static string GetShortPath(string? fullPath)
         {
             if (string.IsNullOrEmpty(fullPath)) return "";
 
@@ -548,9 +548,9 @@ namespace AITestAnalyzer
             if (fullPath.Length <= 60) return fullPath;
 
             // Otherwise show first part ... last part
-            string root = Path.GetPathRoot(fullPath);     // e.g., "C:\"
+            string? root = Path.GetPathRoot(fullPath);     // e.g., "C:\"
             string end = fullPath.Substring(fullPath.Length - 40);
-            return root + "..." + end;
+            return (root ?? "") + "..." + end;
         }
 
         // ============================================================

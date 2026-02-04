@@ -69,7 +69,7 @@ namespace AITestAnalyzer
             int? testLimit = null,
             int worksheetIndex = 0,
             bool useCache = true,
-            TestCaseCache sharedCache = null)
+            TestCaseCache? sharedCache = null)
         {
             var result = new FileResult
             {
@@ -119,7 +119,7 @@ namespace AITestAnalyzer
                 excelWriter.AddAnalysisColumnHeader();
 
                 // Initialize or use shared cache
-                TestCaseCache cache = sharedCache;
+                TestCaseCache? cache = sharedCache;
                 if (useCache && cache == null)
                 {
                     cache = new TestCaseCache();
@@ -153,10 +153,10 @@ namespace AITestAnalyzer
                         {
                             string hash = cache.GenerateHash(testCase);
 
-                            if (cache.TryGetCached(hash, out CachedResult cachedResult, CACHE_MAX_AGE_DAYS))
+                            if (cache.TryGetCached(hash, out CachedResult? cachedResult, CACHE_MAX_AGE_DAYS))
                             {
                                 // CACHE HIT
-                                analysisResult = cachedResult.AnalysisResult;
+                                analysisResult = cachedResult!.AnalysisResult;
                                 tokens = 0;
                                 cacheHits++;
                             }
@@ -273,7 +273,7 @@ namespace AITestAnalyzer
             string outputDir = ExcelWriter.CreateOutputFolder();
 
             // Initialize shared cache for batch processing
-            TestCaseCache sharedCache = null;
+            TestCaseCache? sharedCache = null;
             if (useCache)
             {
                 sharedCache = new TestCaseCache();

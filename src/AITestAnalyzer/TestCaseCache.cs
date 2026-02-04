@@ -44,11 +44,23 @@ namespace AITestAnalyzer
                 {
                     string json = File.ReadAllText(_cacheFilePath);
                     var cacheList = JsonSerializer.Deserialize<List<CachedResult>>(json);
+
+                    // ✅ FIX: Handle null deserialization result
+                    if (cacheList == null)
+                    {
+                        _cache = new Dictionary<string, CachedResult>();
+                        return;
+                    }
+
                     _cache = new Dictionary<string, CachedResult>();
 
                     foreach (var item in cacheList)
                     {
-                        _cache[item.Hash] = item;
+                        // ✅ FIX: Null check before using item
+                        if (item != null && !string.IsNullOrEmpty(item.Hash))
+                        {
+                            _cache[item.Hash] = item;
+                        }
                     }
                 }
                 catch
@@ -134,7 +146,7 @@ namespace AITestAnalyzer
         /// Automatically removes expired cache entries when detected.
         /// Cache expiry ensures analysis stays current with evolving test quality standards.
         /// </remarks>
-        public bool TryGetCached(string hash, out CachedResult cachedResult, int maxAgeDays = DEFAULT_MAX_AGE_DAYS)
+        public bool TryGetCached(string hash, out CachedResult? cachedResult, int maxAgeDays = DEFAULT_MAX_AGE_DAYS)
         {
             if (_cache.TryGetValue(hash, out cachedResult))
             {

@@ -76,8 +76,8 @@ namespace AITestAnalyzer
 
                     if (completionResult.Successful)
                     {
-                        string analysis = completionResult.Choices.First().Message.Content.Trim();
-                        int tokens = completionResult.Usage.TotalTokens;
+                        string analysis = completionResult!.Choices.First().Message.Content!.Trim();
+                        int tokens = completionResult.Usage!.TotalTokens;
                         return (analysis, tokens);
                     }
                     else

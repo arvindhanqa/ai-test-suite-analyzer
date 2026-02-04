@@ -159,7 +159,7 @@ namespace AITestAnalyzer
             Console.WriteLine();
 
             // Initialize cache
-            TestCaseCache cache = null;
+            TestCaseCache? cache = null;
             if (useCache)
             {
                 WriteInfo("Initializing cache system...");
@@ -200,7 +200,7 @@ namespace AITestAnalyzer
 
             for (int row = startRow; row < startRow + totalTests; row++)
             {
-                TestCase testCase = excelReader.ReadTestCase(rowNumber: row);
+                TestCase? testCase = excelReader.ReadTestCase(rowNumber: row);
                 if (testCase == null) continue;
 
                 processedCount++;
@@ -213,9 +213,9 @@ namespace AITestAnalyzer
                 {
                     string hash = cache.GenerateHash(testCase);
 
-                    if (cache.TryGetCached(hash, out CachedResult cachedResult, CACHE_MAX_AGE_DAYS))
+                    if (cache.TryGetCached(hash, out CachedResult? cachedResult, CACHE_MAX_AGE_DAYS))
                     {
-                        result = cachedResult.AnalysisResult;
+                        result = cachedResult!.AnalysisResult;
                         tokens = 0;
                         cacheHits++;
                     }
@@ -340,7 +340,7 @@ namespace AITestAnalyzer
         // Load Configuration — API key + prompt settings only.
         // No ExcelPath. No WorksheetIndex. FileSelector provides those.
         // ============================================================
-        static (Configuration appConfig, PromptConfig promptConfig) LoadConfiguration()
+        static (Configuration? appConfig, PromptConfig? promptConfig) LoadConfiguration()
         {
             WriteInfo("Loading configuration...");
 
@@ -350,7 +350,7 @@ namespace AITestAnalyzer
                 .AddJsonFile("PromptConfig.json", optional: false, reloadOnChange: true)
                 .Build();
 
-            string apiKey = configBuilder["OpenAI:ApiKey"];
+            string? apiKey = configBuilder["OpenAI:ApiKey"];
             string model = configBuilder["OpenAI:Model"] ?? "gpt-4o-mini";
 
             if (string.IsNullOrEmpty(apiKey) || apiKey == "YOUR-ACTUAL-API-KEY-HERE")
