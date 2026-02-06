@@ -1,15 +1,16 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using OfficeOpenXml;
 using OpenAI;
 using OpenAI.Managers;
 using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 using static AITestAnalyzer.FileSelector;
+using static OpenAI.ObjectModels.StaticValues.ImageStatics;
 
 namespace AITestAnalyzer
 {
@@ -301,7 +302,32 @@ namespace AITestAnalyzer
             }
 
             var aiAnalyzer = new AIAnalyzer(appConfig, promptConfig);
+            // After creating AIAnalyzer, add this:
+            Console.WriteLine();
+            WriteInfo("Loading requirements for context-aware analysis...");
 
+            // Initialize requirement cache and extractor
+            var reqCache = new RequirementCache();
+            var reqExtractor = new RequirementExtractor(appConfig, promptConfig);
+
+            // Load requirements from TaskFlow document
+            // TODO: Day 17 - Make requirement path dynamic based on test file name
+            // TODO: Day 17 - Add Coverage column to Excel output
+            string reqFile = @"C:\Projects\ai-test-analyzer\ai-test-suite-analyzer\data\requirements_taskflow.md";
+
+            List<ExtractedRequirement> requirements;
+            try
+            {
+                requirements = await reqExtractor.ExtractRequirements(reqFile, reqCache);
+                WriteSuccess($"Loaded {requirements.Count} requirements as context");
+            }
+            catch (Exception ex)
+            {
+                WriteError($"Failed to load requirements: {ex.Message}");
+                requirements = new List<ExtractedRequirement>(); // Continue with empty list
+            }
+
+            Console.WriteLine();
             // Prepare output file
             WriteInfo("Preparing output file...");
             string outputDir = ExcelWriter.CreateOutputFolder();
@@ -391,13 +417,16 @@ namespace AITestAnalyzer
             for (int row = startRow; row < startRow + totalTests; row++)
             {
                 TestCase? testCase = excelReader.ReadTestCase(rowNumber: row);
-                if (testCase == null) continue;
+                if (testCase == null)
+                    continue;
 
                 processedCount++;
                 progressTracker.DisplayProgress(processedCount, testCase.TestId);
 
                 string result;
-                int tokens;
+                string quality;     // Declare here at method level
+                string coverage;    // Declare here at method level
+                int tokens;         // Declare here at method level
 
                 if (useCache && cache != null)
                 {
@@ -405,13 +434,18 @@ namespace AITestAnalyzer
 
                     if (cache.TryGetCached(hash, out CachedResult? cachedResult, CACHE_MAX_AGE_DAYS))
                     {
+                        // Cache hit - use cached result
                         result = cachedResult!.AnalysisResult;
+                        quality = result;  // For now, treat cached result as quality
+                        coverage = "None"; // No coverage in cache yet
                         tokens = 0;
                         cacheHits++;
                     }
                     else
                     {
-                        (result, tokens) = await aiAnalyzer.AnalyzeTestCase(testCase);
+                        // Cache miss - call AI
+                        (quality, coverage, tokens) = await aiAnalyzer.AnalyzeTestCase(testCase, requirements);
+                        result = quality;  // Store quality as result for now
                         cache.AddToCache(testCase.TestId, hash, result, tokens);
                         apiCalls++;
                         await Task.Delay(1000);
@@ -419,7 +453,9 @@ namespace AITestAnalyzer
                 }
                 else
                 {
-                    (result, tokens) = await aiAnalyzer.AnalyzeTestCase(testCase);
+                    // No cache - call AI directly
+                    (quality, coverage, tokens) = await aiAnalyzer.AnalyzeTestCase(testCase, requirements);
+                    result = quality;  // Store quality as result for now
                     apiCalls++;
                     await Task.Delay(1000);
                 }

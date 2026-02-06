@@ -1,11 +1,12 @@
-﻿using OpenAI;
-using OpenAI.Managers;
-using OpenAI.ObjectModels;
-using OpenAI.ObjectModels.RequestModels;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
+using OpenAI;
+using OpenAI.Managers;
+using OpenAI.ObjectModels;
+using OpenAI.ObjectModels.RequestModels;
 
 namespace AITestAnalyzer
 {
@@ -45,7 +46,7 @@ namespace AITestAnalyzer
         /// Skips Priority, Status, and TestId fields to minimize token usage (84% reduction vs verbose mode).
         /// </remarks>
         /// <exception cref="Exception">Returns error message in result string after 3 failed retry attempts</exception>
-        public async Task<(string result, int tokens)> AnalyzeTestCase(TestCase testCase)
+        public async Task<(string quality, string coverage, int tokens)> AnalyzeTestCase(TestCase testCase, List<ExtractedRequirement> requirements)
         {
             int maxRetries = 3;
             int retryDelayMs = 1000; // Start with 1 second
@@ -56,6 +57,7 @@ namespace AITestAnalyzer
                 {
                     // Build user prompt - only include relevant fields
                     string userPrompt = _promptConfig.UserTemplate
+                        .Replace("{Requirements}", FormatRequirements(requirements))
                         .Replace("{Feature}", testCase.Feature)
                         .Replace("{Scenario}", testCase.Scenario)
                         .Replace("{Steps}", testCase.Steps)
@@ -78,7 +80,25 @@ namespace AITestAnalyzer
                     {
                         string analysis = completionResult!.Choices.First().Message.Content!.Trim();
                         int tokens = completionResult.Usage!.TotalTokens;
-                        return (analysis, tokens);
+
+                        // Parse Quality and Coverage
+                        string quality = "Unknown";
+                        string coverage = "None";
+
+                        var lines = analysis.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+                        foreach (var line in lines)
+                        {
+                            if (line.StartsWith("Quality:", StringComparison.OrdinalIgnoreCase))
+                            {
+                                quality = line.Substring(8).Trim();
+                            }
+                            else if (line.StartsWith("Coverage:", StringComparison.OrdinalIgnoreCase))
+                            {
+                                coverage = line.Substring(9).Trim();
+                            }
+                        }
+
+                        return (quality, coverage, tokens);
                     }
                     else
                     {
@@ -97,7 +117,7 @@ namespace AITestAnalyzer
                         else
                         {
                             // Max retries exceeded
-                            return ($"ERROR after {maxRetries} attempts: {errorMsg}", 0);
+                            return ("ERROR: Unexpected retry loop exit", "None", 0);
                         }
                     }
                 }
@@ -114,13 +134,27 @@ namespace AITestAnalyzer
                     }
                     else
                     {
-                        return ($"ERROR after {maxRetries} attempts: {ex.Message}", 0);
+                        return ("ERROR: Unexpected retry loop exit", "None", 0);
                     }
                 }
             }
 
             // Should never reach here, but just in case
-            return ("ERROR: Unexpected retry loop exit", 0);
+            return ("ERROR: Unexpected retry loop exit", "None", 0);
+        }
+
+        private string FormatRequirements(List<ExtractedRequirement> requirements)
+        {
+            var formatted = new StringBuilder();
+            formatted.AppendLine("REQUIREMENTS TO VALIDATE:");
+            formatted.AppendLine();
+
+            foreach (var req in requirements)
+            {
+                formatted.AppendLine($"- {req.Topic} → {req.Subtopic}: {req.ExpectedAction}");
+            }
+
+            return formatted.ToString();
         }
     }
 }

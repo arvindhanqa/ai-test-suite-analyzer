@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -99,6 +99,22 @@ namespace AITestAnalyzer
                 var excelWriter = new ExcelWriter(outputPath, worksheetIndex);
                 var aiAnalyzer = new AIAnalyzer(_config, _promptConfig);
 
+                var reqCache = new RequirementCache();
+                var reqExtractor = new RequirementExtractor(_config, _promptConfig);
+
+                // TODO: Day 17 - Make requirement path dynamic based on test file name
+                string reqFile = @"C:\Projects\ai-test-analyzer\ai-test-suite-analyzer\data\requirements_taskflow.md";
+
+                List<ExtractedRequirement> requirements;
+                try
+                {
+                    requirements = await reqExtractor.ExtractRequirements(reqFile, reqCache);
+                }
+                catch
+                {
+                    requirements = new List<ExtractedRequirement>();
+                }
+
                 // Validate Excel structure
                 var (excelIsValid, validationMessage) = excelReader.ValidateExcelStructure();
                 if (!excelIsValid)
@@ -145,7 +161,9 @@ namespace AITestAnalyzer
                             continue;
                         }
 
-                        string analysisResult;
+                        string analysisResult;  // Declare at loop level
+                        string quality;
+                        string coverage;
                         int tokens;
 
                         // Check cache if enabled
@@ -157,13 +175,16 @@ namespace AITestAnalyzer
                             {
                                 // CACHE HIT
                                 analysisResult = cachedResult!.AnalysisResult;
+                                quality = analysisResult;  // Map for consistency
+                                coverage = "None";
                                 tokens = 0;
                                 cacheHits++;
                             }
                             else
                             {
                                 // CACHE MISS - Call API
-                                (analysisResult, tokens) = await aiAnalyzer.AnalyzeTestCase(testCase);
+                                (quality, coverage, tokens) = await aiAnalyzer.AnalyzeTestCase(testCase, requirements);
+                                analysisResult = quality;  // Map quality to result
                                 cache.AddToCache(testCase.TestId, hash, analysisResult, tokens);
                                 apiCalls++;
                                 await Task.Delay(1000); // Rate limiting
@@ -172,7 +193,8 @@ namespace AITestAnalyzer
                         else
                         {
                             // Cache disabled
-                            (analysisResult, tokens) = await aiAnalyzer.AnalyzeTestCase(testCase);
+                            (quality, coverage, tokens) = await aiAnalyzer.AnalyzeTestCase(testCase, requirements);
+                            analysisResult = quality;  // Map quality to result
                             apiCalls++;
                             await Task.Delay(1000);
                         }
