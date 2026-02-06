@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using OfficeOpenXml;
 using OpenAI;
 using OpenAI.Managers;
@@ -29,6 +29,13 @@ namespace AITestAnalyzer
             if (args.Length > 0)
             {
                 string firstArg = args[0].ToLower();
+
+                // For requirement extraction testing
+                if (firstArg == "--test-requirements")
+                {
+                    await TestRequirementExtraction();
+                    return;
+                }
 
                 if (firstArg == "--help" || firstArg == "-h")
                 {
@@ -92,6 +99,189 @@ namespace AITestAnalyzer
             }
         }
 
+        // ============================================================
+        // TEST REQUIREMENT EXTRACTION (Day 15 Feature)
+        // ============================================================
+        static async Task TestRequirementExtraction()
+        {
+            Console.Clear();
+            WriteHeader("═══════════════════════════════════════════════════════════════════════");
+            WriteHeader("   🧪 REQUIREMENT EXTRACTION TEST - DAY 15");
+            WriteHeader("═══════════════════════════════════════════════════════════════════════");
+            Console.WriteLine();
+
+            // Load configuration inline
+            WriteInfo("Loading configuration...");
+
+            var configBuilder = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+                .AddJsonFile("PromptConfig.json", optional: false, reloadOnChange: true)
+                .Build();
+
+            string? apiKey = configBuilder["OpenAI:ApiKey"];
+            string model = configBuilder["OpenAI:Model"] ?? "gpt-4o-mini";
+
+            if (string.IsNullOrEmpty(apiKey) || apiKey == "YOUR-ACTUAL-API-KEY-HERE")
+            {
+                WriteError("ERROR: OpenAI API key not configured!");
+                WriteError("Please update appsettings.json with your actual API key.");
+                Console.WriteLine();
+                WriteInfo("Press any key to exit...");
+                Console.ReadKey();
+                return;
+            }
+
+            var appConfig = new Configuration { ApiKey = apiKey, Model = model };
+            var promptConfig = new PromptConfig
+            {
+                MaxTokens = 2000,
+                Model = model,
+                Temperature = 0,
+                SystemMessage = "You are a requirement analysis expert.",
+                UserTemplate = ""
+            };
+
+            WriteSuccess($"Model: {model}");
+            WriteSuccess($"Max Tokens: 2000 (requirement extraction)");
+            WriteSuccess($"Temperature: 0 (deterministic)");
+            Console.WriteLine();
+
+            // Validate API
+            WriteInfo("Validating API connection...");
+            var validator = new ConfigurationValidator(appConfig, promptConfig);
+
+            var apiKeyResult = validator.ValidateApiKey();
+            if (!apiKeyResult.IsValid)
+            {
+                WriteError($"API Key Error: {apiKeyResult.ErrorMessage}");
+                Console.WriteLine();
+                WriteInfo("Press any key to exit...");
+                Console.ReadKey();
+                return;
+            }
+
+            var connectionResult = await validator.ValidateOpenAIConnection();
+            if (!connectionResult.IsValid)
+            {
+                WriteError($"OpenAI Connection Error: {connectionResult.ErrorMessage}");
+                Console.WriteLine();
+                WriteInfo("Press any key to exit...");
+                Console.ReadKey();
+                return;
+            }
+
+            WriteSuccess("API connection validated");
+            Console.WriteLine();
+
+            // Initialize extractor AND cache
+            var extractor = new RequirementExtractor(appConfig, promptConfig);
+            var cache = new RequirementCache();
+
+            // Show cache stats
+            WriteInfo("Checking cache...");
+            var (cacheCount, totalReqs, totalTokens) = cache.GetStats();
+            if (cacheCount > 0)
+            {
+                WriteSuccess($"Cache: {cacheCount} documents, {totalReqs} requirements, {totalTokens} tokens saved");
+            }
+            else
+            {
+                WriteInfo("Cache: Empty (first run)");
+            }
+            Console.WriteLine();
+
+            // File path
+            string requirementFile = @"C:\Projects\ai-test-analyzer\ai-test-suite-analyzer\data\requirements_taskflow.md";
+
+            WriteInfo($"Looking for: {requirementFile}");
+
+            if (!File.Exists(requirementFile))
+            {
+                WriteError($"File not found: {requirementFile}");
+                Console.WriteLine();
+                WriteWarning("Please update the path in Program.cs TestRequirementExtraction() method");
+                Console.WriteLine();
+                WriteInfo("Press any key to exit...");
+                Console.ReadKey();
+                return;
+            }
+
+            // Show file info
+            var fileInfo = new FileInfo(requirementFile);
+            WriteSuccess($"File: {fileInfo.Name}");
+            WriteSuccess($"Size: {fileInfo.Length:N0} bytes");
+            WriteSuccess($"Modified: {fileInfo.LastWriteTime}");
+            Console.WriteLine();
+
+            // Extract with caching!
+            WriteInfo("Extracting requirements (checking cache first)...");
+            var requirements = await extractor.ExtractRequirements(requirementFile, cache, maxAgeDays: 30);
+
+            // Display results
+            Console.WriteLine();
+            WriteHeader("═══════════════════════════════════════════════════════════════════════");
+            WriteHeader("   EXTRACTED REQUIREMENTS");
+            WriteHeader("═══════════════════════════════════════════════════════════════════════");
+            Console.WriteLine();
+
+            if (requirements.Count == 0)
+            {
+                WriteWarning("No requirements extracted. Check AI response format.");
+                Console.WriteLine();
+                WriteInfo("Press any key to exit...");
+                Console.ReadKey();
+                return;
+            }
+
+            // Group and display
+            var groupedByTopic = requirements.GroupBy(r => r.Topic).OrderBy(g => g.Key);
+            int count = 1;
+
+            foreach (var topicGroup in groupedByTopic)
+            {
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine($"📁 {topicGroup.Key}");
+                Console.ResetColor();
+
+                foreach (var req in topicGroup)
+                {
+                    Console.ForegroundColor = ConsoleColor.White;
+                    Console.Write($"   {count}. ");
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine(req.Subtopic);
+                    Console.ResetColor();
+
+                    Console.ForegroundColor = ConsoleColor.Gray;
+                    Console.WriteLine($"      → {req.ExpectedAction}");
+                    Console.ResetColor();
+
+                    count++;
+                }
+                Console.WriteLine();
+            }
+
+            WriteHeader("═══════════════════════════════════════════════════════════════════════");
+            WriteSuccess($"Total Requirements Extracted: {requirements.Count}");
+
+            Console.WriteLine();
+            WriteInfo("Distribution by Topic:");
+            foreach (var topicGroup in groupedByTopic)
+            {
+                Console.WriteLine($"   • {topicGroup.Key}: {topicGroup.Count()} requirements");
+            }
+
+            // Show final cache stats
+            Console.WriteLine();
+            var (finalCount, finalReqs, finalTokens) = cache.GetStats();
+            WriteInfo($"Cache updated: {finalCount} documents, {finalReqs} requirements total");
+
+            Console.WriteLine();
+            WriteHeader("═══════════════════════════════════════════════════════════════════════");
+            Console.WriteLine();
+            WriteInfo("Press any key to exit...");
+            Console.ReadKey();
+        }
         // ============================================================
         // SINGLE FILE MODE
         // ============================================================
@@ -430,11 +620,12 @@ namespace AITestAnalyzer
             WriteHeader($"{AppName} v{Version}");
             Console.WriteLine();
             WriteInfo("USAGE:");
-            Console.WriteLine("  dotnet run                    # Launch interactive menu");
-            Console.WriteLine("  dotnet run -- --help          # Show this help message");
-            Console.WriteLine("  dotnet run -- --version       # Show version information");
-            Console.WriteLine("  dotnet run -- --clear-cache   # Clear all cached results");
-            Console.WriteLine("  dotnet run -- --no-cache      # Disable cache for this run");
+            Console.WriteLine("  dotnet run                        # Launch interactive menu");
+            Console.WriteLine("  dotnet run -- --help              # Show this help message");
+            Console.WriteLine("  dotnet run -- --version           # Show version information");
+            Console.WriteLine("  dotnet run -- --clear-cache       # Clear all cached results");
+            Console.WriteLine("  dotnet run -- --no-cache          # Disable cache for this run");
+            Console.WriteLine("  dotnet run -- --test-requirements # 🆕 Test requirement extraction");
             Console.WriteLine();
             WriteInfo("The interactive menu lets you:");
             Console.WriteLine("  - Pick single file or batch mode");
@@ -443,10 +634,11 @@ namespace AITestAnalyzer
             Console.WriteLine("  - Set how many tests to run");
             Console.WriteLine();
             WriteInfo("OPTIONS:");
-            Console.WriteLine("  --help, -h                    Show this help message");
-            Console.WriteLine("  --version, -v                 Show version information");
-            Console.WriteLine("  --clear-cache                 Clear all cached results");
-            Console.WriteLine("  --no-cache                    Disable cache (force fresh analysis)");
+            Console.WriteLine("  --help, -h                        Show this help message");
+            Console.WriteLine("  --version, -v                     Show version information");
+            Console.WriteLine("  --clear-cache                     Clear all cached results");
+            Console.WriteLine("  --no-cache                        Disable cache (force fresh analysis)");
+            Console.WriteLine("  --test-requirements               🆕 Test AI requirement extraction (Day 15)");
             Console.WriteLine();
             WriteInfo("CACHE SYSTEM:");
             Console.WriteLine("  - Analysis results are cached to save API costs");
