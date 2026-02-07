@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;  // ADD THIS LINE
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -11,7 +12,9 @@ namespace AITestAnalyzer
     {
         public string TestId { get; set; } = "";
         public string Hash { get; set; } = "";
-        public string AnalysisResult { get; set; } = "";
+        public string AnalysisResult { get; set; } = "";  // Keep for backward compatibility
+        public string Quality { get; set; } = "";          // NEW: Quality feedback
+        public string Coverage { get; set; } = "";         // NEW: Coverage info
         public int Tokens { get; set; }
         public DateTime CachedAt { get; set; }
     }
@@ -33,6 +36,9 @@ namespace AITestAnalyzer
             _cacheFilePath = Path.Combine(cacheDirectory, "test_analysis_cache.json");
             _cache = new Dictionary<string, CachedResult>(); // Initialize before LoadCache
             LoadCache();
+            // Check if migration is needed
+            MigrateCacheIfNeeded();
+            SaveCache();
         }
 
         // Load cache from disk
@@ -72,6 +78,22 @@ namespace AITestAnalyzer
             {
                 _cache = new Dictionary<string, CachedResult>();
             }
+        }
+
+        // Migrate old cache entries to new format
+        private void MigrateCacheIfNeeded()
+        {
+            int migrated = 0;
+            foreach (var entry in _cache.Values)
+            {
+                if (string.IsNullOrEmpty(entry.Quality) && !string.IsNullOrEmpty(entry.AnalysisResult))
+                {
+                    entry.Quality = entry.AnalysisResult;
+                    entry.Coverage = "None";
+                    migrated++;
+                }
+            }
+            Console.WriteLine($"✅ Migrated {migrated} entries");
         }
 
         // Save cache to disk
@@ -166,13 +188,15 @@ namespace AITestAnalyzer
         }
 
         // Add result to cache
-        public void AddToCache(string testId, string hash, string analysisResult, int tokens)
+        public void AddToCache(string testId, string hash, string quality, string coverage, int tokens)
         {
             _cache[hash] = new CachedResult
             {
                 TestId = testId,
                 Hash = hash,
-                AnalysisResult = analysisResult,
+                AnalysisResult = quality,  // Keep for backward compatibility with old cache
+                Quality = quality,          // NEW
+                Coverage = coverage,        // NEW
                 Tokens = tokens,
                 CachedAt = DateTime.Now
             };

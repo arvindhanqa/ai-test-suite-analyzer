@@ -201,8 +201,8 @@ namespace AITestAnalyzer
                             {
                                 // CACHE HIT
                                 analysisResult = cachedResult!.AnalysisResult;
-                                quality = analysisResult;  // Map for consistency
-                                coverage = "None";
+                                quality = cachedResult.Quality;      // NEW
+                                coverage = cachedResult.Coverage;    // NEW
                                 tokens = 0;
                                 cacheHits++;
                             }
@@ -211,7 +211,7 @@ namespace AITestAnalyzer
                                 // CACHE MISS - Call API
                                 (quality, coverage, tokens) = await aiAnalyzer.AnalyzeTestCase(testCase, requirements);
                                 analysisResult = quality;  // Map quality to result
-                                cache.AddToCache(testCase.TestId, hash, analysisResult, tokens);
+                                cache.AddToCache(testCase.TestId, hash, quality, coverage, tokens);
                                 apiCalls++;
                                 await Task.Delay(1000); // Rate limiting
                             }
