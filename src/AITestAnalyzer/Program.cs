@@ -461,8 +461,8 @@ namespace AITestAnalyzer
                     {
                         // Cache hit - use cached result
                         result = cachedResult!.AnalysisResult;
-                        quality = result;  // For now, treat cached result as quality
-                        coverage = "None"; // No coverage in cache yet
+                        quality = cachedResult.Quality;     // NEW: Get from cache
+                        coverage = cachedResult.Coverage;   // NEW: Get from cache
                         tokens = 0;
                         cacheHits++;
                     }
@@ -471,7 +471,7 @@ namespace AITestAnalyzer
                         // Cache miss - call AI
                         (quality, coverage, tokens) = await aiAnalyzer.AnalyzeTestCase(testCase, requirements);
                         result = quality;  // Store quality as result for now
-                        cache.AddToCache(testCase.TestId, hash, result, tokens);
+                        cache.AddToCache(testCase.TestId, hash, quality, coverage, tokens);
                         apiCalls++;
                         await Task.Delay(1000);
                     }
