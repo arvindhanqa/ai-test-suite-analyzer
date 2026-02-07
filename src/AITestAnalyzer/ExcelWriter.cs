@@ -1,4 +1,4 @@
-﻿using OfficeOpenXml;
+using OfficeOpenXml;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -94,11 +94,23 @@ namespace AITestAnalyzer
                 headerCell.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
                 headerCell.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
 
+                // Add "Requirement Coverage" header in column I (9th column)
+                var coverageHeaderCell = worksheet.Cells[1, 9];
+                coverageHeaderCell.Value = "Requirement Coverage";
+
+                // Style the coverage header
+                coverageHeaderCell.Style.Font.Bold = true;
+                coverageHeaderCell.Style.Font.Size = 12;
+                coverageHeaderCell.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                coverageHeaderCell.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGreen);
+                coverageHeaderCell.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+                coverageHeaderCell.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
+
                 // ✨ NEW: FREEZE PANES - Keep row 1 (header) visible when scrolling
                 worksheet.View.FreezePanes(2, 1); // Freeze everything above row 2
 
                 // ✨ NEW: AUTO-FILTER - Add dropdown filters to all headers
-                var lastCol = worksheet.Dimension?.End.Column ?? 8;
+                var lastCol = worksheet.Dimension?.End.Column ?? 9; // Include coverage column
                 worksheet.Cells[1, 1, 1, lastCol].AutoFilter = true;
 
                 // ✨ NEW: AUTO-SIZE COLUMNS - Fit content width
@@ -110,6 +122,9 @@ namespace AITestAnalyzer
 
                 // Set column H (AI Analysis) to wider fixed width for readability
                 worksheet.Column(8).Width = 60;
+
+                // NEW: Set column I (Coverage) to fixed width
+                worksheet.Column(9).Width = 40;
 
                 package.Save();
             }
@@ -132,7 +147,7 @@ namespace AITestAnalyzer
         /// - Sets column width to 50 characters
         /// - Handles exceptions gracefully (logs warning, continues processing)
         /// </remarks>
-        public void WriteAnalysis(int rowNumber, string analysis)
+        public void WriteAnalysis(int rowNumber, string analysis, string coverage)
         {
             try
             {
@@ -167,6 +182,23 @@ namespace AITestAnalyzer
                     worksheet.Cells[1, 8].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGray);
                     worksheet.Cells[1, 8].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Medium);
 
+                    // Write coverage to column 9
+                    worksheet.Cells[rowNumber, 9].Value = coverage;
+                    worksheet.Cells[rowNumber, 9].Style.WrapText = true;
+                    worksheet.Cells[rowNumber, 9].Style.VerticalAlignment = OfficeOpenXml.Style.ExcelVerticalAlignment.Top;
+                    worksheet.Cells[rowNumber, 9].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
+
+                    // Color code coverage
+                    if (string.IsNullOrWhiteSpace(coverage) || coverage == "None")
+                    {
+                        worksheet.Cells[rowNumber, 9].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                        worksheet.Cells[rowNumber, 9].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightYellow);
+                    }
+                    else
+                    {
+                        worksheet.Cells[rowNumber, 9].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                        worksheet.Cells[rowNumber, 9].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGreen);
+                    }
                     package.Save();
                 }
             }

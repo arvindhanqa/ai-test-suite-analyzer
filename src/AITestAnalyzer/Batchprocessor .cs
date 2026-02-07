@@ -225,7 +225,7 @@ namespace AITestAnalyzer
                             await Task.Delay(1000);
                         }
 
-                        excelWriter.WriteAnalysis(rowNumber, analysisResult);
+                        excelWriter.WriteAnalysis(rowNumber, quality, coverage);
                         results.Add((testCase.TestId, analysisResult, tokens));
 
                         progressTracker.DisplayProgress(i + 1, testCase.TestId);
@@ -233,7 +233,7 @@ namespace AITestAnalyzer
                     catch (Exception ex)
                     {
                         results.Add(($"Row{rowNumber}", $"ERROR: {ex.Message}", 0));
-                        excelWriter.WriteAnalysis(rowNumber, $"ERROR: {ex.Message}");
+                        excelWriter.WriteAnalysis(rowNumber, $"ERROR: {ex.Message}", "None");
                     }
                 }
 

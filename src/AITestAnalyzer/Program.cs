@@ -486,7 +486,7 @@ namespace AITestAnalyzer
                 }
 
                 results.Add((testCase.TestId, result, tokens));
-                excelWriter.WriteAnalysis(row, result);
+                excelWriter.WriteAnalysis(row, quality, coverage);
             }
 
             var endTime = DateTime.Now;

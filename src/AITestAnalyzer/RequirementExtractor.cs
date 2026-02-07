@@ -151,6 +151,8 @@ JSON array:";
                 Console.WriteLine($"\n📝 Parsing JSON response ({jsonText.Length} characters)...");
                 Console.ResetColor();
 
+                // Parse JSON response
+                // TODO: Add retry logic for intermittent JSON parsing errors (see issue Status: Open.#6)
                 var requirements = JsonSerializer.Deserialize<List<ExtractedRequirement>>(
                     jsonText,
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
