@@ -102,8 +102,34 @@ namespace AITestAnalyzer
                 var reqCache = new RequirementCache();
                 var reqExtractor = new RequirementExtractor(_config, _promptConfig);
 
-                // TODO: Day 17 - Make requirement path dynamic based on test file name
-                string reqFile = @"C:\Projects\ai-test-analyzer\ai-test-suite-analyzer\data\requirements_taskflow.md";
+                // Auto-detect requirement file based on test file name
+                string testFileName = Path.GetFileNameWithoutExtension(inputPath);
+                string reqFileName = testFileName.Replace("test_cases_", "requirements_") + ".md";
+                string dataFolder = Path.GetDirectoryName(inputPath) ?? ".";
+                string reqPath = Path.Combine(dataFolder, reqFileName);
+
+                if (!File.Exists(reqPath))
+                {
+                    Console.WriteLine($"⚠️  Auto-detection failed. Could not find: {reqFileName}");
+                    Console.Write("📁 Enter requirement file path (or press Enter to skip): ");
+                    string? userInput = Console.ReadLine();
+
+                    if (string.IsNullOrWhiteSpace(userInput))
+                    {
+                        Console.WriteLine("⚠️  No requirements provided. Analysis will be quality-only (no coverage tracking).");
+                        reqPath = ""; // Empty path = skip requirements
+                    }
+                    else
+                    {
+                        reqPath = userInput;
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"✅ Auto-detected requirement file: {Path.GetFileName(reqPath)}");
+                }
+
+                string reqFile = reqPath; // Keep variable name consistent with existing code
 
                 List<ExtractedRequirement> requirements;
                 try
