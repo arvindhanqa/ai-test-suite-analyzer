@@ -25,7 +25,8 @@ namespace AITestAnalyzer
         }
 
         /// <summary>
-        /// Extract requirements from document text using AI (with caching)
+        /// Extract requirements from document text using AI (with caching and retry logic)
+        /// Now uses smart compression: 8-15 word descriptions in pipe-delimited format
         /// </summary>
         public async Task<List<ExtractedRequirement>> ExtractRequirements(
             string documentPath,
@@ -46,94 +47,207 @@ namespace AITestAnalyzer
             Console.WriteLine("🔍 Extracting requirements using AI...");
             Console.ResetColor();
 
-            var prompt = BuildExtractionPrompt(documentText);
+            // RETRY LOGIC (Fix for Issue #6)
+            const int maxRetries = 3;
+            Exception? lastException = null;
 
+            for (int attempt = 1; attempt <= maxRetries; attempt++)
+            {
+                try
+                {
+                    if (attempt > 1)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine($"🔄 Retry attempt {attempt}/{maxRetries}...");
+                        Console.ResetColor();
+                    }
+
+                    var completionResult = await _openAiService.ChatCompletion.CreateCompletion(
+                        new ChatCompletionCreateRequest
+                        {
+                            Messages = new List<ChatMessage>
+                            {
+                        ChatMessage.FromSystem("You extract requirements in ultra-compact pipe-delimited format. Use 8-15 word descriptions that preserve core meaning."),
+                        ChatMessage.FromUser(BuildSmartCompressionPrompt(documentText))
+                            },
+                            Model = _model,
+                            MaxTokens = 4000,  // INCREASED from 2000
+                            Temperature = 0
+                        });
+
+                    if (!completionResult.Successful)
+                    {
+                        throw new Exception($"API Error: {completionResult.Error?.Message ?? "Unknown error"}");
+                    }
+
+                    string response = completionResult.Choices.First().Message.Content!.Trim();
+                    int tokens = completionResult.Usage!.TotalTokens;
+
+                    Console.ForegroundColor = ConsoleColor.Gray;
+                    Console.WriteLine($"📊 Tokens used: {tokens:N0}");
+                    Console.ResetColor();
+
+                    // Parse pipe-delimited format
+                    var requirements = ParsePipeDelimitedResponse(response);
+
+                    if (requirements.Count == 0)
+                    {
+                        throw new Exception("No requirements parsed from response");
+                    }
+
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine($"✅ Extracted {requirements.Count} requirements");
+                    Console.ResetColor();
+
+                    // Cache the results
+                    cache.AddToCache(documentPath, requirements, tokens);
+
+                    return requirements;
+                }
+                catch (Exception ex)
+                {
+                    lastException = ex;
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine($"❌ Attempt {attempt}/{maxRetries} failed: {ex.Message}");
+                    Console.ResetColor();
+
+                    if (attempt < maxRetries)
+                    {
+                        await Task.Delay(1000); // Wait 1 second before retry
+                    }
+                }
+            }
+
+            // All retries failed
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"❌ Extraction failed after {maxRetries} attempts. Last error: {lastException?.Message}");
+            Console.ResetColor();
+            return new List<ExtractedRequirement>();
+        }
+
+        /// <summary>
+        /// Build AI prompt for smart compression extraction
+        /// </summary>
+        private string BuildSmartCompressionPrompt(string documentText)
+        {
+            return $@"Extract ALL requirements from this document as pipe-delimited lines.
+
+FORMAT (exact):
+ID|key|description|testable
+
+RULES:
+1. ID: Short unique code (2-10 chars)
+   Examples: UA-01, TM-05, PO-12, NS-03
+
+2. key: Dot-separated hierarchical path
+   Examples: user.auth.login, task.create, production.order.routing
+   Use clear, full words (not abbreviations)
+
+3. description: 8-15 words capturing CORE requirement
+   - Keep the WHAT (what happens)
+   - Keep the WHERE (which screen/system if relevant)
+   - Keep the WHEN (timing/sequence if important)
+   - Use common abbreviations: txn, prod, GL, auth, pwd, mgmt, sys, cfg
+   - Skip implementation details
+   
+   GOOD: ""route prod orders to new txn screen before GL posting""
+   GOOD: ""users login with email and password, session expires after 30min""
+   BAD: ""route orders"" (too short, lost meaning)
+   BAD: ""system shall allow users to..."" (too verbose)
+
+4. testable: Use 1 for yes, 0 for no
+
+EXAMPLES:
+UA-01|user.auth.login|users login with email and password, session timeout 30min|1
+UA-02|user.auth.register|new users create account with email verification required|1
+TM-01|task.create|create new task with title, description, assignee and due date|1
+PO-01|production.order.routing|route prod orders to new txn screen for review before GL posting|1
+
+Be CONCISE but keep SEMANTIC MEANING. 8-15 words per description.
+
+Document:
+{documentText}
+
+Return ONLY pipe-delimited lines (one per line). NO markdown, NO code blocks, NO explanations.";
+        }
+
+        /// <summary>
+        /// Parse pipe-delimited response into ExtractedRequirement objects
+        /// </summary>
+        private List<ExtractedRequirement> ParsePipeDelimitedResponse(string response)
+        {
             try
             {
-                var completionResult = await _openAiService.ChatCompletion.CreateCompletion(
-                    new ChatCompletionCreateRequest
-                    {
-                        Messages = new List<ChatMessage>
-                        {
-                    ChatMessage.FromSystem("You are a requirement analysis expert. Extract structured requirements from documents."),
-                    ChatMessage.FromUser(prompt)
-                        },
-                        Model = _model,
-                        MaxTokens = 2000,
-                        Temperature = 0
-                    });
-
-                if (!completionResult.Successful)
+                // Clean up response (remove markdown if present)
+                response = response.Trim();
+                response = response.Replace("```", "").Trim();
+                if (response.StartsWith("plaintext") || response.StartsWith("text"))
                 {
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"❌ API Error: {completionResult.Error?.Message ?? "Unknown error"}");
-                    Console.ResetColor();
-                    return new List<ExtractedRequirement>();
+                    response = response.Substring(response.IndexOf('\n') + 1).Trim();
                 }
 
-                string response = completionResult.Choices.First().Message.Content!.Trim();
-                int tokens = completionResult.Usage!.TotalTokens;
+                // Validate we got pipe-delimited content
+                if (!response.Contains('|'))
+                {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine("⚠️  Response doesn't contain pipe-delimited data, trying JSON fallback...");
+                    Console.ResetColor();
+                    return ParseRequirementsFromResponse(response); // Fall back to old JSON parser
+                }
 
                 Console.ForegroundColor = ConsoleColor.Gray;
-                Console.WriteLine($"📊 Tokens used: {tokens:N0}");
+                Console.WriteLine($"🔍 Parsing pipe-delimited response ({response.Length} characters)...");
                 Console.ResetColor();
 
-                var requirements = ParseRequirementsFromResponse(response);
+                // Parse each line
+                var lines = response.Split('\n', StringSplitOptions.RemoveEmptyEntries)
+                                  .Select(l => l.Trim())
+                                  .Where(l => !string.IsNullOrWhiteSpace(l) && l.Contains('|'))
+                                  .ToList();
 
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine($"✅ Extracted {requirements.Count} requirements");
-                Console.ResetColor();
+                if (lines.Count == 0)
+                {
+                    throw new FormatException("No valid pipe-delimited lines found");
+                }
 
-                // Cache the results
-                cache.AddToCache(documentPath, requirements, tokens);
+                var requirements = new List<ExtractedRequirement>();
+                int parseErrors = 0;
+
+                foreach (var line in lines)
+                {
+                    try
+                    {
+                        var req = ExtractedRequirement.ParsePipeDelimited(line);
+                        requirements.Add(req);
+                    }
+                    catch (Exception ex)
+                    {
+                        parseErrors++;
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine($"⚠️  Skipped invalid line: {line.Substring(0, Math.Min(50, line.Length))}...");
+                        Console.ResetColor();
+                    }
+                }
+
+                if (parseErrors > 0)
+                {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine($"⚠️  Skipped {parseErrors} invalid lines");
+                    Console.ResetColor();
+                }
 
                 return requirements;
             }
             catch (Exception ex)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"❌ Extraction failed: {ex.Message}");
+                Console.WriteLine($"❌ Parse error: {ex.Message}");
+                Console.WriteLine($"\nFirst 500 chars of response:");
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine(response.Substring(0, Math.Min(500, response.Length)));
                 Console.ResetColor();
                 return new List<ExtractedRequirement>();
             }
-        }
-
-        // Keep the old ReadRequirementDocument as public helper
-
-        /// <summary>
-        /// Build the AI prompt for requirement extraction
-        /// Uses "tweet style" for token optimization
-        /// </summary>
-        private string BuildExtractionPrompt(string documentText)
-        {
-            return $@"Extract testable requirements from this document. Return ONLY a JSON array, no markdown formatting, no explanation.
-
-Each requirement should have:
-- topic: High-level feature area (e.g., ""Task Management"", ""Dashboard"")
-- subtopic: Specific functionality (e.g., ""Create Task"", ""Update Task"")
-- expectedAction: What the system does (clear, testable behavior)
-- isTestable: true/false
-
-Rules:
-1. One requirement per distinct user action
-2. Focus on functional requirements only
-3. Skip non-functional requirements (performance, design guidelines)
-4. Be specific and actionable
-
-Return format (JSON array only):
-[
-  {{
-    ""topic"": ""Task Management"",
-    ""subtopic"": ""Create Task"",
-    ""expectedAction"": ""System shall allow users to create a new task with title, description, due date, and assignee"",
-    ""isTestable"": true
-  }}
-]
-
-Document to analyze:
-{documentText}
-
-JSON array:";
         }
 
         /// <summary>
