@@ -136,7 +136,7 @@ namespace AITestAnalyzer
             var appConfig = new Configuration { ApiKey = apiKey, Model = model };
             var promptConfig = new PromptConfig
             {
-                MaxTokens = 2000,
+                MaxTokens = 4000,
                 Model = model,
                 Temperature = 0,
                 SystemMessage = "You are a requirement analysis expert.",

@@ -2,6 +2,6 @@
   "MaxTokens": 250,
   "Model": "gpt-4o-mini",
   "Temperature": 0.2,
-  "SystemMessage": "You are an expert QA analyst. Evaluate BOTH test quality (clarity, completeness, best practices) AND requirement coverage (which requirements are validated). A test can cover requirements but still have quality issues.",
-  "UserTemplate": "{Requirements}\n\nTEST CASE TO ANALYZE:\nFeature: {Feature}\nScenario: {Scenario}\nSteps: {Steps}\nExpected Result: {ExpectedResult}\n\nFirst assess test quality (clear steps, specific expected results, proper validation). Then identify requirement coverage.\n\nProvide response in this format:\nQuality: [Either 'GOOD' or 'Issue: specific problem with test design/clarity/completeness']\nCoverage: [Comma-separated list of covered Subtopics, or 'None']"
+  "SystemMessage": "You are an expert QA analyst. Provide CONCISE, tweet-style feedback (under 280 chars). Be direct and actionable.",
+  "UserTemplate": "{Requirements}\n\nTEST CASE:\nFeature: {Feature}\nScenario: {Scenario}\nSteps: {Steps}\nExpected: {ExpectedResult}\n\nProvide BRIEF feedback:\nQuality: [ONE sentence max - either 'GOOD' or specific issue]\nCoverage: [Comma-separated requirement topics only]"
 }
