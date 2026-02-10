@@ -143,6 +143,94 @@ namespace AITestAnalyzer
             return ("ERROR: Unexpected retry loop exit", "None", 0);
         }
 
+        /// <summary>
+        /// QA MODE: Analyzes test quality without requirements
+        /// </summary>
+        public async Task<(string quality, int tokens)> AnalyzeTestQuality(TestCase testCase)
+        {
+            int maxRetries = 3;
+            int retryDelayMs = 1000;
+
+            for (int attempt = 1; attempt <= maxRetries; attempt++)
+            {
+                try
+                {
+                    string systemMessage = "You are an expert QA analyst. Assess test case quality. Be concise and actionable.";
+
+                    string userPrompt = $@"TEST CASE:
+Feature: {testCase.Feature}
+Scenario: {testCase.Scenario}
+Steps: {testCase.Steps}
+Expected Result: {testCase.ExpectedResult}
+
+Provide BRIEF feedback:
+Quality: [ONE sentence - either 'GOOD' or specific issue]
+
+Be direct and actionable. Focus on: clarity, completeness, testability.";
+
+                    var completionResult = await _openAiService.ChatCompletion.CreateCompletion(
+                        new ChatCompletionCreateRequest
+                        {
+                            Messages = new List<ChatMessage>
+                            {
+                        ChatMessage.FromSystem(systemMessage),
+                        ChatMessage.FromUser(userPrompt)
+                            },
+                            Model = _promptConfig.Model,
+                            MaxTokens = 250,
+                            Temperature = (float)_promptConfig.Temperature
+                        });
+
+                    if (completionResult.Successful)
+                    {
+                        string analysis = completionResult.Choices.First().Message.Content!.Trim();
+                        int tokens = completionResult.Usage!.TotalTokens;
+
+                        // Extract quality feedback
+                        string quality = analysis;
+                        if (quality.StartsWith("Quality:", StringComparison.OrdinalIgnoreCase))
+                        {
+                            quality = quality.Substring(8).Trim();
+                        }
+
+                        return (quality, tokens);
+                    }
+                    else
+                    {
+                        string errorMsg = completionResult.Error?.Message ?? "Unknown API error";
+                        if (attempt < maxRetries)
+                        {
+                            Console.WriteLine($"      ⚠️  API error (attempt {attempt}/{maxRetries}): {errorMsg}");
+                            Console.WriteLine($"      ⏳ Retrying in {retryDelayMs / 1000} seconds...");
+                            await Task.Delay(retryDelayMs);
+                            retryDelayMs *= 2;
+                            continue;
+                        }
+                        else
+                        {
+                            return ("ERROR: API call failed after retries", 0);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    if (attempt < maxRetries)
+                    {
+                        Console.WriteLine($"      ⚠️  Exception (attempt {attempt}/{maxRetries}): {ex.Message}");
+                        Console.WriteLine($"      ⏳ Retrying in {retryDelayMs / 1000} seconds...");
+                        await Task.Delay(retryDelayMs);
+                        retryDelayMs *= 2;
+                        continue;
+                    }
+                    else
+                    {
+                        return ($"ERROR: {ex.Message}", 0);
+                    }
+                }
+            }
+
+            return ("ERROR: Unexpected retry loop exit", 0);
+        }
         private string FormatRequirements(List<ExtractedRequirement> requirements)
         {
             var formatted = new StringBuilder();
