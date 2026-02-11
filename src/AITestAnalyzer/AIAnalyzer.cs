@@ -407,6 +407,10 @@ FEEDBACK:
             if (coverageIds == null || coverageIds.Count == 0)
                 return "";
 
+            // If no requirements, just return the IDs themselves
+            if (requirements == null || requirements.Count == 0)
+                return string.Join(", ", coverageIds);
+
             var displayNames = new List<string>();
 
             foreach (var id in coverageIds)
@@ -418,10 +422,16 @@ FEEDBACK:
                 {
                     displayNames.Add(req.GetDisplayText());
                 }
+                else
+                {
+                    // ID not found in requirements - just show the ID
+                    displayNames.Add(id);
+                }
             }
 
             return string.Join(", ", displayNames.Distinct());
         }
+
 
         private string FormatRequirements(List<ExtractedRequirement> requirements)
         {
