@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -18,9 +18,10 @@ namespace AITestAnalyzer
         public class SelectionResult
         {
             public enum Mode { Single, Batch, Exit }
-
+            public enum AnalysisMode { QA, BA }  // NEW: QA or BA mode
             public Mode SelectedMode { get; set; }
-            public string FilePath { get; set; } = "";      // Single mode: path to .xlsx
+            public AnalysisMode SelectedAnalysisMode { get; set; }  // NEW
+            public string FilePath { get; set; } = "";      // Single mode: path to .xlsx            
             public string FolderPath { get; set; } = "";    // Batch mode: path to folder
             public int TestLimit { get; set; } = 0;    // 0 = all tests
             public int SheetIndex { get; set; } = 1;   // Default sheet index
@@ -87,6 +88,56 @@ namespace AITestAnalyzer
                 }
             }
         }
+
+        /// <summary>
+        /// Prompts user to select QA Mode or BA Mode for analysis
+        /// </summary>
+        public static SelectionResult.AnalysisMode SelectAnalysisMode()
+        {
+            while (true)
+            {
+                Console.Clear();
+                WriteHeader("SELECT ANALYSIS TYPE");
+                Console.WriteLine();
+                Console.WriteLine("  Choose your analysis mode:");
+                Console.WriteLine();
+
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine("    [1] QA MODE - Test Quality Analysis");
+                Console.ResetColor();
+                Console.WriteLine("        • Reviews test structure and clarity");
+                Console.WriteLine("        • No requirements needed");
+                Console.WriteLine("        • Fast analysis (~150 tokens per test)");
+                Console.WriteLine("        • Output: 1 column (AI Analysis)");
+                Console.WriteLine();
+
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine("    [2] BA MODE - Requirement Coverage Analysis");
+                Console.ResetColor();
+                Console.WriteLine("        • Validates tests against requirements");
+                Console.WriteLine("        • Shows coverage gaps");
+                Console.WriteLine("        • Requires requirement document");
+                Console.WriteLine("        • Output: 2 columns (Requirement Feedback | Coverage)");
+                Console.WriteLine();
+
+                WritePrompt("Enter your choice (1-2): ");
+
+                string? choice = Console.ReadLine()?.Trim();
+
+                switch (choice)
+                {
+                    case "1":
+                        return SelectionResult.AnalysisMode.QA;
+                    case "2":
+                        return SelectionResult.AnalysisMode.BA;
+                    default:
+                        WriteWarning("Invalid choice. Please enter 1 or 2.");
+                        PauseForUser();
+                        break;
+                }
+            }
+        }
+
 
         // ============================================================
         // SINGLE FILE SELECTION
@@ -256,9 +307,13 @@ namespace AITestAnalyzer
                         continue; // Back to config screen to confirm before running
 
                     case "R":
+                        // NEW: Ask for analysis mode before returning
+                        var analysisMode = SelectAnalysisMode();
+
                         return new SelectionResult
                         {
                             SelectedMode = SelectionResult.Mode.Single,
+                            SelectedAnalysisMode = analysisMode,  // NEW
                             FilePath = filePath,
                             TestLimit = testLimit,
                             SheetIndex = sheetIndex
@@ -358,9 +413,13 @@ namespace AITestAnalyzer
             string? confirm = Console.ReadLine()?.Trim().ToUpper();
             if (confirm == "B") return ShowMainMenu();
 
+            // NEW: Ask for analysis mode before returning
+            var analysisMode = SelectAnalysisMode();
+
             return new SelectionResult
             {
                 SelectedMode = SelectionResult.Mode.Batch,
+                SelectedAnalysisMode = analysisMode,  // NEW
                 FolderPath = folderPath,
                 TestLimit = testLimit,
                 SheetIndex = sheetIndex

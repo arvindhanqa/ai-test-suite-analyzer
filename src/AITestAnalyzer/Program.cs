@@ -291,64 +291,66 @@ namespace AITestAnalyzer
             string excelPath = selection.FilePath;
             int worksheetIndex = selection.SheetIndex;
             int testLimit = selection.TestLimit; // 0 = all
-
-            // Validate (API key + worksheet index against the chosen file)
-            bool configIsValid = await ValidateConfiguration(appConfig, promptConfig, excelPath, worksheetIndex);
-            if (!configIsValid)
-            {
-                WriteInfo("Press any key to exit...");
-                Console.ReadKey();
-                return;
-            }
+            string analysisMode = selection.SelectedAnalysisMode == SelectionResult.AnalysisMode.QA ? "QA" : "BA";  // NEW LINE
 
             var aiAnalyzer = new AIAnalyzer(appConfig, promptConfig);
-            // After creating AIAnalyzer, add this:
             Console.WriteLine();
-            WriteInfo("Loading requirements for context-aware analysis...");
 
-            // Initialize requirement cache and extractor
-            var reqCache = new RequirementCache();
-            var reqExtractor = new RequirementExtractor(appConfig, promptConfig);
+            // ============================================================
+            // MODE-SPECIFIC SETUP
+            // ============================================================
+            List<ExtractedRequirement> requirements = new List<ExtractedRequirement>();
 
-            // Auto-detect requirement file based on test file name
-            string testFileName = Path.GetFileNameWithoutExtension(excelPath);
-            string reqFileName = testFileName.Replace("test_cases_", "requirements_") + ".md";
-            string dataFolder = Path.GetDirectoryName(excelPath) ?? ".";
-            string reqPath = Path.Combine(dataFolder, reqFileName);
-
-            if (!File.Exists(reqPath))
+            if (analysisMode == "BA")
             {
-                Console.WriteLine($"⚠️  Auto-detection failed. Could not find: {reqFileName}");
-                Console.Write("📁 Enter requirement file path (or press Enter to skip): ");
-                string? userInput = Console.ReadLine();
+                WriteInfo("BA MODE: Loading requirements for coverage analysis...");
 
-                if (string.IsNullOrWhiteSpace(userInput))
+                var reqCache = new RequirementCache();
+                var reqExtractor = new RequirementExtractor(appConfig, promptConfig);
+
+                // Auto-detect requirement file
+                string testFileName = Path.GetFileNameWithoutExtension(excelPath);
+                string reqFileName = testFileName.Replace("test_cases_", "requirements_") + ".md";
+                string dataFolder = Path.GetDirectoryName(excelPath) ?? ".";
+                string reqPath = Path.Combine(dataFolder, reqFileName);
+
+                if (!File.Exists(reqPath))
                 {
-                    Console.WriteLine("⚠️  No requirements provided. Analysis will be quality-only (no coverage tracking).");
-                    reqPath = ""; // Empty path = skip requirements
+                    Console.WriteLine($"⚠️  Auto-detection failed. Could not find: {reqFileName}");
+                    Console.Write("📁 Enter requirement file path: ");
+                    string? userInput = Console.ReadLine();
+
+                    if (string.IsNullOrWhiteSpace(userInput))
+                    {
+                        WriteError("BA Mode requires a requirement file. Exiting...");
+                        WriteInfo("Press any key to exit...");
+                        Console.ReadKey();
+                        return;
+                    }
+
+                    reqPath = userInput;
                 }
                 else
                 {
-                    reqPath = userInput;
+                    Console.WriteLine($"✅ Auto-detected requirement file: {Path.GetFileName(reqPath)}");
+                }
+
+                try
+                {
+                    requirements = await reqExtractor.ExtractRequirements(reqPath, reqCache);
+                    WriteSuccess($"Loaded {requirements.Count} requirements");
+                }
+                catch (Exception ex)
+                {
+                    WriteError($"Failed to load requirements: {ex.Message}");
+                    WriteInfo("Press any key to exit...");
+                    Console.ReadKey();
+                    return;
                 }
             }
             else
             {
-                Console.WriteLine($"✅ Auto-detected requirement file: {Path.GetFileName(reqPath)}");
-            }
-
-            string reqFile = reqPath; // Keep variable name consistent with existing code
-
-            List<ExtractedRequirement> requirements;
-            try
-            {
-                requirements = await reqExtractor.ExtractRequirements(reqFile, reqCache);
-                WriteSuccess($"Loaded {requirements.Count} requirements as context");
-            }
-            catch (Exception ex)
-            {
-                WriteError($"Failed to load requirements: {ex.Message}");
-                requirements = new List<ExtractedRequirement>(); // Continue with empty list
+                WriteInfo("QA MODE: Quality analysis only (no requirements needed)");
             }
 
             Console.WriteLine();
@@ -360,7 +362,7 @@ namespace AITestAnalyzer
 
             var excelWriter = new ExcelWriter(outputPath, worksheetIndex);
             excelWriter.RenameOriginalSheet();
-            excelWriter.AddAnalysisColumnHeader();
+            excelWriter.AddAnalysisColumnHeader(analysisMode);  // ADD MODE PARAMETER
             Console.WriteLine();
 
             // Validate Excel structure
@@ -448,45 +450,51 @@ namespace AITestAnalyzer
                 processedCount++;
                 progressTracker.DisplayProgress(processedCount, testCase.TestId);
 
-                string result;
-                string quality;     // Declare here at method level
-                string coverage;    // Declare here at method level
-                int tokens;         // Declare here at method level
+                string quality = "";
+                string coverage = "";
+                int tokens = 0;
 
-                if (useCache && cache != null)
+                // QA MODE: Quality analysis only
+                if (analysisMode == "QA")
                 {
-                    string hash = cache.GenerateHash(testCase);
-
-                    if (cache.TryGetCached(hash, out CachedResult? cachedResult, CACHE_MAX_AGE_DAYS))
+                    if (useCache && cache != null)
                     {
-                        // Cache hit - use cached result
-                        result = cachedResult!.AnalysisResult;
-                        quality = cachedResult.Quality;     // NEW: Get from cache
-                        coverage = cachedResult.Coverage;   // NEW: Get from cache
-                        tokens = 0;
-                        cacheHits++;
+                        string hash = cache.GenerateHash(testCase);
+                        if (cache.TryGetCached(hash, out CachedResult? cachedResult, CACHE_MAX_AGE_DAYS))
+                        {
+                            quality = cachedResult!.Quality;
+                            tokens = 0;
+                            cacheHits++;
+                        }
+                        else
+                        {
+                            (quality, tokens) = await aiAnalyzer.AnalyzeTestQuality(testCase);
+                            cache.AddToCache(testCase.TestId, hash, quality, "", tokens);
+                            apiCalls++;
+                            await Task.Delay(1000);
+                        }
                     }
                     else
                     {
-                        // Cache miss - call AI
-                        (quality, coverage, tokens) = await aiAnalyzer.AnalyzeTestCase(testCase, requirements);
-                        result = quality;  // Store quality as result for now
-                        cache.AddToCache(testCase.TestId, hash, quality, coverage, tokens);
+                        (quality, tokens) = await aiAnalyzer.AnalyzeTestQuality(testCase);
                         apiCalls++;
                         await Task.Delay(1000);
                     }
+                    coverage = "";
                 }
+                // BA MODE: Coverage + requirement feedback
                 else
                 {
-                    // No cache - call AI directly
-                    (quality, coverage, tokens) = await aiAnalyzer.AnalyzeTestCase(testCase, requirements);
-                    result = quality;  // Store quality as result for now
+                    var (reqFeedback, coverageIds, tokensUsed) = await aiAnalyzer.AnalyzeCoverageAndFeedback(testCase, requirements);
+                    quality = reqFeedback;
+                    coverage = aiAnalyzer.ConvertIdsToDisplayNames(coverageIds, requirements);
+                    tokens = tokensUsed;
                     apiCalls++;
                     await Task.Delay(1000);
                 }
 
-                results.Add((testCase.TestId, result, tokens));
-                excelWriter.WriteAnalysis(row, quality, coverage);
+                results.Add((testCase.TestId, quality, tokens));
+                excelWriter.WriteAnalysis(row, quality, coverage, analysisMode);  // ADD MODE PARAMETER
             }
 
             var endTime = DateTime.Now;
@@ -503,13 +511,16 @@ namespace AITestAnalyzer
                 WriteSuccess("Cache saved successfully");
             }
 
-            // Create summary sheets
-            Console.WriteLine();
-            WriteInfo("Creating Quality Issues Summary...");
-            excelWriter.CreateQualityIssuesSheet(results);
+            // Create summary sheets (only for QA mode)
+            if (analysisMode == "QA")
+            {
+                Console.WriteLine();
+                WriteInfo("Creating Quality Issues Summary...");
+                excelWriter.CreateQualityIssuesSheet(results);
 
-            WriteInfo("Creating Statistics Dashboard...");
-            excelWriter.CreateStatisticsDashboard(results, startTime, endTime);
+                WriteInfo("Creating Statistics Dashboard...");
+                excelWriter.CreateStatisticsDashboard(results, startTime, endTime);
+            }
 
             // Display summary
             Console.WriteLine();

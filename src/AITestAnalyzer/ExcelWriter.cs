@@ -76,55 +76,85 @@ namespace AITestAnalyzer
         // METHOD 4: Add AI Analysis Column Header
         // ============================================================
         // Add analysis column header with formatting
-        public void AddAnalysisColumnHeader()
+        public void AddAnalysisColumnHeader(string mode = "BA")
         {
             using (var package = new ExcelPackage(new FileInfo(_outputPath)))
             {
                 var worksheet = package.Workbook.Worksheets[_worksheetIndex];
 
-                // Add "AI Analysis" header in column H (8th column)
-                var headerCell = worksheet.Cells[1, 8];
-                headerCell.Value = "AI Analysis";
-
-                // Style the header
-                headerCell.Style.Font.Bold = true;
-                headerCell.Style.Font.Size = 12;
-                headerCell.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
-                headerCell.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightBlue);
-                headerCell.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
-                headerCell.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
-
-                // Add "Requirement Coverage" header in column I (9th column)
-                var coverageHeaderCell = worksheet.Cells[1, 9];
-                coverageHeaderCell.Value = "Requirement Coverage";
-
-                // Style the coverage header
-                coverageHeaderCell.Style.Font.Bold = true;
-                coverageHeaderCell.Style.Font.Size = 12;
-                coverageHeaderCell.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
-                coverageHeaderCell.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGreen);
-                coverageHeaderCell.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
-                coverageHeaderCell.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
-
-                // ✨ NEW: FREEZE PANES - Keep row 1 (header) visible when scrolling
-                worksheet.View.FreezePanes(2, 1); // Freeze everything above row 2
-
-                // ✨ NEW: AUTO-FILTER - Add dropdown filters to all headers
-                var lastCol = worksheet.Dimension?.End.Column ?? 9; // Include coverage column
-                worksheet.Cells[1, 1, 1, lastCol].AutoFilter = true;
-
-                // ✨ NEW: AUTO-SIZE COLUMNS - Fit content width
-                // Auto-size columns 1-7 (existing columns)
-                for (int col = 1; col <= 7; col++)
+                if (mode == "QA")
                 {
-                    worksheet.Column(col).AutoFit();
+                    // ============================================================
+                    // QA MODE: 1 column only (AI Analysis)
+                    // ============================================================
+
+                    // Add "AI Analysis" header in column H (8th column)
+                    var headerCell = worksheet.Cells[1, 8];
+                    headerCell.Value = "AI Analysis";
+                    headerCell.Style.Font.Bold = true;
+                    headerCell.Style.Font.Size = 12;
+                    headerCell.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                    headerCell.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightBlue);
+                    headerCell.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+                    headerCell.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
+
+                    // Freeze panes
+                    worksheet.View.FreezePanes(2, 1);
+
+                    // Auto-filter
+                    worksheet.Cells[1, 1, 1, 8].AutoFilter = true;
+
+                    // Auto-size columns 1-7
+                    for (int col = 1; col <= 7; col++)
+                    {
+                        worksheet.Column(col).AutoFit();
+                    }
+
+                    // Set column H width
+                    worksheet.Column(8).Width = 60;
                 }
+                else // BA Mode
+                {
+                    // ============================================================
+                    // BA MODE: 2 columns (Requirement Feedback | Coverage)
+                    // ============================================================
 
-                // Set column H (AI Analysis) to wider fixed width for readability
-                worksheet.Column(8).Width = 60;
+                    // Add "Requirement Feedback" header in column H (8th column)
+                    var headerCell = worksheet.Cells[1, 8];
+                    headerCell.Value = "Requirement Feedback";
+                    headerCell.Style.Font.Bold = true;
+                    headerCell.Style.Font.Size = 12;
+                    headerCell.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                    headerCell.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightCoral);
+                    headerCell.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+                    headerCell.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
 
-                // NEW: Set column I (Coverage) to fixed width
-                worksheet.Column(9).Width = 40;
+                    // Add "Coverage" header in column I (9th column)
+                    var coverageHeaderCell = worksheet.Cells[1, 9];
+                    coverageHeaderCell.Value = "Coverage";
+                    coverageHeaderCell.Style.Font.Bold = true;
+                    coverageHeaderCell.Style.Font.Size = 12;
+                    coverageHeaderCell.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                    coverageHeaderCell.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGreen);
+                    coverageHeaderCell.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+                    coverageHeaderCell.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
+
+                    // Freeze panes
+                    worksheet.View.FreezePanes(2, 1);
+
+                    // Auto-filter
+                    worksheet.Cells[1, 1, 1, 9].AutoFilter = true;
+
+                    // Auto-size columns 1-7
+                    for (int col = 1; col <= 7; col++)
+                    {
+                        worksheet.Column(col).AutoFit();
+                    }
+
+                    // Set column widths
+                    worksheet.Column(8).Width = 60; // Requirement Feedback
+                    worksheet.Column(9).Width = 40; // Coverage
+                }
 
                 package.Save();
             }
@@ -147,58 +177,83 @@ namespace AITestAnalyzer
         /// - Sets column width to 50 characters
         /// - Handles exceptions gracefully (logs warning, continues processing)
         /// </remarks>
-        public void WriteAnalysis(int rowNumber, string analysis, string coverage)
+        public void WriteAnalysis(int rowNumber, string analysis, string coverage, string mode = "BA")
         {
             try
             {
                 using (var package = new ExcelPackage(new FileInfo(_outputPath)))
                 {
-                    var worksheet = package.Workbook.Worksheets[_worksheetIndex]; // Sheet2
+                    var worksheet = package.Workbook.Worksheets[_worksheetIndex];
 
-                    // Write to column 8 (AI Analysis)
-                    worksheet.Cells[rowNumber, 8].Value = analysis;
-
-                    // Color coding
-                    if (analysis == "GOOD")
+                    if (mode == "QA")
                     {
-                        worksheet.Cells[rowNumber, 8].Style.Font.Color.SetColor(System.Drawing.Color.Green);
+                        // ============================================================
+                        // QA MODE: Write to column H only (AI Analysis)
+                        // ============================================================
+
+                        worksheet.Cells[rowNumber, 8].Value = analysis;
+
+                        // Color coding
+                        if (analysis == "GOOD")
+                        {
+                            worksheet.Cells[rowNumber, 8].Style.Font.Color.SetColor(System.Drawing.Color.Green);
+                        }
+                        else if (analysis.StartsWith("Issue:") || analysis.StartsWith("Steps"))
+                        {
+                            worksheet.Cells[rowNumber, 8].Style.Font.Color.SetColor(System.Drawing.Color.Orange);
+                        }
+                        else if (analysis.StartsWith("ERROR:"))
+                        {
+                            worksheet.Cells[rowNumber, 8].Style.Font.Color.SetColor(System.Drawing.Color.Red);
+                        }
+
+                        worksheet.Cells[rowNumber, 8].Style.WrapText = true;
+                        worksheet.Cells[rowNumber, 8].Style.VerticalAlignment = OfficeOpenXml.Style.ExcelVerticalAlignment.Top;
+                        worksheet.Cells[rowNumber, 8].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
                     }
-                    else if (analysis.StartsWith("Issue:"))
+                    else // BA Mode
                     {
-                        worksheet.Cells[rowNumber, 8].Style.Font.Color.SetColor(System.Drawing.Color.Orange);
-                    }
-                    else if (analysis.StartsWith("ERROR:"))
-                    {
-                        worksheet.Cells[rowNumber, 8].Style.Font.Color.SetColor(System.Drawing.Color.Red);
+                        // ============================================================
+                        // BA MODE: Write to columns H and I (Requirement Feedback | Coverage)
+                        // ============================================================
+
+                        // Write requirement feedback to column H
+                        worksheet.Cells[rowNumber, 8].Value = analysis;
+                        worksheet.Cells[rowNumber, 8].Style.WrapText = true;
+                        worksheet.Cells[rowNumber, 8].Style.VerticalAlignment = OfficeOpenXml.Style.ExcelVerticalAlignment.Top;
+                        worksheet.Cells[rowNumber, 8].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
+
+                        // Color code requirement feedback
+                        if (string.IsNullOrWhiteSpace(analysis))
+                        {
+                            // No issues = green background
+                            worksheet.Cells[rowNumber, 8].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                            worksheet.Cells[rowNumber, 8].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGreen);
+                        }
+                        else if (analysis.StartsWith("ERROR:"))
+                        {
+                            worksheet.Cells[rowNumber, 8].Style.Font.Color.SetColor(System.Drawing.Color.Red);
+                        }
+
+                        // Write coverage to column I
+                        worksheet.Cells[rowNumber, 9].Value = coverage;
+                        worksheet.Cells[rowNumber, 9].Style.WrapText = true;
+                        worksheet.Cells[rowNumber, 9].Style.VerticalAlignment = OfficeOpenXml.Style.ExcelVerticalAlignment.Top;
+                        worksheet.Cells[rowNumber, 9].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
+
+                        // Color code coverage
+                        if (string.IsNullOrWhiteSpace(coverage) || coverage == "None")
+                        {
+                            worksheet.Cells[rowNumber, 9].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                            worksheet.Cells[rowNumber, 9].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightYellow);
+                        }
+                        else
+                        {
+                            worksheet.Cells[rowNumber, 9].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                            worksheet.Cells[rowNumber, 9].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGreen);
+                        }
                     }
 
-                    worksheet.Cells[rowNumber, 8].Style.WrapText = true;
-                    worksheet.Cells[rowNumber, 8].Style.VerticalAlignment = OfficeOpenXml.Style.ExcelVerticalAlignment.Top;
-                    worksheet.Cells[rowNumber, 8].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
-                    worksheet.Column(8).Width = 50;  // Set AI Analysis column to 50 characters wide
-
-                    // In AddAnalysisColumnHeader method, add:
-                    worksheet.Cells[1, 8].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
-                    worksheet.Cells[1, 8].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGray);
-                    worksheet.Cells[1, 8].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Medium);
-
-                    // Write coverage to column 9
-                    worksheet.Cells[rowNumber, 9].Value = coverage;
-                    worksheet.Cells[rowNumber, 9].Style.WrapText = true;
-                    worksheet.Cells[rowNumber, 9].Style.VerticalAlignment = OfficeOpenXml.Style.ExcelVerticalAlignment.Top;
-                    worksheet.Cells[rowNumber, 9].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
-
-                    // Color code coverage
-                    if (string.IsNullOrWhiteSpace(coverage) || coverage == "None")
-                    {
-                        worksheet.Cells[rowNumber, 9].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
-                        worksheet.Cells[rowNumber, 9].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightYellow);
-                    }
-                    else
-                    {
-                        worksheet.Cells[rowNumber, 9].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
-                        worksheet.Cells[rowNumber, 9].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGreen);
-                    }
                     package.Save();
                 }
             }
