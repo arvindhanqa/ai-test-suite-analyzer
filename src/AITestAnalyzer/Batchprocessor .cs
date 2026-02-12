@@ -69,7 +69,8 @@ namespace AITestAnalyzer
             int? testLimit = null,
             int worksheetIndex = 0,
             bool useCache = true,
-            TestCaseCache? sharedCache = null)
+            TestCaseCache? sharedCache = null,
+            string analysisMode = "BA")
         {
             var result = new FileResult
             {
@@ -158,7 +159,7 @@ namespace AITestAnalyzer
 
                 // Prepare Excel output
                 excelWriter.RenameOriginalSheet();
-                excelWriter.AddAnalysisColumnHeader();
+                excelWriter.AddAnalysisColumnHeader(analysisMode);
 
                 // Initialize or use shared cache
                 TestCaseCache? cache = sharedCache;
@@ -193,39 +194,59 @@ namespace AITestAnalyzer
                         int tokens;
 
                         // Check cache if enabled
+                        string baseHash = cache?.GenerateHash(testCase) ?? "";
+                        string cacheHash = analysisMode == "QA" ? baseHash : "ba_" + baseHash;
+
                         if (useCache && cache != null)
                         {
-                            string hash = cache.GenerateHash(testCase);
-
-                            if (cache.TryGetCached(hash, out CachedResult? cachedResult, CACHE_MAX_AGE_DAYS))
+                            if (cache.TryGetCached(cacheHash, out CachedResult? cachedResult, CACHE_MAX_AGE_DAYS))
                             {
-                                // CACHE HIT
-                                analysisResult = cachedResult!.AnalysisResult;
-                                quality = cachedResult.Quality;      // NEW
-                                coverage = cachedResult.Coverage;    // NEW
+                                quality = cachedResult!.Quality;
+                                coverage = cachedResult.Coverage;
+                                analysisResult = quality;
                                 tokens = 0;
                                 cacheHits++;
                             }
                             else
                             {
-                                // CACHE MISS - Call API
-                                (quality, coverage, tokens) = await aiAnalyzer.AnalyzeTestCase(testCase, requirements);
-                                analysisResult = quality;  // Map quality to result
-                                cache.AddToCache(testCase.TestId, hash, quality, coverage, tokens);
+                                if (analysisMode == "QA")
+                                {
+                                    (quality, tokens) = await aiAnalyzer.AnalyzeTestQuality(testCase);
+                                    coverage = "";
+                                }
+                                else
+                                {
+                                    var (reqFeedback, coverageIds, tokensUsed) = await aiAnalyzer.AnalyzeCoverageAndFeedback(testCase, requirements);
+                                    quality = reqFeedback;
+                                    coverage = aiAnalyzer.ConvertIdsToDisplayNames(coverageIds, requirements);
+                                    tokens = tokensUsed;
+                                }
+                                analysisResult = quality;
+                                cache.AddToCache(testCase.TestId, cacheHash, quality, coverage, tokens);
                                 apiCalls++;
-                                await Task.Delay(1000); // Rate limiting
+                                await Task.Delay(1000);
                             }
                         }
                         else
                         {
-                            // Cache disabled
-                            (quality, coverage, tokens) = await aiAnalyzer.AnalyzeTestCase(testCase, requirements);
-                            analysisResult = quality;  // Map quality to result
+                            if (analysisMode == "QA")
+                            {
+                                (quality, tokens) = await aiAnalyzer.AnalyzeTestQuality(testCase);
+                                coverage = "";
+                            }
+                            else
+                            {
+                                var (reqFeedback, coverageIds, tokensUsed) = await aiAnalyzer.AnalyzeCoverageAndFeedback(testCase, requirements);
+                                quality = reqFeedback;
+                                coverage = aiAnalyzer.ConvertIdsToDisplayNames(coverageIds, requirements);
+                                tokens = tokensUsed;
+                            }
+                            analysisResult = quality;
                             apiCalls++;
                             await Task.Delay(1000);
                         }
 
-                        excelWriter.WriteAnalysis(rowNumber, quality, coverage);
+                        excelWriter.WriteAnalysis(rowNumber, quality, coverage, analysisMode);
                         results.Add((testCase.TestId, analysisResult, tokens));
 
                         progressTracker.DisplayProgress(i + 1, testCase.TestId);
@@ -300,7 +321,8 @@ namespace AITestAnalyzer
             string folderPath,
             int? testLimitPerFile = null,
             int worksheetIndex = 0,
-            bool useCache = true)
+            bool useCache = true,
+            string analysisMode = "BA")
         {
             var allResults = new List<FileResult>();
             var batchStartTime = DateTime.Now;
@@ -367,7 +389,8 @@ namespace AITestAnalyzer
                     testLimitPerFile,
                     worksheetIndex,
                     useCache,
-                    sharedCache);
+                    sharedCache,
+                    analysisMode);
 
                 allResults.Add(result);
 

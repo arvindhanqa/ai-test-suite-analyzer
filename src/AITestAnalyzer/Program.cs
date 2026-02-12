@@ -485,12 +485,38 @@ namespace AITestAnalyzer
                 // BA MODE: Coverage + requirement feedback
                 else
                 {
-                    var (reqFeedback, coverageIds, tokensUsed) = await aiAnalyzer.AnalyzeCoverageAndFeedback(testCase, requirements);
-                    quality = reqFeedback;
-                    coverage = aiAnalyzer.ConvertIdsToDisplayNames(coverageIds, requirements);
-                    tokens = tokensUsed;
-                    apiCalls++;
-                    await Task.Delay(1000);
+                    if (useCache && cache != null)
+                    {
+                        string baseHash = cache.GenerateHash(testCase);
+                        string baHash = "ba_" + baseHash;  // Separate namespace from QA cache
+
+                        if (cache.TryGetCached(baHash, out CachedResult? cachedResult, CACHE_MAX_AGE_DAYS))
+                        {
+                            quality = cachedResult!.Quality;
+                            coverage = cachedResult!.Coverage;
+                            tokens = 0;
+                            cacheHits++;
+                        }
+                        else
+                        {
+                            var (reqFeedback, coverageIds, tokensUsed) = await aiAnalyzer.AnalyzeCoverageAndFeedback(testCase, requirements);
+                            quality = reqFeedback;
+                            coverage = aiAnalyzer.ConvertIdsToDisplayNames(coverageIds, requirements);
+                            tokens = tokensUsed;
+                            cache.AddToCache(testCase.TestId, baHash, quality, coverage, tokens);
+                            apiCalls++;
+                            await Task.Delay(1000);
+                        }
+                    }
+                    else
+                    {
+                        var (reqFeedback, coverageIds, tokensUsed) = await aiAnalyzer.AnalyzeCoverageAndFeedback(testCase, requirements);
+                        quality = reqFeedback;
+                        coverage = aiAnalyzer.ConvertIdsToDisplayNames(coverageIds, requirements);
+                        tokens = tokensUsed;
+                        apiCalls++;
+                        await Task.Delay(1000);
+                    }
                 }
 
                 results.Add((testCase.TestId, quality, tokens));
@@ -573,11 +599,14 @@ namespace AITestAnalyzer
             {
                 int? limitParam = (testLimit == 0) ? null : (int?)testLimit;
 
+                string batchMode = selection.SelectedAnalysisMode == SelectionResult.AnalysisMode.QA ? "QA" : "BA";
+
                 var results = await batchProcessor.ProcessBatchAsync(
                     folderPath,
                     limitParam,
                     worksheetIndex,
-                    useCache);
+                    useCache,
+                    batchMode);
 
                 if (results.Count == 0)
                 {
