@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -54,7 +54,7 @@ namespace AITestAnalyzer
         /// - 56 tests, 3 cache hits, 53 API calls, 100% issues → Shows all sections with appropriate colors
         /// - Cache disabled (--no-cache) → Shows warning instead of cache section
         /// </remarks>
-        public static void Display(List<(string TestId, string Result, int Tokens)> results,
+        public static void Display(List<(string TestId, string Result, int Tokens, string Coverage)> results,
                                   DateTime startTime, DateTime endTime, string outputPath, int cacheHits, int apiCalls, bool cacheEnabled)
         {
             int goodTests = results.Count(r => r.Result.StartsWith("GOOD", StringComparison.OrdinalIgnoreCase));

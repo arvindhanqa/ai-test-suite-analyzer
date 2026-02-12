@@ -433,7 +433,7 @@ namespace AITestAnalyzer
 
             // Process tests
             var startTime = DateTime.Now;
-            var results = new List<(string TestId, string Result, int Tokens)>();
+            var results = new List<(string TestId, string Result, int Tokens, string Coverage)>();
             int processedCount = 0;
             int cacheHits = 0;
             int apiCalls = 0;
@@ -501,7 +501,7 @@ namespace AITestAnalyzer
                         {
                             var (reqFeedback, coverageIds, tokensUsed) = await aiAnalyzer.AnalyzeCoverageAndFeedback(testCase, requirements);
                             quality = reqFeedback;
-                            coverage = aiAnalyzer.ConvertIdsToDisplayNames(coverageIds, requirements);
+                            coverage = string.Join(", ", coverageIds);
                             tokens = tokensUsed;
                             cache.AddToCache(testCase.TestId, baHash, quality, coverage, tokens);
                             apiCalls++;
@@ -512,14 +512,14 @@ namespace AITestAnalyzer
                     {
                         var (reqFeedback, coverageIds, tokensUsed) = await aiAnalyzer.AnalyzeCoverageAndFeedback(testCase, requirements);
                         quality = reqFeedback;
-                        coverage = aiAnalyzer.ConvertIdsToDisplayNames(coverageIds, requirements);
+                        coverage = string.Join(", ", coverageIds);
                         tokens = tokensUsed;
                         apiCalls++;
                         await Task.Delay(1000);
                     }
                 }
 
-                results.Add((testCase.TestId, quality, tokens));
+                results.Add((testCase.TestId, quality, tokens, coverage));
                 excelWriter.WriteAnalysis(row, quality, coverage, analysisMode);  // ADD MODE PARAMETER
             }
 
@@ -546,6 +546,15 @@ namespace AITestAnalyzer
 
                 WriteInfo("Creating Statistics Dashboard...");
                 excelWriter.CreateStatisticsDashboard(results, startTime, endTime);
+            }
+
+            // BA Mode: Coverage Gap Analysis sheet
+            if (analysisMode == "BA")
+            {
+                Console.WriteLine();
+                WriteInfo("Creating Coverage Gap Analysis...");
+                // END DEBUG
+                excelWriter.CreateCoverageGapSheet(results, requirements);
             }
 
             // Display summary

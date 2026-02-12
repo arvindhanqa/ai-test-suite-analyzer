@@ -290,7 +290,7 @@ namespace AITestAnalyzer
         /// EXAMPLE OUTPUT:
         /// - 56 tests analyzed, 52 have issues → sheet contains 52 rows + header + summary = 54 rows total
         /// </remarks>
-        public void CreateQualityIssuesSheet(List<(string TestId, string Result, int Tokens)> results)
+        public void CreateQualityIssuesSheet(List<(string TestId, string Result, int Tokens, string Coverage)> results)
         {
             try
             {
@@ -332,7 +332,7 @@ namespace AITestAnalyzer
 
                     // DATA ROWS - only tests with issues
                     int currentRow = 2;
-                    foreach (var (testId, result, tokens) in results)
+                    foreach (var (testId, result, tokens, coverage) in results)
                     {
                         if (result != "GOOD" && !result.StartsWith("ERROR:"))
                         {
@@ -408,7 +408,7 @@ namespace AITestAnalyzer
         /// - Freeze panes (keeps title visible when scrolling)
         /// - Medium borders around entire used range
         /// </remarks>
-        public void CreateStatisticsDashboard(List<(string TestId, string Result, int Tokens)> results, DateTime startTime, DateTime endTime)
+        public void CreateStatisticsDashboard(List<(string TestId, string Result, int Tokens, string Coverage)> results, DateTime startTime, DateTime endTime)
         {
             try
             {
@@ -623,6 +623,214 @@ namespace AITestAnalyzer
             catch (Exception ex)
             {
                 Console.WriteLine($"   ⚠️ Warning: Could not create statistics sheet: {ex.Message}");
+            }
+        }
+
+        // ============================================================
+        // HELPER: Build coverage map from results
+        // requirement ID → list of TestIds that cover it
+        // ============================================================
+        private Dictionary<string, List<string>> BuildCoverageMap(
+            List<(string TestId, string Result, int Tokens, string Coverage)> results,
+            List<ExtractedRequirement> requirements)
+        {
+            // Initialize every requirement with an empty list
+            var coverageMap = new Dictionary<string, List<string>>();
+            foreach (var req in requirements)
+            {
+                if (!string.IsNullOrWhiteSpace(req.Id))
+                    coverageMap[req.Id] = new List<string>();
+            }
+
+            // Parse coverage string per test and map back to requirement IDs
+            foreach (var (testId, result, tokens, coverage) in results)
+            {
+                if (string.IsNullOrWhiteSpace(coverage) || coverage == "None")
+                    continue;
+
+                // Coverage string format: "UA-01, UA-02, UA-03" or "TM-01, TM-02"
+                var ids = coverage.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                  .Select(id => id.Trim())
+                                  .Where(id => !string.IsNullOrWhiteSpace(id));
+
+                foreach (var id in ids)
+                {
+                    if (coverageMap.ContainsKey(id))
+                    {
+                        coverageMap[id].Add(testId);
+                    }
+                    // If ID not in map, it came from AI but isn't in our requirements list — skip it
+                }
+            }
+
+            return coverageMap;
+        }
+
+        // ============================================================
+        // METHOD: Create Coverage Gap Summary Sheet (BA Mode only)
+        // ============================================================
+        public void CreateCoverageGapSheet(
+            List<(string TestId, string Result, int Tokens, string Coverage)> results,
+            List<ExtractedRequirement> requirements)
+        {
+            try
+            {
+                using (var package = new ExcelPackage(new FileInfo(_outputPath)))
+                {
+                    // Delete existing sheet if present
+                    var existingSheet = package.Workbook.Worksheets["Coverage Gap Analysis"];
+                    if (existingSheet != null)
+                        package.Workbook.Worksheets.Delete(existingSheet);
+
+                    var sheet = package.Workbook.Worksheets.Add("Coverage Gap Analysis");
+
+                    // ── TITLE ──────────────────────────────────────────
+                    sheet.Cells[1, 1].Value = "REQUIREMENT COVERAGE GAP ANALYSIS";
+                    sheet.Cells[1, 1, 1, 5].Merge = true;
+                    sheet.Cells[1, 1].Style.Font.Size = 14;
+                    sheet.Cells[1, 1].Style.Font.Bold = true;
+                    sheet.Cells[1, 1].Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+                    sheet.Cells[1, 1].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                    sheet.Cells[1, 1].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.DarkSlateBlue);
+                    sheet.Cells[1, 1].Style.Font.Color.SetColor(System.Drawing.Color.White);
+
+                    // ── HEADERS ────────────────────────────────────────
+                    sheet.Cells[2, 1].Value = "Req ID";
+                    sheet.Cells[2, 2].Value = "Description";
+                    sheet.Cells[2, 3].Value = "Tests Covering It";
+                    sheet.Cells[2, 4].Value = "Count";
+                    sheet.Cells[2, 5].Value = "Status";
+
+                    using (var headerRange = sheet.Cells[2, 1, 2, 5])
+                    {
+                        headerRange.Style.Font.Bold = true;
+                        headerRange.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                        headerRange.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.SteelBlue);
+                        headerRange.Style.Font.Color.SetColor(System.Drawing.Color.White);
+                        headerRange.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+                        headerRange.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Medium);
+                    }
+
+                    // Freeze header rows
+                    sheet.View.FreezePanes(3, 1);
+                    sheet.Cells[2, 1, 2, 5].AutoFilter = true;
+
+                    // ── BUILD COVERAGE MAP ─────────────────────────────
+                    var coverageMap = BuildCoverageMap(results, requirements);
+
+                    // ── DATA ROWS ──────────────────────────────────────
+                    int row = 3;
+                    int notCovered = 0;
+                    int lowCoverage = 0;
+                    int covered = 0;
+
+                    foreach (var req in requirements)
+                    {
+                        if (string.IsNullOrWhiteSpace(req.Id))
+                            continue;
+
+                        var testsCovering = coverageMap.ContainsKey(req.Id)
+                            ? coverageMap[req.Id]
+                            : new List<string>();
+
+                        int count = testsCovering.Count;
+                        string testsStr = count > 0 ? string.Join(", ", testsCovering) : "";
+                        string description = req.IsCompressedFormat()
+                            ? req.Description
+                            : (!string.IsNullOrWhiteSpace(req.Subtopic) ? req.Subtopic : req.Topic);
+
+                        // Determine status
+                        string status;
+                        System.Drawing.Color rowColor;
+
+                        if (count == 0)
+                        {
+                            status = "❌ NOT COVERED";
+                            rowColor = System.Drawing.Color.FromArgb(255, 199, 206); // Light red
+                            notCovered++;
+                        }
+                        else if (count == 1)
+                        {
+                            status = "⚠️ LOW (1 test)";
+                            rowColor = System.Drawing.Color.FromArgb(255, 235, 156); // Light yellow
+                            lowCoverage++;
+                        }
+                        else
+                        {
+                            status = $"✅ COVERED ({count} tests)";
+                            rowColor = System.Drawing.Color.FromArgb(198, 239, 206); // Light green
+                            covered++;
+                        }
+
+                        sheet.Cells[row, 1].Value = req.Id;
+                        sheet.Cells[row, 2].Value = description;
+                        sheet.Cells[row, 3].Value = testsStr;
+                        sheet.Cells[row, 4].Value = count;
+                        sheet.Cells[row, 5].Value = status;
+
+                        // Apply row background color
+                        using (var rowRange = sheet.Cells[row, 1, row, 5])
+                        {
+                            rowRange.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                            rowRange.Style.Fill.BackgroundColor.SetColor(rowColor);
+                            rowRange.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
+                        }
+
+                        sheet.Cells[row, 2].Style.WrapText = true;
+                        sheet.Cells[row, 3].Style.WrapText = true;
+
+                        row++;
+                    }
+
+                    // ── SUMMARY ROW ────────────────────────────────────
+                    row++; // Empty row
+                    sheet.Cells[row, 1].Value = "SUMMARY";
+                    sheet.Cells[row, 1].Style.Font.Bold = true;
+                    sheet.Cells[row, 1].Style.Font.Size = 12;
+                    row++;
+
+                    sheet.Cells[row, 1].Value = "❌ Not Covered:";
+                    sheet.Cells[row, 2].Value = notCovered;
+                    sheet.Cells[row, 1].Style.Font.Color.SetColor(System.Drawing.Color.Red);
+                    sheet.Cells[row, 1].Style.Font.Bold = true;
+                    row++;
+
+                    sheet.Cells[row, 1].Value = "⚠️ Low Coverage (1 test):";
+                    sheet.Cells[row, 2].Value = lowCoverage;
+                    sheet.Cells[row, 1].Style.Font.Color.SetColor(System.Drawing.Color.OrangeRed);
+                    sheet.Cells[row, 1].Style.Font.Bold = true;
+                    row++;
+
+                    sheet.Cells[row, 1].Value = "✅ Covered (2+ tests):";
+                    sheet.Cells[row, 2].Value = covered;
+                    sheet.Cells[row, 1].Style.Font.Color.SetColor(System.Drawing.Color.Green);
+                    sheet.Cells[row, 1].Style.Font.Bold = true;
+                    row++;
+
+                    int total = notCovered + lowCoverage + covered;
+                    double coveragePct = total > 0 ? (covered * 100.0 / total) : 0;
+                    sheet.Cells[row, 1].Value = "Coverage Score:";
+                    sheet.Cells[row, 2].Value = $"{coveragePct:F1}%";
+                    sheet.Cells[row, 2].Style.Font.Bold = true;
+                    sheet.Cells[row, 2].Style.Font.Color.SetColor(
+                        coveragePct >= 80 ? System.Drawing.Color.Green :
+                        coveragePct >= 50 ? System.Drawing.Color.OrangeRed :
+                        System.Drawing.Color.Red);
+
+                    // ── COLUMN WIDTHS ──────────────────────────────────
+                    sheet.Column(1).Width = 12;  // Req ID
+                    sheet.Column(2).Width = 45;  // Description
+                    sheet.Column(3).Width = 35;  // Tests Covering It
+                    sheet.Column(4).Width = 10;  // Count
+                    sheet.Column(5).Width = 22;  // Status
+
+                    package.Save();
+                    Console.WriteLine("   ✅ Created 'Coverage Gap Analysis' sheet");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"   ⚠️  Warning: Could not create coverage gap sheet: {ex.Message}");
             }
         }
     }

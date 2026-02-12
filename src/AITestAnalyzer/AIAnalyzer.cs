@@ -441,7 +441,7 @@ FEEDBACK:
 
             foreach (var req in requirements)
             {
-                formatted.AppendLine($"- {req.Topic} → {req.Subtopic}: {req.ExpectedAction}");
+                formatted.AppendLine($"- {req.Id}: {req.Topic} → {req.Subtopic}: {req.ExpectedAction}");
             }
 
             return formatted.ToString();

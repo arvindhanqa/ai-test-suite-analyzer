@@ -169,7 +169,7 @@ namespace AITestAnalyzer
                 }
 
                 // Process tests
-                var results = new List<(string TestId, string Result, int Tokens)>();
+                var results = new List<(string TestId, string Result, int Tokens, string Coverage)>();
                 var progressTracker = new ProgressTracker(testsToAnalyze, fileStartTime);
 
                 int cacheHits = 0;
@@ -218,7 +218,7 @@ namespace AITestAnalyzer
                                 {
                                     var (reqFeedback, coverageIds, tokensUsed) = await aiAnalyzer.AnalyzeCoverageAndFeedback(testCase, requirements);
                                     quality = reqFeedback;
-                                    coverage = aiAnalyzer.ConvertIdsToDisplayNames(coverageIds, requirements);
+                                    coverage = string.Join(", ", coverageIds);
                                     tokens = tokensUsed;
                                 }
                                 analysisResult = quality;
@@ -238,7 +238,7 @@ namespace AITestAnalyzer
                             {
                                 var (reqFeedback, coverageIds, tokensUsed) = await aiAnalyzer.AnalyzeCoverageAndFeedback(testCase, requirements);
                                 quality = reqFeedback;
-                                coverage = aiAnalyzer.ConvertIdsToDisplayNames(coverageIds, requirements);
+                                coverage = string.Join(", ", coverageIds);
                                 tokens = tokensUsed;
                             }
                             analysisResult = quality;
@@ -247,13 +247,13 @@ namespace AITestAnalyzer
                         }
 
                         excelWriter.WriteAnalysis(rowNumber, quality, coverage, analysisMode);
-                        results.Add((testCase.TestId, analysisResult, tokens));
+                        results.Add((testCase.TestId, analysisResult, tokens, coverage));
 
                         progressTracker.DisplayProgress(i + 1, testCase.TestId);
                     }
                     catch (Exception ex)
                     {
-                        results.Add(($"Row{rowNumber}", $"ERROR: {ex.Message}", 0));
+                        results.Add(($"Row{rowNumber}", $"ERROR: {ex.Message}", 0, ""));
                         excelWriter.WriteAnalysis(rowNumber, $"ERROR: {ex.Message}", "None");
                     }
                 }
@@ -262,8 +262,18 @@ namespace AITestAnalyzer
 
                 // Create summary sheets
                 var endTime = DateTime.Now;
-                excelWriter.CreateQualityIssuesSheet(results);
-                excelWriter.CreateStatisticsDashboard(results, fileStartTime, endTime);
+
+                if (analysisMode == "QA")
+                {
+                    excelWriter.CreateQualityIssuesSheet(results);
+                    excelWriter.CreateStatisticsDashboard(results, fileStartTime, endTime);
+                }
+
+                if (analysisMode == "BA")
+                {
+                    WriteInfo("Creating Coverage Gap Analysis...");
+                    excelWriter.CreateCoverageGapSheet(results, requirements);
+                }
 
                 // Calculate results
                 result.TotalTests = results.Count;
