@@ -1,8 +1,8 @@
 # AI Test Suite Analyzer
 
-> Automated test case quality analysis using OpenAI GPT-4o-mini - Analyze 56 test cases for $0.001
+> AI-powered test case quality analysis and requirement coverage validation — analyze 56 test cases for $0.001, re-run for free
 
-An intelligent test analysis tool that reads Excel test cases, evaluates quality using AI, and generates comprehensive reports with actionable insights.
+An intelligent test analysis tool that reads Excel test cases, evaluates quality using AI, and validates requirement coverage. Supports two analysis modes for QA Engineers and Business Analysts.
 
 ---
 
@@ -13,26 +13,71 @@ Manual test case review is:
 - 👁️ **Inconsistent**: Quality varies by reviewer
 - 📈 **Not scalable**: Impossible to review 500+ test cases regularly
 - 💼 **Expensive**: Senior QA time costs $50-100/hour
+- 🕳️ **Gap-blind**: Hard to spot which requirements have no test coverage
 
-**This tool solves that.**
+**This tool solves all of that.**
 
 ---
 
 ## ✨ Features
 
+### 🆕 Dual Analysis Modes (Phase 2)
+
+The tool now supports two distinct analysis modes depending on your role and goal:
+
+#### QA Mode — Test Quality Analysis
+For QA Engineers who want to assess test case quality without requirements.
+
+- Analyzes each test for completeness, clarity, and best practices
+- Single "AI Analysis" column output (blue header)
+- Color-coded: Green = GOOD, Orange = Issues, Red = Errors
+- ~150 tokens per test (~$0.001 for 56 tests)
+- Full cache support (repeat runs = $0.00)
+
+**Sample QA Mode output:**
+```
+TC-001  GOOD
+TC-002  GOOD
+TC-003  INCOMPLETE - Missing detailed requirements for user registration process.
+TC-004  GOOD
+```
+
+#### BA Mode — Requirement Coverage Analysis
+For Business Analysts and QA Leads who want to validate requirement coverage.
+
+- Identifies which requirements each test covers
+- Flags missing requirement coverage with actionable ❌ items
+- Two-column output: "Requirement Feedback" (coral) + "Coverage" (green)
+- Coverage shows specific requirement IDs (UA-01, TM-03, etc.)
+- ~800-1000 tokens per test (~$0.007 for 56 tests)
+- Mode-aware cache (separate namespace from QA cache, repeat runs = $0.00)
+
+**Sample BA Mode output:**
+```
+Requirement Feedback                                          Coverage
+❌ Email format validation missing (UA-02) - add step...     UA-01, UA-02, UA-03, UA-04
+❌ Password strength validation missing (UA-03) - ensure...
+❌ Age confirmation checkbox validation missing (UA-06)...
+```
+
+---
+
 ### Core Capabilities
-- 📊 **AI-Powered Analysis**: Uses GPT-4o-mini to evaluate test quality
+- 📊 **AI-Powered Analysis**: Uses GPT-4o-mini to evaluate test quality and requirement coverage
 - 📈 **Multi-Sheet Excel Output**: Separate sheets for detailed analysis, issues, and statistics
 - ⚡ **Real-Time Progress**: Visual progress bar with ETA calculation
-- 💰 **Cost-Optimized**: 84% token reduction through prompt engineering ($0.001 for 56 tests)
+- 💰 **Cost-Optimized**: 84% token reduction through prompt engineering
 - 🎨 **Color-Coded Feedback**: Green for good tests, orange for issues, red for errors
-- 📋 **Actionable Insights**: Specific, concise improvement suggestions
+- 📋 **Actionable Insights**: Specific, concise improvement suggestions per test
 - 🔄 **Retry Logic**: Automatic retry with exponential backoff for API failures
 - ✅ **Excel Validation**: Pre-flight checks before processing
 - 🎯 **Professional Output**: Freeze panes, auto-filters, optimized column widths
 
-### 🆕 Interactive File Selector (NEW!)
-No more command-line arguments or config file editing to run the tool. An interactive menu guides you through everything:
+---
+
+### Interactive File Selector
+
+No command-line arguments needed. An interactive menu guides you through everything:
 
 ```
   AI TEST SUITE ANALYZER
@@ -42,178 +87,138 @@ No more command-line arguments or config file editing to run the tool. An intera
     [1] Analyze a single Excel file
     [2] Batch analyze all Excel files in a folder
     [3] Exit
+```
+
+After selecting a file, you choose your analysis mode:
+
+```
+  SELECT ANALYSIS MODE
+
+    [1] QA Mode  — Test quality analysis (no requirements needed)
+    [2] BA Mode  — Requirement coverage validation
 ```
 
 **Single file flow:**
 - Auto-discovers Excel files in common project locations
 - Shows test count before you commit to running
 - Configure test limit and sheet index from the menu
-- Validates the file via EPPlus before you even see the settings screen
 
 **Batch flow:**
 - Discovers folders containing Excel files
-- Shows file count per folder
-- Same limit/sheet controls apply across all files
-
-### Batch Processing
-Process multiple Excel files in a single run:
-
-- **Multi-File Processing**: Analyze entire folders of test suites at once
-- **Separate Output Files**: Each input file gets its own timestamped analysis report
-- **Aggregate Statistics**: Combined summary showing quality across all files
-- **Color-Coded Table**: Visual comparison of quality scores per file
-- **Cache Integration**: Cached results work across files for massive cost savings
-
-**Example batch output:**
-```
-┌─────────────────────────────────┬────────┬─────────┬──────────┬────────────┐
-│ File                            │ Tests  │ Quality │ Tokens   │ Cost       │
-├─────────────────────────────────┼────────┼─────────┼──────────┼────────────┤
-│ test_cases_shopease.xlsx        │     56 │   5.4%  │    6,900 │ $0.001035  │
-│ test_cases_taskflow.xlsx        │     30 │  10.0%  │    3,700 │ $0.000555  │
-└─────────────────────────────────┴────────┴─────────┴──────────┴────────────┘
-
-📈 AGGREGATE STATISTICS
-   Files processed:     2
-   Total tests:         86
-   Overall quality:     7.0%
-```
-
-### Intelligent Caching System
-A production-ready cache system that dramatically reduces API costs and analysis time:
-
-- **Content-Aware Caching**: Tests are cached based on their content hash, not Test ID
-- **Automatic Expiry**: Cache entries expire after 30 days to prevent stale analysis
-- **Smart Detection**: Only changed tests are re-analyzed; unchanged tests use cached results
-- **Cost Savings**: 100% cache hit = $0.00 API cost + instant results (0.4s vs 120s)
-- **Persistent Storage**: Cache survives application restarts
-
-**Real-world impact:**
-- First run (56 tests): ~$0.001 cost, ~2 minutes
-- Second run (same tests): $0.00 cost, ~0.4 seconds ⚡
-- Modified 5 tests: ~$0.0001 cost (only changed tests re-analyzed)
-
-### Output Sheets
-1. **AI Detailed Analysis**: Original test cases with AI feedback column
-   - Freeze panes (header stays visible when scrolling)
-   - Auto-filter on all columns (one-click filtering)
-   - Color-coded feedback (green/orange/red)
-   - Optimized column widths
-
-2. **Quality Issues Summary**: Filtered list of tests needing improvement
-   - Only problematic tests shown
-   - Auto-filter enabled
-   - Actionable issue descriptions
-
-3. **Statistics Dashboard**: Executive-level metrics and recommendations
-   - Quality score with color coding
-   - Test breakdown by category
-   - Cost and performance metrics
-   - Budget projections
-   - Dynamic recommendations
-
-### Quality Checks
-- ✅ Test completeness (preconditions, steps, expected results)
-- ✅ Clarity and specificity
-- ✅ Best practices compliance
-- ✅ Missing error scenarios
-- ✅ Boundary condition coverage
-
-### Reliability Features
-- 🔄 **Automatic retry** with exponential backoff (3 attempts: 1s, 2s, 4s)
-- ✅ **Excel structure validation** before processing
-- 🛡️ **Graceful error handling** (continues on individual test failures)
-- 📝 **Clear error messages** for troubleshooting
+- Applies selected mode across all files in folder
+- Shared cache across files for maximum cost savings
 
 ---
 
-## 📸 Screenshots
+### Intelligent Requirement Auto-Detection (BA Mode)
 
-### Interactive Main Menu
+BA Mode automatically finds the matching requirements file based on your test file name:
+
 ```
-  AI TEST SUITE ANALYZER
-
-  What would you like to do?
-
-    [1] Analyze a single Excel file
-    [2] Batch analyze all Excel files in a folder
-    [3] Exit
-
-  Enter your choice (1-3):
+test_cases_taskflow.xlsx  →  auto-finds  requirements_taskflow.md
+test_cases_shopease.xlsx  →  auto-finds  requirements_shopease.md
 ```
 
-### Configure Analysis Screen
-```
-  CONFIGURE ANALYSIS
+If the file isn't found, you're prompted to enter the path manually. Requirements are extracted once via AI and cached — subsequent runs use cached requirements at zero cost.
 
-  📄 File: test_cases_shopease.xlsx
-      Path: C:\Projects\ai-test-analyzer\data
-      Tests found: 56
+---
 
-  Current settings:
-      Tests to analyze: 7
-      Sheet index:      1
+### Intelligent Caching System
 
-  Options:
-    [1] Analyze ALL 56 tests
-    [2] Analyze first N tests
-    [3] Change sheet index
-    [R] Run with current settings
-    [B] Back
-```
+A production-ready dual-layer cache system:
 
-### Real-Time Progress Bar
-```
-[============>.......] 67.9% | 38/56 | TC-038 | ETA: 35s
-```
+**Test Analysis Cache (QA + BA)**
+- Content-aware: Tests cached by SHA256 hash of test content (not Test ID)
+- Mode-separated: QA results use plain hash, BA results use `ba_` prefix hash — no collisions
+- 30-day expiry with automatic cleanup
+- Persistent across application restarts
 
-### Cache Performance (100% hit)
+**Requirement Cache**
+- Requirement documents extracted once, cached by file path + modification date
+- Subsequent BA Mode runs load requirements instantly at $0.00
+
+**Real-world impact:**
+- First run (56 tests, BA Mode): ~$0.007, ~3 minutes
+- Second run (same tests): $0.00, ~4 seconds ⚡
+- Batch (2 files, 100% cached): $0.00, 3.7 seconds for 20 tests
+
+---
+
+### Batch Processing
+
+Process multiple Excel files in a single run with full mode support:
+
+- **Multi-File Processing**: Analyze entire folders in one command
+- **Mode Consistent**: Selected mode (QA/BA) applies to all files in batch
+- **Separate Output Files**: Each input file gets its own timestamped report
+- **Shared Cache**: Cache works across files — same test in two files = one API call
+- **Aggregate Statistics**: Combined summary across all files
+
+**Example batch summary:**
 ```
-  CACHE PERFORMANCE
-   ✅ Cache hits:       7 (100.0%)
-   📡 API calls:        0 (0.0%)
-   💾 Tokens saved:     ~1,050
-   💰 Cost saved:       ~$0.000157
+┌─────────────────────────────────┬────────┬─────────┬────────┬──────────┬────────────┐
+│ File                            │ Tests  │ Quality │ Cache  │ Tokens   │ Cost       │
+├─────────────────────────────────┼────────┼─────────┼────────┼──────────┼────────────┤
+│ test_cases_shopease.xlsx        │     10 │   0.0%  │  10/10 │        0 │ $0.000000  │
+│ test_cases_taskflow.xlsx        │     10 │   0.0%  │  10/10 │        0 │ $0.000000  │
+└─────────────────────────────────┴────────┴─────────┴────────┴──────────┴────────────┘
+
+📈 AGGREGATE STATISTICS
+   Files processed:     2
+   Total tests:         20
+   Cache hits:          20 (100.0%)
+   Total cost:          $0.000000
+   Total time:          3.7 seconds
 ```
 
 ---
 
 ## 🏗️ Architecture
+
 ```
-FileSelector (Interactive Menu)
+FileSelector (Interactive Menu + Mode Selection)
        ↓
-Excel Input → ExcelReader → AIAnalyzer → OpenAI API (with retry)
-                ↓              ↓              ↓
-           Validation    ProgressTracker   Error Handling
-                ↓              ↓              ↓
-           ExcelWriter → [3 Professional Sheets] → Output
-                ↓
-         BatchProcessor → [Multiple Files] → Aggregate Summary
+  [QA Mode]                    [BA Mode]
+      ↓                            ↓
+ExcelReader              RequirementExtractor → RequirementCache
+      ↓                            ↓
+AIAnalyzer.AnalyzeTestQuality   AIAnalyzer.AnalyzeCoverageAndFeedback
+      ↓                            ↓
+  TestCaseCache              TestCaseCache (ba_ prefix)
+      ↓                            ↓
+ExcelWriter (1 column)     ExcelWriter (2 columns)
+      ↓                            ↓
+[AI Analysis Sheet]        [Requirement Feedback + Coverage Sheet]
+
+BatchProcessor → Applies selected mode across all files → Aggregate Summary
 ```
 
-### Code Structure (Professional SOLID Architecture)
+### Code Structure
 ```
 AITestAnalyzer/
-├── Program.cs              # Main orchestration
-├── Configuration.cs        # App configuration model
-├── PromptConfig.cs         # AI prompt configuration
-├── TestCase.cs             # Test case data model
-├── FileSelector.cs         # Interactive menu system (NEW!)
-├── ExcelReader.cs          # Excel reading + validation
-├── ExcelWriter.cs          # Excel writing + formatting
-├── AIAnalyzer.cs           # OpenAI integration + retry logic
-├── ProgressTracker.cs      # Real-time progress display
-├── SummaryDisplay.cs       # Console output formatting
-├── TestCaseCache.cs        # Intelligent cache system
-├── ConfigurationValidator.cs # Startup validation
-└── BatchProcessor.cs       # Multi-file batch processing
+├── Program.cs                  # Main orchestration + mode routing
+├── Configuration.cs            # App configuration model
+├── PromptConfig.cs             # AI prompt configuration
+├── TestCase.cs                 # Test case data model
+├── FileSelector.cs             # Interactive menu + mode selection
+├── ExcelReader.cs              # Excel reading + validation
+├── ExcelWriter.cs              # Mode-aware Excel writing + formatting
+├── AIAnalyzer.cs               # OpenAI integration (3 analysis methods)
+├── ProgressTracker.cs          # Real-time progress display
+├── SummaryDisplay.cs           # Console output formatting
+├── TestCaseCache.cs            # Dual-mode cache (QA + BA namespaces)
+├── RequirementExtractor.cs     # AI requirement extraction
+├── RequirementCache.cs         # Requirement document cache
+├── ExtractedRequirement.cs     # Requirement data model
+├── ConfigurationValidator.cs   # Startup validation
+└── BatchProcessor.cs           # Multi-file batch (mode-aware)
 ```
 
 **Key Design Principles:**
-- ✅ Single Responsibility Principle (each class has one job)
-- ✅ Dependency Injection via constructors
-- ✅ Separation of Concerns (I/O, AI, UI separated)
-- ✅ 68% code reduction from initial monolithic design
+- ✅ Single Responsibility (each class has one job)
+- ✅ Modular "lego block" architecture — modes snap in cleanly
+- ✅ Context-aware analysis (93% API cost reduction vs separate passes)
+- ✅ Backward-compatible cache migration
 
 ---
 
@@ -233,14 +238,12 @@ cd ai-test-suite-analyzer
 ```
 
 2. **Configure API Key**
-
-   Copy the sample config and add your key:
 ```bash
 cd src/AITestAnalyzer
 cp appsettings.json.sample appsettings.json
 ```
 
-   Edit `appsettings.json` and replace `YOUR-OPENAI-API-KEY-HERE` with your actual API key:
+Edit `appsettings.json`:
 ```json
 {
   "OpenAI": {
@@ -261,54 +264,21 @@ dotnet build
 dotnet run
 ```
 
-The interactive menu handles everything from here — no file paths or flags needed.
-
----
-
-## ⚙️ Configuration Validation
-
-The tool automatically validates your configuration on startup:
-```
-🔍 Validating configuration...
-
-✅ API key format valid
-✅ Worksheet index valid (Sheet: 'Sheet2')
-✅ OpenAI API connection successful
-```
-
-**Validation checks:**
-- ✅ API key exists and has correct format (starts with `sk-`)
-- ✅ Selected Excel file is accessible (not locked by another program)
-- ✅ Worksheet index is within valid range
-- ✅ OpenAI API connection works (test API call)
+The interactive menu handles everything from here.
 
 ---
 
 ## Usage
 
 ### Interactive Mode (Default)
-
-Just run the tool:
 ```bash
 dotnet run
 ```
 
-The interactive menu walks you through:
-1. Choose single file or batch mode
-2. Select your Excel file (auto-discovered or manual path)
-3. Configure test count and sheet index
-4. Hit Run
-
 ### Cache Controls
-
-**Skip cache (force fresh analysis):**
 ```bash
-dotnet run -- --no-cache
-```
-
-**Clear all cached results:**
-```bash
-dotnet run -- --clear-cache
+dotnet run -- --no-cache       # Force fresh analysis
+dotnet run -- --clear-cache    # Clear all cached results
 ```
 
 ### Help and Version
@@ -319,47 +289,34 @@ dotnet run -- --version
 
 ---
 
-## 🛡️ Error Handling
-
-### Automatic Retry Logic
-- **3 attempts** with exponential backoff (1s, 2s, 4s)
-- Handles temporary network issues and rate limits
-- Clear console feedback during retries
-
-### Pre-Flight Validation
-- Checks Excel file structure before processing
-- Validates minimum column count
-- Ensures header row exists
-- Confirms at least one data row present
-
-### Graceful Degradation
-- Individual test failures don't stop processing
-- Clear error messages for failed tests
-- Tool continues analyzing remaining tests
-
----
-
 ## 💰 Cost Analysis
 
-### Token Usage Optimization Journey
+### QA Mode Token Usage
 
-| Version | Tokens/Test | Cost/Test | 56 Tests | Savings |
-|---------|-------------|-----------|----------|---------|
-| Initial (Verbose) | 750 | $0.000113 | $0.0063 | - |
-| Optimized (Tweet-style) | 184 | $0.000028 | $0.0015 | 76% |
-| Final (Optimized) | 123-154 | $0.000018-$0.000023 | $0.001-$0.0013 | 84% |
-| **With Cache (100% Hit)** | **0** | **$0.00** | **$0.00** | **100%** ⚡ |
+| Version | Tokens/Test | Cost/Test | 56 Tests |
+|---------|-------------|-----------|----------|
+| Initial (Verbose) | 750 | $0.000113 | $0.0063 |
+| Optimized | 154 | $0.000023 | $0.0013 |
+| **With Cache (100% Hit)** | **0** | **$0.00** | **$0.00** ⚡ |
+
+### BA Mode Token Usage
+
+| Scenario | Tokens/Test | Cost/Test | 56 Tests |
+|----------|-------------|-----------|----------|
+| Fresh analysis | ~900 | $0.000135 | $0.0075 |
+| **With Cache (100% Hit)** | **0** | **$0.00** | **$0.00** ⚡ |
 
 ### Real-World Cost Scenarios
 
-| Scenario | Tests | Cost | Time |
-|----------|-------|------|------|
-| First run | 56 | ~$0.001 | ~2 min |
-| Re-run (100% cached) | 56 | $0.00 | ~0.4s |
-| Batch (2 files, first run) | 86 | ~$0.0016 | ~3 min |
-| Batch (50% cached) | 86 | ~$0.0008 | ~1.5 min |
+| Scenario | Tests | Mode | Cost | Time |
+|----------|-------|------|------|------|
+| First run | 56 | QA | ~$0.001 | ~2 min |
+| First run | 56 | BA | ~$0.007 | ~3 min |
+| Re-run (100% cached) | 56 | QA or BA | $0.00 | ~0.4s |
+| Batch (2 files, first run) | 86 | BA | ~$0.012 | ~5 min |
+| Batch (2 files, 100% cached) | 86 | BA | $0.00 | ~4s |
 
-**Your $10 OpenAI budget can handle ~555,000 fresh analyses — or virtually unlimited re-runs with cache.**
+**Your $10 OpenAI budget covers hundreds of fresh full-suite analyses — or virtually unlimited re-runs with cache.**
 
 ---
 
@@ -379,30 +336,33 @@ dotnet run -- --version
 ai-test-suite-analyzer/
 ├── src/
 │   └── AITestAnalyzer/
-│       ├── Program.cs                  # Main orchestration
-│       ├── Configuration.cs            # App configuration class
-│       ├── PromptConfig.cs             # AI prompt configuration
-│       ├── TestCase.cs                 # Test case model
-│       ├── FileSelector.cs             # Interactive menu system (NEW!)
-│       ├── ExcelReader.cs              # Excel reading + validation
-│       ├── ExcelWriter.cs              # Excel writing + formatting
-│       ├── AIAnalyzer.cs               # OpenAI integration + retry
-│       ├── ProgressTracker.cs          # Progress display
-│       ├── SummaryDisplay.cs           # Console output
-│       ├── TestCaseCache.cs            # Cache system
-│       ├── ConfigurationValidator.cs   # Startup validation
-│       ├── BatchProcessor.cs           # Multi-file batch processing
-│       ├── appsettings.json            # App settings (API key)
-│       └── PromptConfig.json           # Prompt templates
+│       ├── Program.cs
+│       ├── FileSelector.cs
+│       ├── AIAnalyzer.cs
+│       ├── ExcelReader.cs
+│       ├── ExcelWriter.cs
+│       ├── TestCaseCache.cs
+│       ├── RequirementExtractor.cs
+│       ├── RequirementCache.cs
+│       ├── ExtractedRequirement.cs
+│       ├── BatchProcessor.cs
+│       ├── ProgressTracker.cs
+│       ├── SummaryDisplay.cs
+│       ├── ConfigurationValidator.cs
+│       ├── Configuration.cs
+│       ├── PromptConfig.cs
+│       ├── TestCase.cs
+│       ├── appsettings.json
+│       └── PromptConfig.json
 ├── data/
-│   ├── requirements_shopease.md        # Sample requirements
-│   ├── test_cases_shopease.xlsx        # Sample test cases (56 tests)
-│   ├── requirements_taskflow.md        # TaskFlow requirements
-│   └── test_cases_taskflow.xlsx        # TaskFlow test cases (30 tests)
-├── cache/                              # Cache storage (gitignored)
-├── output/                             # Generated analysis reports
+│   ├── requirements_shopease.md
+│   ├── test_cases_shopease.xlsx
+│   ├── requirements_taskflow.md
+│   └── test_cases_taskflow.xlsx
+├── cache/                          # Cache storage (gitignored)
+├── output/                         # Generated analysis reports
 ├── docs/
-│   └── daily-logs/                     # Development progress logs
+│   └── daily-logs/                 # Development progress logs
 └── README.md
 ```
 
@@ -410,58 +370,41 @@ ai-test-suite-analyzer/
 
 ## 🎯 Roadmap
 
-### Week 0 ✅ COMPLETE (Days 1-7)
-- [x] Environment setup and dummy data creation
+### Phase 1 ✅ COMPLETE (Days 1-14)
+- [x] Environment setup and test data creation
 - [x] Excel reading with EPPlus
 - [x] OpenAI API integration (GPT-4o-mini)
 - [x] Cost optimization (84% token reduction)
-- [x] Professional code architecture (68% refactoring)
+- [x] Professional code architecture
 - [x] Multi-sheet Excel output with color coding
-
-### Week 1 ✅ COMPLETE (Days 8-9)
 - [x] Real-time progress bar with ETA
-- [x] Statistics dashboard with recommendations
+- [x] Statistics dashboard
 - [x] Error handling with automatic retry logic
-- [x] Excel validation before processing
-- [x] Freeze panes, auto-filters, column auto-sizing
-- [x] CLI arguments (--help, --version, --no-cache, --clear-cache)
-- [x] Intelligent cache system with 30-day expiry
-- [x] Content-aware caching (hash-based)
+- [x] Intelligent cache system (content-aware, 30-day expiry)
+- [x] Batch processing (multiple Excel files)
+- [x] Interactive FileSelector menu
 
-### Week 2 ✅ IN PROGRESS (Days 10-16)
-- [x] Batch processing (multiple Excel files) ✅
-- [x] TaskFlow test data (second test suite) ✅
-- [x] **Interactive FileSelector menu** ✅ (replaces CLI argument parsing)
-- [x] ConfigurationValidator cleanup (parameters from FileSelector) ✅
-- [ ] Enhanced error reporting
-- [ ] Export to PDF/HTML (optional)
+### Phase 2 ✅ COMPLETE (Days 15-20)
+- [x] Requirement extraction via AI (pipe-delimited, compressed format)
+- [x] Requirement caching system
+- [x] Context-aware test analysis (93% cost reduction vs separate passes)
+- [x] QA Mode — quality-only analysis
+- [x] BA Mode — requirement coverage gap analysis
+- [x] Auto-detection of requirement files from test file naming
+- [x] Coverage column in Excel output (color-coded, ID-based)
+- [x] Dual-mode cache (separate QA/BA namespaces, no collisions)
+- [x] Batch mode fully mode-aware (QA/BA across all files)
 
-### Weeks 5-8 — Advanced Features (Planned)
-- [ ] Coverage Gap Analysis: Compare tests against requirements
-- [ ] Flow Correctness Validation: Verify test steps match requirement flows
-- [ ] Step Completeness Check: Ensure all validation steps present
+### Phase 3 — In Progress (Days 21+)
+- [ ] Coverage gap summary sheet (BA Mode aggregate view)
+- [ ] QA Mode summary sheets in batch
+- [ ] Export enhancements
 
-### Future Enhancements
+### Future
 - [ ] Web interface (Blazor)
-- [ ] Integration with JIRA/TestRail
+- [ ] JIRA/TestRail integration
 - [ ] CI/CD pipeline integration
 - [ ] Local LLM support (Ollama)
-
----
-
-## 📊 Results
-
-### Test Quality Distribution (Sample 56 Tests)
-- **Good Quality**: 3 tests (5.4%)
-- **Need Improvement**: 53 tests (94.6%)
-
-### Common Issues Found
-- Missing expected result details (42%)
-- Vague test steps (31%)
-- No error scenario coverage (18%)
-- Unclear validation criteria (9%)
-
-**AI correctly identified intentionally poor test cases with specific, actionable feedback.**
 
 ---
 
@@ -476,25 +419,19 @@ ai-test-suite-analyzer/
 - **LinkedIn**: [linkedin.com/in/aravindrajsekar](https://www.linkedin.com/in/aravindrajsekar)
 - **Location**: Saskatoon, Saskatchewan, Canada
 
-### Notable Achievements
-- 🏆 Increased test automation coverage from 15% to 95% (3,000 automated tests)
-- 🏆 Reduced production bugs from 50 to 5 per month through Test SOP implementation
-- 🏆 Led distributed QA teams across USA, Serbia, and Sri Lanka
-- 🏆 Created in-house test coverage calculator tool
-- 🏆 Automated 500+ scenarios for 22 new features with 100% coverage
-
 ---
 
 ## 🤝 About This Project
 
-This is a personal learning project built as part of a 90-day commitment (January 20 - April 19, 2026) to build practical AI-powered tooling and demonstrate the ability to ship complete software from concept to production.
+This is a personal project built as part of a 90-day commitment (January 20 - April 19, 2026) to build practical AI-powered tooling and demonstrate the ability to ship complete software from concept to production.
 
-**Status (Day 11)**: Week 2 in progress. Interactive menu system complete. Tool is production-ready.
+**Status (Day 21)**: Phase 2 complete. Dual-mode QA/BA analysis working in both single and batch modes. Cache system verified. 21 consecutive days of commits.
 
 ### Development Progress
-- **Days 1-7 (Week 0)**: Foundation — setup, data, Excel processing, OpenAI integration, cost optimization
-- **Days 8-9 (Week 1)**: Professional features — progress bar, caching, error handling, CLI, refactoring
-- **Days 10-11 (Week 2)**: Scale — batch processing, second test suite, interactive FileSelector menu
+- **Days 1-7 (Phase 0)**: Foundation — setup, data, Excel processing, OpenAI integration, cost optimization
+- **Days 8-14 (Phase 1)**: Professional features — progress bar, caching, error handling, CLI, batch processing, interactive menu
+- **Days 15-20 (Phase 2)**: Intelligence — requirement extraction, dual-mode analysis (QA/BA), coverage tracking, mode-aware cache
+- **Day 21+ (Phase 3)**: Polish — BA Mode cache for batch, documentation, coverage summary sheets
 
 ---
 
@@ -517,4 +454,4 @@ Built with:
 
 ---
 
-*Last Updated: February 1, 2026 (Day 11)*
+*Last Updated: February 11, 2026 (Day 21)*
