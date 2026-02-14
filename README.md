@@ -48,16 +48,25 @@ For Business Analysts and QA Leads who want to validate requirement coverage.
 - Identifies which requirements each test covers
 - Flags missing requirement coverage with actionable ❌ items
 - Two-column output: "Requirement Feedback" (coral) + "Coverage" (green)
-- Coverage shows specific requirement IDs (UA-01, TM-03, etc.)
+- Coverage shows specific requirement IDs (FR-AUTH-001, TM-003, etc.)
 - ~800-1000 tokens per test (~$0.007 for 56 tests)
 - Mode-aware cache (separate namespace from QA cache, repeat runs = $0.00)
+- **Coverage Gap Analysis sheet** — one row per requirement showing which tests cover it
 
 **Sample BA Mode output:**
 ```
 Requirement Feedback                                          Coverage
-❌ Email format validation missing (UA-02) - add step...     UA-01, UA-02, UA-03, UA-04
-❌ Password strength validation missing (UA-03) - ensure...
-❌ Age confirmation checkbox validation missing (UA-06)...
+❌ Email format validation missing (FR-AUTH-002) - add step  FR-AUTH-001, FR-AUTH-002
+❌ Password strength validation missing (FR-AUTH-003)...
+❌ Age confirmation checkbox validation missing (BR-AUTH-001)
+```
+
+**Coverage Gap Analysis sheet:**
+```
+Req ID       Description                    Tests Covering It    Count  Status
+FR-AUTH-001  new users create account...    TC-001, TC-002       5      ✅ COVERED (5 tests)
+BR-AUTH-001  each email linked to one...                         0      ❌ NOT COVERED
+VR-AUTH-001  email must be valid format...                       0      ❌ NOT COVERED
 ```
 
 ---
@@ -186,9 +195,9 @@ AIAnalyzer.AnalyzeTestQuality   AIAnalyzer.AnalyzeCoverageAndFeedback
       ↓                            ↓
   TestCaseCache              TestCaseCache (ba_ prefix)
       ↓                            ↓
-ExcelWriter (1 column)     ExcelWriter (2 columns)
+ExcelWriter (1 column)     ExcelWriter (2 columns + Gap Sheet)
       ↓                            ↓
-[AI Analysis Sheet]        [Requirement Feedback + Coverage Sheet]
+[AI Analysis Sheet]        [Requirement Feedback + Coverage + Gap Analysis]
 
 BatchProcessor → Applies selected mode across all files → Aggregate Summary
 ```
@@ -203,7 +212,7 @@ AITestAnalyzer/
 ├── FileSelector.cs             # Interactive menu + mode selection
 ├── ExcelReader.cs              # Excel reading + validation
 ├── ExcelWriter.cs              # Mode-aware Excel writing + formatting
-├── AIAnalyzer.cs               # OpenAI integration (3 analysis methods)
+├── AIAnalyzer.cs               # OpenAI integration (2 analysis methods)
 ├── ProgressTracker.cs          # Real-time progress display
 ├── SummaryDisplay.cs           # Console output formatting
 ├── TestCaseCache.cs            # Dual-mode cache (QA + BA namespaces)
@@ -395,8 +404,13 @@ ai-test-suite-analyzer/
 - [x] Dual-mode cache (separate QA/BA namespaces, no collisions)
 - [x] Batch mode fully mode-aware (QA/BA across all files)
 
-### Phase 3 — In Progress (Days 21+)
-- [ ] Coverage gap summary sheet (BA Mode aggregate view)
+### Phase 3 ✅ IN PROGRESS (Days 21-23)
+- [x] BA Mode cache + batch mode fix (Day 21)
+- [x] Coverage Gap Analysis sheet — color-coded per-requirement status (Day 22)
+- [x] Fix FormatRequirements to include IDs in AI prompt (Day 22)
+- [x] Fix coverage storage to use raw IDs for accurate gap mapping (Day 22)
+- [x] Dead code cleanup — removed unused AIAnalyzer methods (Day 23)
+- [x] Fix row height truncation in Coverage Gap sheet (Day 23)
 - [ ] QA Mode summary sheets in batch
 - [ ] Export enhancements
 
@@ -419,19 +433,26 @@ ai-test-suite-analyzer/
 - **LinkedIn**: [linkedin.com/in/aravindrajsekar](https://www.linkedin.com/in/aravindrajsekar)
 - **Location**: Saskatoon, Saskatchewan, Canada
 
+### Notable Achievements
+- 🏆 Increased test automation coverage from 15% to 95% (3,000 automated tests)
+- 🏆 Reduced production bugs from 50 to 5 per month through Test SOP implementation
+- 🏆 Led distributed QA teams across USA, Serbia, and Sri Lanka
+- 🏆 Created in-house test coverage calculator tool
+- 🏆 Automated 500+ scenarios for 22 new features with 100% coverage
+
 ---
 
 ## 🤝 About This Project
 
 This is a personal project built as part of a 90-day commitment (January 20 - April 19, 2026) to build practical AI-powered tooling and demonstrate the ability to ship complete software from concept to production.
 
-**Status (Day 21)**: Phase 2 complete. Dual-mode QA/BA analysis working in both single and batch modes. Cache system verified. 21 consecutive days of commits.
+**Status (Day 23)**: Phase 3 in progress. Coverage Gap Analysis sheet complete. Dual-mode QA/BA analysis verified in single and batch modes. 23 consecutive days of commits.
 
 ### Development Progress
 - **Days 1-7 (Phase 0)**: Foundation — setup, data, Excel processing, OpenAI integration, cost optimization
 - **Days 8-14 (Phase 1)**: Professional features — progress bar, caching, error handling, CLI, batch processing, interactive menu
 - **Days 15-20 (Phase 2)**: Intelligence — requirement extraction, dual-mode analysis (QA/BA), coverage tracking, mode-aware cache
-- **Day 21+ (Phase 3)**: Polish — BA Mode cache for batch, documentation, coverage summary sheets
+- **Days 21-23 (Phase 3)**: Polish — BA Mode cache for batch, Coverage Gap Analysis sheet, dead code cleanup
 
 ---
 
@@ -454,4 +475,4 @@ Built with:
 
 ---
 
-*Last Updated: February 11, 2026 (Day 21)*
+*Last Updated: February 13, 2026 (Day 23)*
