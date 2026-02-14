@@ -824,6 +824,12 @@ namespace AITestAnalyzer
                     sheet.Column(4).Width = 10;  // Count
                     sheet.Column(5).Width = 22;  // Status
 
+                    // Auto-fit row heights for wrapped text
+                    for (int r = 3; r < row; r++)
+                    {
+                        sheet.Row(r).CustomHeight = false;
+                    }
+
                     package.Save();
                     Console.WriteLine("   ✅ Created 'Coverage Gap Analysis' sheet");
                 }
