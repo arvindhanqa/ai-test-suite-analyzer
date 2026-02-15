@@ -436,7 +436,7 @@ namespace AITestAnalyzer
 
             // Display batch summary
             var batchEndTime = DateTime.Now;
-            DisplayBatchSummary(allResults, batchStartTime, batchEndTime, useCache);
+            DisplayBatchSummary(allResults, batchStartTime, batchEndTime, useCache, analysisMode);
 
             return allResults;
         }
@@ -444,17 +444,17 @@ namespace AITestAnalyzer
         // ============================================================
         // METHOD 4: Display combined batch summary
         // ============================================================
-        private void DisplayBatchSummary(List<FileResult> results, DateTime startTime, DateTime endTime, bool cacheEnabled)
+        private void DisplayBatchSummary(List<FileResult> results, DateTime startTime, DateTime endTime, bool cacheEnabled, string analysisMode)
         {
             var totalTime = (endTime - startTime).TotalSeconds;
 
             WriteHeader("\n" + new string('═', 70));
             WriteHeader("📊 BATCH PROCESSING SUMMARY");
             WriteHeader(new string('═', 70));
-
+            string colLabel = analysisMode == "BA" ? "Coverage" : "Quality ";
             // Per-file summary table
             Console.WriteLine("\n┌─────────────────────────────────┬────────┬─────────┬────────┬──────────┬────────────┐");
-            Console.WriteLine("│ File                            │ Tests  │ Quality │ Cache  │ Tokens   │ Cost       │");
+            Console.WriteLine($"│ File                            │ Tests  │ {colLabel} │ Cache  │ Tokens   │ Cost       │");
             Console.WriteLine("├─────────────────────────────────┼────────┼─────────┼────────┼──────────┼────────────┤");
 
             foreach (var result in results)
@@ -463,7 +463,7 @@ namespace AITestAnalyzer
                     ? result.FileName.Substring(0, 28) + "..."
                     : result.FileName.PadRight(31);
 
-                string quality = $"{result.QualityScore:F1}%";
+                string quality = analysisMode == "BA" ? "  N/A   " : $"{result.QualityScore:F1}%";
                 string cacheInfo = $"{result.CacheHits}/{result.TotalTests}";
 
                 Console.Write($"│ {fileName} │ ");

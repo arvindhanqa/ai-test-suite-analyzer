@@ -568,7 +568,7 @@ namespace AITestAnalyzer
 
             // Display summary
             Console.WriteLine();
-            SummaryDisplay.Display(results, startTime, endTime, outputPath, cacheHits, apiCalls, useCache);
+            SummaryDisplay.Display(results, startTime, endTime, outputPath, cacheHits, apiCalls, useCache, analysisMode);
 
             Console.WriteLine();
             WriteInfo("Press any key to exit...");

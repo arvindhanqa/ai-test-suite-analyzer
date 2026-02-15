@@ -55,7 +55,7 @@ namespace AITestAnalyzer
         /// - Cache disabled (--no-cache) → Shows warning instead of cache section
         /// </remarks>
         public static void Display(List<(string TestId, string Result, int Tokens, string Coverage)> results,
-                                  DateTime startTime, DateTime endTime, string outputPath, int cacheHits, int apiCalls, bool cacheEnabled)
+                                  DateTime startTime, DateTime endTime, string outputPath, int cacheHits, int apiCalls, bool cacheEnabled, string analysisMode = "QA")
         {
             int goodTests = results.Count(r => r.Result.StartsWith("GOOD", StringComparison.OrdinalIgnoreCase));
             int issueTests = results.Count - goodTests;
@@ -121,18 +121,27 @@ namespace AITestAnalyzer
                 Console.ResetColor();
             }
 
-            // Then the existing test quality section starts...
             Console.WriteLine($"Tests analyzed: {results.Count}");
 
-            // Good tests in GREEN
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine($"✅ Good tests: {goodTests} ({(goodTests * 100.0 / results.Count):F0}%)");
-            Console.ResetColor();
-
-            // Issues in YELLOW
-            Console.ForegroundColor = ConsoleColor.Yellow;
-            Console.WriteLine($"⚠️  Tests with issues: {issueTests} ({(issueTests * 100.0 / results.Count):F0}%)");
-            Console.ResetColor();
+            if (analysisMode == "QA")
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($"✅ Good tests: {goodTests} ({(goodTests * 100.0 / results.Count):F0}%)");
+                Console.ResetColor();
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"⚠️  Tests with issues: {issueTests} ({(issueTests * 100.0 / results.Count):F0}%)");
+                Console.ResetColor();
+            }
+            else
+            {
+                int covered = results.Count(r => !string.IsNullOrWhiteSpace(r.Coverage) && r.Coverage != "None");
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($"✅ Tests with coverage: {covered} ({(covered * 100.0 / results.Count):F0}%)");
+                Console.ResetColor();
+                Console.ForegroundColor = ConsoleColor.Yellow;
+                Console.WriteLine($"⚠️  Tests with no coverage: {results.Count - covered} ({((results.Count - covered) * 100.0 / results.Count):F0}%)");
+                Console.ResetColor();
+            }
 
             Console.WriteLine();
             Console.WriteLine($"Total tokens: {totalTokens:N0}");
