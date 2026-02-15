@@ -1,5 +1,8 @@
 # AI Test Suite Analyzer
 
+[![Build](https://github.com/arvindhanqa/ai-test-suite-analyzer/actions/workflows/build.yml/badge.svg)](https://github.com/arvindhanqa/ai-test-suite-analyzer/actions/workflows/build.yml)
+
+
 > AI-powered test case quality analysis and requirement coverage validation — analyze 56 test cases for $0.001, re-run for free
 
 An intelligent test analysis tool that reads Excel test cases, evaluates quality using AI, and validates requirement coverage. Supports two analysis modes for QA Engineers and Business Analysts.
