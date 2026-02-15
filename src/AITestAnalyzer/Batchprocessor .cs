@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using static AITestAnalyzer.BatchProcessor;
 
 namespace AITestAnalyzer
 {
@@ -273,6 +274,14 @@ namespace AITestAnalyzer
                 {
                     WriteInfo("Creating Coverage Gap Analysis...");
                     excelWriter.CreateCoverageGapSheet(results, requirements);
+                    WriteInfo("Creating BA Statistics Dashboard...");
+                    excelWriter.CreateBAStatisticsDashboard(
+                        results,
+                        requirements,
+                        results.Sum(r => r.Tokens),
+                        cacheHits,
+                        endTime - fileStartTime
+                    );
                 }
 
                 // Calculate results

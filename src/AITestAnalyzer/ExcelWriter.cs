@@ -1,9 +1,10 @@
-using OfficeOpenXml;
 using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using OfficeOpenXml;
+using OfficeOpenXml.Style;
 
 namespace AITestAnalyzer
 {
@@ -839,5 +840,169 @@ namespace AITestAnalyzer
                 Console.WriteLine($"   ⚠️  Warning: Could not create coverage gap sheet: {ex.Message}");
             }
         }
+
+        // ============================================================
+        // METHOD: Create Statistics dashboard Like QA mode  Sheet (BA Mode only)
+        // ============================================================
+        public void CreateBAStatisticsDashboard(
+    List<(string TestId, string Result, int Tokens, string Coverage)> results,
+    List<ExtractedRequirement> requirements,
+    int totalTokens,
+    int cacheHits,
+    TimeSpan elapsed)
+        {
+            try
+            {
+                using (var package = new ExcelPackage(new FileInfo(_outputPath)))
+                {
+                    var existingSheet = package.Workbook.Worksheets["BA Statistics Dashboard"];
+                    if (existingSheet != null)
+                        package.Workbook.Worksheets.Delete(existingSheet);
+
+                    var sheet = package.Workbook.Worksheets.Add("BA Statistics Dashboard");
+                    int row = 1;
+
+                    // ── SECTION 1: COVERAGE SCORE ──────────────────────────────
+                    sheet.Cells[row, 1, row, 4].Merge = true;
+                    sheet.Cells[row, 1].Value = "BA MODE — STATISTICS DASHBOARD";
+                    sheet.Cells[row, 1].Style.Font.Bold = true;
+                    sheet.Cells[row, 1].Style.Font.Size = 14;
+                    sheet.Cells[row, 1].Style.Fill.PatternType = ExcelFillStyle.Solid;
+                    sheet.Cells[row, 1].Style.Fill.BackgroundColor.SetColor(ColorTranslator.FromHtml("#2F4F4F")); // dark slate
+                    sheet.Cells[row, 1].Style.Font.Color.SetColor(Color.White);
+                    sheet.Cells[row, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+                    row += 2;
+
+                    // Build coverage map (same logic as CreateCoverageGapSheet)
+                    var coverageMap = BuildCoverageMap(results, requirements);
+                    int covered = 0, low = 0, notCovered = 0;
+
+                    foreach (var req in requirements)
+                    {
+                        var tests = coverageMap.ContainsKey(req.Id) ? coverageMap[req.Id] : new List<string>();
+                        if (tests.Count >= 2)
+                            covered++;
+                        else if (tests.Count == 1)
+                            low++;
+                        else
+                            notCovered++;
+                    }
+
+                    int total = requirements.Count;
+                    double coverageScore = total > 0 ? Math.Round((covered / (double)total) * 100, 1) : 0;
+
+                    // Big coverage score display
+                    sheet.Cells[row, 1, row, 4].Merge = true;
+                    sheet.Cells[row, 1].Value = "COVERAGE SCORE";
+                    sheet.Cells[row, 1].Style.Font.Bold = true;
+                    sheet.Cells[row, 1].Style.Font.Size = 11;
+                    row++;
+
+                    sheet.Cells[row, 1, row, 4].Merge = true;
+                    sheet.Cells[row, 1].Value = $"{coverageScore}%";
+                    sheet.Cells[row, 1].Style.Font.Bold = true;
+                    sheet.Cells[row, 1].Style.Font.Size = 28;
+                    sheet.Cells[row, 1].Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+
+                    var scoreColor = coverageScore >= 80
+                        ? ColorTranslator.FromHtml("#C6EFCE")   // green
+                        : coverageScore >= 50
+                            ? ColorTranslator.FromHtml("#FFEB9C") // orange
+                            : ColorTranslator.FromHtml("#FFC7CE"); // red
+
+                    sheet.Cells[row, 1].Style.Fill.PatternType = ExcelFillStyle.Solid;
+                    sheet.Cells[row, 1].Style.Fill.BackgroundColor.SetColor(scoreColor);
+                    row += 2;
+
+                    // ── SECTION 2: REQUIREMENTS BREAKDOWN ─────────────────────
+                    sheet.Cells[row, 1, row, 4].Merge = true;
+                    sheet.Cells[row, 1].Value = "REQUIREMENTS BREAKDOWN";
+                    sheet.Cells[row, 1].Style.Font.Bold = true;
+                    sheet.Cells[row, 1].Style.Font.Size = 11;
+                    sheet.Cells[row, 1].Style.Fill.PatternType = ExcelFillStyle.Solid;
+                    sheet.Cells[row, 1].Style.Fill.BackgroundColor.SetColor(ColorTranslator.FromHtml("#D9E1F2"));
+                    row++;
+
+                    // Header row
+                    string[] headers = { "Status", "Count", "Percentage", "" };
+                    for (int c = 0; c < 3; c++)
+                    {
+                        sheet.Cells[row, c + 1].Value = headers[c];
+                        sheet.Cells[row, c + 1].Style.Font.Bold = true;
+                    }
+                    row++;
+
+                    // Data rows
+                    var breakdownData = new[]
+                    {
+        ("✅ Covered (2+ tests)",    covered,    total > 0 ? $"{Math.Round(covered / (double)total * 100, 1)}%" : "0%",   "#C6EFCE"),
+        ("⚠️ Low Coverage (1 test)", low,        total > 0 ? $"{Math.Round(low / (double)total * 100, 1)}%" : "0%",       "#FFEB9C"),
+        ("❌ Not Covered (0 tests)", notCovered, total > 0 ? $"{Math.Round(notCovered / (double)total * 100, 1)}%" : "0%","#FFC7CE"),
+    };
+
+                    foreach (var (label, count, pct, hex) in breakdownData)
+                    {
+                        sheet.Cells[row, 1].Value = label;
+                        sheet.Cells[row, 2].Value = count;
+                        sheet.Cells[row, 3].Value = pct;
+                        sheet.Cells[row, 1, row, 3].Style.Fill.PatternType = ExcelFillStyle.Solid;
+                        sheet.Cells[row, 1, row, 3].Style.Fill.BackgroundColor.SetColor(ColorTranslator.FromHtml(hex));
+                        row++;
+                    }
+
+                    // Total row
+                    sheet.Cells[row, 1].Value = "TOTAL";
+                    sheet.Cells[row, 2].Value = total;
+                    sheet.Cells[row, 3].Value = "100%";
+                    sheet.Cells[row, 1].Style.Font.Bold = true;
+                    sheet.Cells[row, 2].Style.Font.Bold = true;
+                    row += 2;
+
+                    // ── SECTION 3: COST & PERFORMANCE ─────────────────────────
+                    sheet.Cells[row, 1, row, 4].Merge = true;
+                    sheet.Cells[row, 1].Value = "COST & PERFORMANCE";
+                    sheet.Cells[row, 1].Style.Font.Bold = true;
+                    sheet.Cells[row, 1].Style.Font.Size = 11;
+                    sheet.Cells[row, 1].Style.Fill.PatternType = ExcelFillStyle.Solid;
+                    sheet.Cells[row, 1].Style.Fill.BackgroundColor.SetColor(ColorTranslator.FromHtml("#D9E1F2"));
+                    row++;
+
+                    int apiCalls = results.Count - cacheHits;
+                    double estimatedCost = totalTokens * 0.00000015; // GPT-4o-mini rate
+
+                    var perfData = new[]
+                    {
+        ("Test Cases Analyzed", results.Count.ToString()),
+        ("Requirements Analyzed", total.ToString()),
+        ("Total Tokens Used", totalTokens.ToString("N0")),
+        ("API Calls Made", apiCalls.ToString()),
+        ("Cache Hits", cacheHits.ToString()),
+        ("Estimated Cost", $"${estimatedCost:F4} USD"),
+        ("Time Elapsed", elapsed.ToString(@"mm\:ss")),
+    };
+
+                    foreach (var (label, value) in perfData)
+                    {
+                        sheet.Cells[row, 1].Value = label;
+                        sheet.Cells[row, 2].Value = value;
+                        sheet.Cells[row, 1].Style.Font.Bold = true;
+                        row++;
+                    }
+
+                    // Column widths
+                    sheet.Column(1).Width = 30;
+                    sheet.Column(2).Width = 15;
+                    sheet.Column(3).Width = 15;
+                    package.Save();
+                    Console.WriteLine("   ✅ Created 'BA Statistics Dashboard' sheet");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"   ⚠️  Warning: Could not create BA statistics sheet: {ex.Message}");
+            }
+        }
+
+
     }
 }

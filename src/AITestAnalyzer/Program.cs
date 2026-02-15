@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -555,6 +556,14 @@ namespace AITestAnalyzer
                 WriteInfo("Creating Coverage Gap Analysis...");
                 // END DEBUG
                 excelWriter.CreateCoverageGapSheet(results, requirements);
+                WriteInfo("Creating BA Statistics Dashboard...");
+                excelWriter.CreateBAStatisticsDashboard(
+                    results,
+                    requirements,
+                    results.Sum(r => r.Tokens),
+                    cacheHits,
+                    endTime - startTime
+                );
             }
 
             // Display summary
