@@ -220,7 +220,7 @@ Return ONLY pipe-delimited lines (one per line). NO markdown, NO code blocks, NO
                         var req = ExtractedRequirement.ParsePipeDelimited(line);
                         requirements.Add(req);
                     }
-                    catch (Exception ex)
+                    catch (Exception)
                     {
                         parseErrors++;
                         Console.ForegroundColor = ConsoleColor.Yellow;
