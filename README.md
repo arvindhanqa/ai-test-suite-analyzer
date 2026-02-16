@@ -379,6 +379,32 @@ ai-test-suite-analyzer/
 ```
 
 ---
+## 📸 Screenshots
+
+### 🖥️ Interactive Menu
+| Main Menu | Analysis Type Selection |
+|-----------|------------------------|
+| ![Main Menu](docs/screenshots/01-main-menu.png) | ![Analysis Type](docs/screenshots/03-select-analysis-type.png) |
+
+### ⚙️ Configure Analysis
+![Configure Analysis](docs/screenshots/02-configure-analysis.png)
+
+### 🤖 QA Mode — Console Output
+![QA Console](docs/screenshots/07-qa-console-output.png)
+
+### 📊 QA Mode — Excel Output
+| Quality Issues Summary | Statistics Dashboard |
+|----------------------|---------------------|
+| ![Quality Issues](docs/screenshots/08-qa-issues-sheet.png) | ![QA Dashboard](docs/screenshots/09-qa-statistics-dashboard.png) |
+
+### 🎯 BA Mode — Console Output
+![BA Console](docs/screenshots/04-ba-console-output.png)
+
+### 📋 BA Mode — Excel Output
+| Coverage Gap Analysis | BA Statistics Dashboard |
+|----------------------|------------------------|
+| ![Coverage Gap](docs/screenshots/05-coverage-gap-analysis.png) | ![BA Dashboard](docs/screenshots/06-ba-statistics-dashboard.png) |
+``
 
 ## 🎯 Roadmap
 
