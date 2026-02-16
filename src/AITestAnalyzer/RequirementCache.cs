@@ -81,7 +81,8 @@ namespace AITestAnalyzer
         {
             // Use file path + last modified date as key
             var fileInfo = new FileInfo(documentPath);
-            string combined = $"{documentPath}_{fileInfo.LastWriteTime:yyyyMMddHHmmss}";
+            string normalizedPath = fileInfo.FullName.ToLower(); // ← always absolute, case-insensitive
+            string combined = $"{normalizedPath}_{fileInfo.LastWriteTime:yyyyMMddHHmmss}";
 
             using (var md5 = System.Security.Cryptography.MD5.Create())
             {
