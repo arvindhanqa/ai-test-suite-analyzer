@@ -51,13 +51,16 @@ namespace AITestAnalyzer
                 }
                 if (firstArg == "--clear-cache")
                 {
-                    WriteInfo("Clearing cache...");
+                    WriteInfo("Clearing all caches...");
                     var tempCache = new TestCaseCache();
                     tempCache.ClearCache();
-                    WriteSuccess("Cache cleared successfully!");
+                    var tempReqCache = new RequirementCache();
+                    tempReqCache.ClearCache();
+                    WriteSuccess("All caches cleared successfully!");
                     Console.WriteLine();
-                    WriteInfo("All cached analysis results have been deleted.");
-                    WriteInfo("Next run will re-analyze all tests using OpenAI API.");
+                    WriteInfo("Deleted: cache/test_analysis_cache.json");
+                    WriteInfo("Deleted: cache/requirements/requirements_cache.json");
+                    WriteInfo("Next run will re-analyze all tests and requirements using OpenAI API.");
                     return;
                 }
             }
