@@ -1,4 +1,4 @@
-﻿namespace AITestAnalyzer
+namespace AITestAnalyzer
 {
     public class PromptConfig
     {
@@ -7,5 +7,6 @@
         public double Temperature { get; set; }
         public string SystemMessage { get; set; } = "";
         public string UserTemplate { get; set; } = "";
+        public double CostPerToken { get; set; }
     }
 }

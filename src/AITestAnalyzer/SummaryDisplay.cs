@@ -7,6 +7,8 @@ namespace AITestAnalyzer
 {
     public class SummaryDisplay
     {
+        private const int EstimatedTokensPerCachedTest = 150; // Used to estimate cache savings
+
         /// <summary>
         /// Displays comprehensive analysis summary to console with color-coded statistics and cache performance metrics
         /// </summary>
@@ -55,12 +57,12 @@ namespace AITestAnalyzer
         /// - Cache disabled (--no-cache) → Shows warning instead of cache section
         /// </remarks>
         public static void Display(List<(string TestId, string Result, int Tokens, string Coverage)> results,
-                                  DateTime startTime, DateTime endTime, string outputPath, int cacheHits, int apiCalls, bool cacheEnabled, string analysisMode = "QA")
+                                  DateTime startTime, DateTime endTime, string outputPath, int cacheHits, int apiCalls, bool cacheEnabled, PromptConfig promptConfig, string analysisMode = "QA")
         {
             int goodTests = results.Count(r => r.Result.StartsWith("GOOD", StringComparison.OrdinalIgnoreCase));
             int issueTests = results.Count - goodTests;
             int totalTokens = results.Sum(r => r.Tokens);
-            double totalCost = totalTokens * 0.00000015;
+            double totalCost = totalTokens * promptConfig.CostPerToken;
             int avgTokens = results.Count > 0 ? totalTokens / results.Count : 0;
             var duration = (endTime - startTime).TotalSeconds;
 
@@ -95,9 +97,9 @@ namespace AITestAnalyzer
                 if (cacheHits > 0)
                 {
                     // Calculate savings (approximate)
-                    int avgTokensPerTest = 150; // Estimated average
+                    int avgTokensPerTest = EstimatedTokensPerCachedTest; // Estimated average
                     int savedTokens = cacheHits * avgTokensPerTest;
-                    double savedCost = savedTokens * 0.000000150; // GPT-4o-mini cost per token
+                    double savedCost = savedTokens * promptConfig.CostPerToken;
 
                     Console.ForegroundColor = ConsoleColor.Green;
                     Console.Write("💰 ");
