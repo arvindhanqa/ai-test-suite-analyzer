@@ -15,6 +15,7 @@ namespace AITestAnalyzer
         private readonly Configuration _config;
         private readonly PromptConfig _promptConfig;
         private const int CACHE_MAX_AGE_DAYS = 30;
+        private const int EstimatedTokensPerCachedTest = 150;
 
         public BatchProcessor(Configuration config, PromptConfig promptConfig)
         {
@@ -98,7 +99,7 @@ namespace AITestAnalyzer
 
                 // Initialize components
                 var excelReader = new ExcelReader(inputPath, worksheetIndex);
-                var excelWriter = new ExcelWriter(outputPath, worksheetIndex);
+                var excelWriter = new ExcelWriter(outputPath, _promptConfig, worksheetIndex);
                 var aiAnalyzer = new AIAnalyzer(_config, _promptConfig);
 
                 var reqCache = new RequirementCache();
@@ -290,7 +291,7 @@ namespace AITestAnalyzer
                 result.IssueTests = results.Count(r => r.Result != "GOOD" && !r.Result.StartsWith("ERROR:"));
                 result.ErrorTests = results.Count(r => r.Result.StartsWith("ERROR:"));
                 result.TotalTokens = results.Sum(r => r.Tokens);
-                result.TotalCost = result.TotalTokens * 0.00000015;
+                result.TotalCost = result.TotalTokens * _promptConfig.CostPerToken;
                 result.TimeTaken = (endTime - fileStartTime).TotalSeconds;
                 result.CacheHits = cacheHits;
                 result.ApiCalls = apiCalls;
@@ -530,8 +531,8 @@ namespace AITestAnalyzer
 
                 if (totalCacheHits > 0)
                 {
-                    int savedTokens = totalCacheHits * 150; // Estimated
-                    double savedCost = savedTokens * 0.00000015;
+                    int savedTokens = totalCacheHits * EstimatedTokensPerCachedTest; // Estimated
+                    double savedCost = savedTokens * _promptConfig.CostPerToken;
                     Console.ForegroundColor = ConsoleColor.Green;
                     Console.WriteLine($"   💰 Tokens saved:      ~{savedTokens:N0}");
                     Console.WriteLine($"   💵 Cost saved:        ~${savedCost:F6}");

@@ -12,10 +12,12 @@ namespace AITestAnalyzer
     {
         private readonly string _outputPath;
         private readonly int _worksheetIndex;
+        private readonly PromptConfig _promptConfig;
 
-        public ExcelWriter(string outputPath, int worksheetIndex = 0)
+        public ExcelWriter(string outputPath, PromptConfig promptConfig, int worksheetIndex = 0)
         {
             _outputPath = outputPath;
+            _promptConfig = promptConfig;
             _worksheetIndex = worksheetIndex;
         }
 
@@ -430,7 +432,7 @@ namespace AITestAnalyzer
                     int issueTests = results.Count(r => r.Result != "GOOD" && !r.Result.StartsWith("ERROR:"));
                     int errorTests = results.Count(r => r.Result.StartsWith("ERROR:"));
                     int totalTokens = results.Sum(r => r.Tokens);
-                    double totalCost = totalTokens * 0.00000015;
+                    double totalCost = totalTokens * _promptConfig.CostPerToken;
                     int avgTokens = totalTests > 0 ? totalTokens / totalTests : 0;
                     double timeTaken = (endTime - startTime).TotalSeconds;
                     double qualityScore = totalTests > 0 ? (goodTests * 100.0 / totalTests) : 0;
@@ -968,7 +970,7 @@ namespace AITestAnalyzer
                     row++;
 
                     int apiCalls = results.Count - cacheHits;
-                    double estimatedCost = totalTokens * 0.00000015; // GPT-4o-mini rate
+                    double estimatedCost = totalTokens * _promptConfig.CostPerToken; // GPT-4o-mini rate
 
                     var perfData = new[]
                     {

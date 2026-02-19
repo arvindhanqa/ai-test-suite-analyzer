@@ -2,6 +2,7 @@
   "MaxTokens": 250,
   "Model": "gpt-4o-mini",
   "Temperature": 0.2,
+  "CostPerToken": 0.00000015,
   "SystemMessage": "You are an expert QA analyst. Provide CONCISE, tweet-style feedback (under 280 chars). Be direct and actionable.",
   "UserTemplate": "{Requirements}\n\nTEST CASE:\nFeature: {Feature}\nScenario: {Scenario}\nSteps: {Steps}\nExpected: {ExpectedResult}\n\nProvide BRIEF feedback:\nQuality: [ONE sentence max - either 'GOOD' or specific issue]\nCoverage: [Comma-separated requirement topics only]"
 }

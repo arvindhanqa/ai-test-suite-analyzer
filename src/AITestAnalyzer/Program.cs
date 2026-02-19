@@ -364,7 +364,7 @@ namespace AITestAnalyzer
             string outputDir = ExcelWriter.CreateOutputFolder();
             string outputPath = ExcelWriter.PrepareOutputFile(excelPath, outputDir);
 
-            var excelWriter = new ExcelWriter(outputPath, worksheetIndex);
+            var excelWriter = new ExcelWriter(outputPath, promptConfig, worksheetIndex);
             excelWriter.RenameOriginalSheet();
             excelWriter.AddAnalysisColumnHeader(analysisMode);  // ADD MODE PARAMETER
             Console.WriteLine();
@@ -571,7 +571,7 @@ namespace AITestAnalyzer
 
             // Display summary
             Console.WriteLine();
-            SummaryDisplay.Display(results, startTime, endTime, outputPath, cacheHits, apiCalls, useCache, analysisMode);
+            SummaryDisplay.Display(results, startTime, endTime, outputPath, cacheHits, apiCalls, useCache, promptConfig, analysisMode);
 
             Console.WriteLine();
             WriteInfo("Press any key to exit...");
@@ -684,7 +684,8 @@ namespace AITestAnalyzer
                 Model = configBuilder["Model"] ?? "gpt-4o-mini",
                 Temperature = double.Parse(configBuilder["Temperature"] ?? "0.2"),
                 SystemMessage = configBuilder["SystemMessage"] ?? "You are an expert QA analyzer.",
-                UserTemplate = configBuilder["UserTemplate"] ?? "Analyze: {Scenario}"
+                UserTemplate = configBuilder["UserTemplate"] ?? "Analyze: {Scenario}",
+                CostPerToken = double.Parse(configBuilder["CostPerToken"] ?? "0.00000015")
             };
 
             WriteSuccess($"Model: {promptConfig.Model}");
