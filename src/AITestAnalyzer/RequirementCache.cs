@@ -23,7 +23,7 @@ namespace AITestAnalyzer
         /// </summary>
         /// <param name="documentPath">Path to the requirement document</param>
         /// <param name="maxAgeDays">Maximum age of cache entry in days</param>
-        public List<ExtractedRequirement>? GetCached(string documentPath, int maxAgeDays = 30)
+        public List<ExtractedRequirement>? GetCached(string documentPath, int maxAgeDays = Constants.CACHE_MAX_AGE_DAYS)
         {
             string cacheKey = GenerateCacheKey(documentPath);
 

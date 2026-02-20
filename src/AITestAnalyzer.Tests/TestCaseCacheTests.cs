@@ -84,7 +84,7 @@ namespace AITestAnalyzer.Tests
 
             // ASSERT
             hash.Should().NotBeNullOrEmpty();
-            hash.Length.Should().Be(16, "because SHA256 produces 64-character hex string");
+            hash.Length.Should().Be(Constants.HASH_LENGTH, "because SHA256 produces 64-character hex string");
         }
     }
 }

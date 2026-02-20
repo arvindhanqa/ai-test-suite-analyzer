@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace AITestAnalyzer
 {
@@ -41,7 +41,7 @@ namespace AITestAnalyzer
             double estimatedRemaining = (_totalTests - processedCount) * avgTimePerTest;
 
             // Build progress bar (20 characters wide)
-            int barWidth = 20;
+            int barWidth = Constants.PROGRESS_BAR_WIDTH;
             int filledWidth = (int)(barWidth * percentComplete / 100);
             string progressBar = "[" + new string('=', filledWidth) + new string('.', barWidth - filledWidth) + "]";
 
