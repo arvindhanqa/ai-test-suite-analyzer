@@ -23,7 +23,7 @@ namespace AITestAnalyzer
     {
         private readonly string _cacheFilePath;
         private Dictionary<string, CachedResult> _cache;
-        private const int DEFAULT_MAX_AGE_DAYS = 30;
+        private const int DEFAULT_MAX_AGE_DAYS = Constants.CACHE_MAX_AGE_DAYS;
 
         public TestCaseCache(string cacheDirectory = "cache")
         {
@@ -150,7 +150,7 @@ namespace AITestAnalyzer
                 {
                     builder.Append(b.ToString("x2"));
                 }
-                return builder.ToString().Substring(0, 16); // First 16 chars
+                return builder.ToString().Substring(0, Constants.HASH_LENGTH); // First 16 chars
             }
         }
 

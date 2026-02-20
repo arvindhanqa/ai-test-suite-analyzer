@@ -31,7 +31,7 @@ namespace AITestAnalyzer
         public async Task<List<ExtractedRequirement>> ExtractRequirements(
             string documentPath,
             RequirementCache cache,
-            int maxAgeDays = 30)
+            int maxAgeDays = Constants.CACHE_MAX_AGE_DAYS)
         {
             // Try cache first
             var cached = cache.GetCached(documentPath, maxAgeDays);
@@ -48,7 +48,7 @@ namespace AITestAnalyzer
             Console.ResetColor();
 
             // RETRY LOGIC (Fix for Issue #6)
-            const int maxRetries = 3;
+            const int maxRetries = Constants.MAX_RETRIES;
             Exception? lastException = null;
 
             for (int attempt = 1; attempt <= maxRetries; attempt++)
@@ -71,7 +71,7 @@ namespace AITestAnalyzer
                         ChatMessage.FromUser(BuildSmartCompressionPrompt(documentText))
                             },
                             Model = _model,
-                            MaxTokens = 4000,  // INCREASED from 2000
+                            MaxTokens = Constants.TOKENS_REQUIREMENT_EXTRACTION,  // INCREASED from 2000
                             Temperature = 0
                         });
 
@@ -113,7 +113,7 @@ namespace AITestAnalyzer
 
                     if (attempt < maxRetries)
                     {
-                        await Task.Delay(1000); // Wait 1 second before retry
+                        await Task.Delay(Constants.RETRY_DELAY_MS); // Wait 1 second before retry
                     }
                 }
             }

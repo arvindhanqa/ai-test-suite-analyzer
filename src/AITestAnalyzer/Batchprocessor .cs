@@ -14,7 +14,7 @@ namespace AITestAnalyzer
     {
         private readonly Configuration _config;
         private readonly PromptConfig _promptConfig;
-        private const int CACHE_MAX_AGE_DAYS = 30;
+        private const int CACHE_MAX_AGE_DAYS = Constants.CACHE_MAX_AGE_DAYS;
         private const int EstimatedTokensPerCachedTest = 150;
 
         public BatchProcessor(Configuration config, PromptConfig promptConfig)

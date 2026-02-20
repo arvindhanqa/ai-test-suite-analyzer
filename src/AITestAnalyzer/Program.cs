@@ -19,7 +19,7 @@ namespace AITestAnalyzer
     {
         private const string Version = "1.0.0";
         private const string AppName = "AI Test Suite Analyzer";
-        private const int CACHE_MAX_AGE_DAYS = 30;
+        private const int CACHE_MAX_AGE_DAYS = Constants.CACHE_MAX_AGE_DAYS;
 
         static async Task Main(string[] args)
         {

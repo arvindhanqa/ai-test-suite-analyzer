@@ -36,8 +36,8 @@ namespace AITestAnalyzer
         /// </summary>
         public async Task<(string quality, int tokens)> AnalyzeTestQuality(TestCase testCase)
         {
-            int maxRetries = 3;
-            int retryDelayMs = 1000;
+            int maxRetries = Constants.MAX_RETRIES;
+            int retryDelayMs = Constants.RETRY_DELAY_MS;
 
             for (int attempt = 1; attempt <= maxRetries; attempt++)
             {
@@ -65,7 +65,7 @@ Be direct and actionable. Focus on: clarity, completeness, testability.";
                         ChatMessage.FromUser(userPrompt)
                             },
                             Model = _promptConfig.Model,
-                            MaxTokens = 250,
+                            MaxTokens = Constants.TOKENS_QA_MODE,
                             Temperature = (float)_promptConfig.Temperature
                         });
 
@@ -130,8 +130,8 @@ Be direct and actionable. Focus on: clarity, completeness, testability.";
             TestCase testCase,
             List<ExtractedRequirement> requirements)
         {
-            int maxRetries = 3;
-            int retryDelayMs = 1000;
+            int maxRetries = Constants.MAX_RETRIES;
+            int retryDelayMs = Constants.RETRY_DELAY_MS;
 
             for (int attempt = 1; attempt <= maxRetries; attempt++)
             {
@@ -177,7 +177,7 @@ FEEDBACK:
                                 ChatMessage.FromUser(userPrompt)
                             },
                             Model = _promptConfig.Model,
-                            MaxTokens = 1000,
+                            MaxTokens = Constants.TOKENS_BA_MODE,
                             Temperature = (float)_promptConfig.Temperature
                         });
 
