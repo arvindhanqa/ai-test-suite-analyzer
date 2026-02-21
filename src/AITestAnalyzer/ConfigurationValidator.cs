@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using OfficeOpenXml;
@@ -62,6 +62,13 @@ namespace AITestAnalyzer
         /// </remarks>
         public async Task<(bool IsValid, string ErrorMessage)> ValidateAll(string excelPath, int worksheetIndex)
         {
+            // 2. Validate Promptconfig file
+            var promptconfigResult = ValidatePromptConfig();
+            if (!promptconfigResult.IsValid)
+            {
+                return (false, promptconfigResult.ErrorMessage);
+            }
+
             // 1. Validate API Key
             var apiKeyResult = ValidateApiKey();
             if (!apiKeyResult.IsValid)
@@ -69,14 +76,14 @@ namespace AITestAnalyzer
                 return (false, apiKeyResult.ErrorMessage);
             }
 
-            // 2. Validate Worksheet Index against the file FileSelector picked
+            // 3. Validate Worksheet Index against the file FileSelector picked
             var worksheetResult = ValidateWorksheetIndex(excelPath, worksheetIndex);
             if (!worksheetResult.IsValid)
             {
                 return (false, worksheetResult.ErrorMessage);
             }
 
-            // 3. Validate OpenAI Connection (optional but recommended)
+            // 4. Validate OpenAI Connection (optional but recommended)
             var connectionResult = await ValidateOpenAIConnection();
             if (!connectionResult.IsValid)
             {
@@ -237,5 +244,38 @@ namespace AITestAnalyzer
                    $"  Worksheet Index: {worksheetIndex}\n" +
                    $"  API Key: {(_config.ApiKey?.Length > 10 ? _config.ApiKey.Substring(0, 7) + "..." : "Not set")}";
         }
+
+        public ValidationResult ValidatePromptConfig()
+        {
+            // Check file exists
+            if (!File.Exists("PromptConfig.json"))
+            {
+                return ValidationResult.Failure(
+                    "PromptConfig.json not found. Please ensure the file exists in the application directory.");
+            }
+
+            // Check MaxTokens is reasonable
+            if (_promptConfig.MaxTokens <= 0 || _promptConfig.MaxTokens > 10000)
+            {
+                return ValidationResult.Failure(
+                    $"Invalid MaxTokens: {_promptConfig.MaxTokens}. Must be between 1 and 10000.");
+            }
+
+            // Check Temperature is in valid range
+            if (_promptConfig.Temperature < 0 || _promptConfig.Temperature > 2.0)
+            {
+                return ValidationResult.Failure(
+                    $"Invalid Temperature: {_promptConfig.Temperature}. Must be between 0.0 and 2.0.");
+            }
+
+            // Check Model is not empty
+            if (string.IsNullOrWhiteSpace(_promptConfig.Model))
+            {
+                return ValidationResult.Failure("Model name is required in PromptConfig.json");
+            }
+
+            return ValidationResult.Success("PromptConfig is valid");
+        }
+
     }
 }
