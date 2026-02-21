@@ -24,6 +24,7 @@ namespace AITestAnalyzer
         private readonly string _cacheFilePath;
         private Dictionary<string, CachedResult> _cache;
         private const int DEFAULT_MAX_AGE_DAYS = Constants.CACHE_MAX_AGE_DAYS;
+        private const int MAX_CACHE_ENTRIES = 1000;
 
         public TestCaseCache(string cacheDirectory = "cache")
         {
@@ -200,6 +201,20 @@ namespace AITestAnalyzer
                 Tokens = tokens,
                 CachedAt = DateTime.Now
             };
+
+            if (_cache.Count > MAX_CACHE_ENTRIES)
+            {
+                var toRemove = _cache.Values
+                    .OrderBy(c => c.CachedAt)
+                    .Take(_cache.Count - MAX_CACHE_ENTRIES)
+                    .Select(c => c.Hash)
+                    .ToList();
+
+                foreach (var key in toRemove)
+                    _cache.Remove(key);
+            }
+
+            SaveCache();
         }
 
         // Get cache statistics
