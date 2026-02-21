@@ -11,6 +11,7 @@ namespace AITestAnalyzer
         private readonly string _cacheFolder = "cache/requirements/";
         private readonly string _cacheFile = "requirements_cache.json";
         private Dictionary<string, CachedRequirements> _cache;
+        private const int MAX_CACHE_ENTRIES = 500;
 
         public RequirementCache()
         {
@@ -60,12 +61,25 @@ namespace AITestAnalyzer
             _cache[cacheKey] = new CachedRequirements
             {
                 DocumentPath = documentPath,
+                CacheKey = cacheKey,
                 DocumentName = Path.GetFileName(documentPath),
                 Requirements = requirements,
                 ExtractedDate = DateTime.Now,
                 TokensUsed = tokensUsed,
                 RequirementCount = requirements.Count
             };
+
+            if (_cache.Count > MAX_CACHE_ENTRIES)
+            {
+                var toRemove = _cache.Values
+                    .OrderBy(c => c.ExtractedDate)
+                    .Take(_cache.Count - MAX_CACHE_ENTRIES)
+                    .Select(c => c.CacheKey)
+                    .ToList();
+
+                foreach (var key in toRemove)
+                    _cache.Remove(key);
+            }
 
             SaveCache();
 
@@ -155,6 +169,7 @@ namespace AITestAnalyzer
     {
         public string DocumentPath { get; set; } = string.Empty;
         public string DocumentName { get; set; } = string.Empty;
+        public string CacheKey { get; set; } = string.Empty;
         public List<ExtractedRequirement> Requirements { get; set; } = new();
         public DateTime ExtractedDate { get; set; }
         public int TokensUsed { get; set; }
