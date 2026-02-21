@@ -359,6 +359,13 @@ namespace AITestAnalyzer
 
             Console.WriteLine();
 
+            bool configValid = await ValidateConfiguration(appConfig, promptConfig, excelPath, worksheetIndex);
+            if (!configValid)
+            {
+                WriteInfo("Press any key to exit...");
+                Console.ReadKey();
+                return;
+            }
             // Prepare output file
             WriteInfo("Preparing output file...");
             string outputDir = ExcelWriter.CreateOutputFolder();
@@ -595,6 +602,14 @@ namespace AITestAnalyzer
 
             // Validate API key only (individual files validated inside BatchProcessor)
             var validator = new ConfigurationValidator(appConfig, promptConfig);
+
+            var promptConfigResult = validator.ValidatePromptConfig();
+            if (!promptConfigResult.IsValid)
+            {
+                WriteError($"PromptConfig Error: {promptConfigResult.ErrorMessage}");
+                return;
+            }
+
             var apiKeyResult = validator.ValidateApiKey();
             if (!apiKeyResult.IsValid)
             {
