@@ -69,9 +69,7 @@ namespace AITestAnalyzer
                 WriteMenItem("2", "Batch analyze all Excel files in a folder");
                 WriteMenItem("3", "Exit");
                 Console.WriteLine();
-                WritePrompt("Enter your choice (1-3): ");
-
-                string? choice = Console.ReadLine()?.Trim();
+                string? choice = ReadIntegerInput($"Enter your choice (1-3): ", 1, 3);
 
                 switch (choice)
                 {
@@ -81,10 +79,6 @@ namespace AITestAnalyzer
                         return SelectBatchFolder();
                     case "3":
                         return new SelectionResult { SelectedMode = SelectionResult.Mode.Exit };
-                    default:
-                        WriteWarning("Invalid choice. Please enter 1, 2, or 3.");
-                        PauseForUser();
-                        break;
                 }
             }
         }
@@ -119,10 +113,7 @@ namespace AITestAnalyzer
                 Console.WriteLine("        • Requires requirement document");
                 Console.WriteLine("        • Output: 2 columns (Requirement Feedback | Coverage)");
                 Console.WriteLine();
-
-                WritePrompt("Enter your choice (1-2): ");
-
-                string? choice = Console.ReadLine()?.Trim();
+                string? choice = ReadIntegerInput($"Enter your choice (1-2): ", 1, 2);
 
                 switch (choice)
                 {
@@ -386,18 +377,34 @@ namespace AITestAnalyzer
             WritePrompt("  Analyze how many tests per file? (Enter for ALL): ");
             string? limitInput = Console.ReadLine()?.Trim();
             int testLimit = 0;
-            if (!string.IsNullOrEmpty(limitInput) && int.TryParse(limitInput, out int limit) && limit > 0)
+            if (string.IsNullOrEmpty(limitInput))
+            {
+                testLimit = 0; // Enter = ALL
+            }
+            else if (int.TryParse(limitInput, out int limit) && limit > 0)
             {
                 testLimit = limit;
+            }
+            else
+            {
+                WriteWarning("  Invalid input. Defaulting to ALL tests.");
             }
 
             // Ask for sheet index
             WritePrompt("  Sheet index (Enter for default=1): ");
             string? sheetInput = Console.ReadLine()?.Trim();
             int sheetIndex = 1;
-            if (!string.IsNullOrEmpty(sheetInput) && int.TryParse(sheetInput, out int sheet) && sheet >= 0)
+            if (string.IsNullOrEmpty(sheetInput))
+            {
+                sheetIndex = 1; // Enter = default
+            }
+            else if (int.TryParse(sheetInput, out int sheet) && sheet >= 0)
             {
                 sheetIndex = sheet;
+            }
+            else
+            {
+                WriteWarning("  Invalid input. Defaulting to sheet index 1.");
             }
 
             // Summary before running
@@ -593,6 +600,35 @@ namespace AITestAnalyzer
             catch
             {
                 return -1; // Couldn't read file
+            }
+        }
+
+        private static string ReadIntegerInput(string prompt, int min, int max)
+        {
+            while (true)
+            {
+                Console.Write(prompt);
+                string? input = Console.ReadLine();
+
+                if (int.TryParse(input, out int value))
+                {
+                    if (value >= min && value <= max)
+                    {
+                        return input;
+                    }
+                    else
+                    {
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine($"⚠️  Please enter a number between {min} and {max}");
+                        Console.ResetColor();
+                    }
+                }
+                else
+                {
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine("⚠️  Invalid input. Please enter a number.");
+                    Console.ResetColor();
+                }
             }
         }
 
