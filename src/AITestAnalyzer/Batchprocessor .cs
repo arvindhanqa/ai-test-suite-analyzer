@@ -101,47 +101,51 @@ namespace AITestAnalyzer
                 var excelReader = new ExcelReader(inputPath, worksheetIndex);
                 var excelWriter = new ExcelWriter(outputPath, _promptConfig, worksheetIndex);
                 var aiAnalyzer = new AIAnalyzer(_config, _promptConfig);
+                List<ExtractedRequirement> requirements = new List<ExtractedRequirement>();
 
-                var reqCache = new RequirementCache();
-                var reqExtractor = new RequirementExtractor(_config, _promptConfig);
-
-                // Auto-detect requirement file based on test file name
-                string testFileName = Path.GetFileNameWithoutExtension(inputPath);
-                string reqFileName = testFileName.Replace("test_cases_", "requirements_") + ".md";
-                string dataFolder = Path.GetDirectoryName(inputPath) ?? ".";
-                string reqPath = Path.Combine(dataFolder, reqFileName);
-
-                if (!File.Exists(reqPath))
+                if (analysisMode == "BA")
                 {
-                    Console.WriteLine($"⚠️  Auto-detection failed. Could not find: {reqFileName}");
-                    Console.Write("📁 Enter requirement file path (or press Enter to skip): ");
-                    string? userInput = Console.ReadLine();
+                    var reqCache = new RequirementCache();
+                    var reqExtractor = new RequirementExtractor(_config, _promptConfig);
 
-                    if (string.IsNullOrWhiteSpace(userInput))
+                    string testFileName = Path.GetFileNameWithoutExtension(inputPath);
+                    string reqFileName = testFileName.Replace("test_cases_", "requirements_") + ".md";
+                    string dataFolder = Path.GetDirectoryName(inputPath) ?? ".";
+                    string reqPath = Path.Combine(dataFolder, reqFileName);
+
+                    if (!File.Exists(reqPath))
                     {
-                        Console.WriteLine("⚠️  No requirements provided. Analysis will be quality-only (no coverage tracking).");
-                        reqPath = ""; // Empty path = skip requirements
+                        Console.WriteLine($"⚠️  Auto-detection failed. Could not find: {reqFileName}");
+                        Console.Write("📁 Enter requirement file path (or press Enter to skip): ");
+                        string? userInput = Console.ReadLine();
+
+                        if (string.IsNullOrWhiteSpace(userInput))
+                        {
+                            Console.WriteLine("⚠️  No requirements provided. Analysis will be quality-only (no coverage tracking).");
+                            reqPath = "";
+                        }
+                        else
+                        {
+                            reqPath = userInput;
+                        }
                     }
                     else
                     {
-                        reqPath = userInput;
+                        Console.WriteLine($"✅ Auto-detected requirement file: {Path.GetFileName(reqPath)}");
+                    }
+
+                    try
+                    {
+                        requirements = await reqExtractor.ExtractRequirements(reqPath, reqCache);
+                    }
+                    catch
+                    {
+                        requirements = new List<ExtractedRequirement>();
                     }
                 }
                 else
                 {
-                    Console.WriteLine($"✅ Auto-detected requirement file: {Path.GetFileName(reqPath)}");
-                }
-
-                string reqFile = reqPath; // Keep variable name consistent with existing code
-
-                List<ExtractedRequirement> requirements;
-                try
-                {
-                    requirements = await reqExtractor.ExtractRequirements(reqFile, reqCache);
-                }
-                catch
-                {
-                    requirements = new List<ExtractedRequirement>();
+                    WriteInfo("QA MODE: Skipping requirements (not needed)");
                 }
 
                 // Validate Excel structure
