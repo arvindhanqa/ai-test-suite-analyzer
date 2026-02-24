@@ -401,7 +401,13 @@ namespace AITestAnalyzer
             foreach (var filePath in excelFiles)
             {
                 fileNumber++;
-                WriteHeader($"\n[{fileNumber}/{excelFiles.Count}] Starting file processing...");
+
+                //progress file bar
+                Console.WriteLine();
+                WriteHeader(new string('─', 60));
+                WriteHeader($"📁 File {fileNumber} of {excelFiles.Count}: {Path.GetFileName(filePath)}");
+                WriteHeader($"   Remaining after this: {excelFiles.Count - fileNumber} file(s)");
+                WriteHeader(new string('─', 60));
 
                 var result = await ProcessSingleFileAsync(
                     filePath,
