@@ -21,10 +21,24 @@ namespace AITestAnalyzer
         private const string AppName = "AI Test Suite Analyzer";
         private const int CACHE_MAX_AGE_DAYS = Constants.CACHE_MAX_AGE_DAYS;
 
+        private static TestCaseCache? _activeCache;
+        private static RequirementCache? _activeReqCache;
         static async Task Main(string[] args)
         {
             ExcelPackage.License.SetNonCommercialPersonal("Aravindhan Rajasekaran");
 
+            Console.CancelKeyPress += (sender, e) =>
+            {
+                e.Cancel = true; // Prevent immediate kill
+                Console.WriteLine();
+                WriteWarning("Shutdown requested. Saving cache...");
+
+                _activeCache?.SaveCache();
+                _activeReqCache?.SaveCache();
+
+                WriteSuccess("Cache saved. Exiting cleanly.");
+                Environment.Exit(0);
+            };
             // ============================================================
             // EARLY EXIT FLAGS — these don't need FileSelector at all
             // ============================================================
@@ -310,6 +324,7 @@ namespace AITestAnalyzer
                 WriteInfo("BA MODE: Loading requirements for coverage analysis...");
 
                 var reqCache = new RequirementCache();
+                _activeReqCache = reqCache;
                 var reqExtractor = new RequirementExtractor(appConfig, promptConfig);
 
                 // Auto-detect requirement file
@@ -418,6 +433,7 @@ namespace AITestAnalyzer
             {
                 WriteInfo("Initializing cache system...");
                 cache = new TestCaseCache();
+                _activeCache = cache;
                 int cacheSize = cache.GetCacheSize();
                 int expiredCount = cache.GetExpiredCount(CACHE_MAX_AGE_DAYS);
 
@@ -630,6 +646,9 @@ namespace AITestAnalyzer
 
             // Run batch — pass testLimit as nullable (null = no limit)
             var batchProcessor = new BatchProcessor(appConfig, promptConfig);
+            var sharedCache = new TestCaseCache();
+            _activeCache = sharedCache;
+            _activeReqCache = new RequirementCache();
 
             try
             {
@@ -642,7 +661,8 @@ namespace AITestAnalyzer
                     limitParam,
                     worksheetIndex,
                     useCache,
-                    batchMode);
+                    batchMode,
+                    sharedCache);
 
                 if (results.Count == 0)
                 {

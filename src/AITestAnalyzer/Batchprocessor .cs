@@ -346,7 +346,8 @@ namespace AITestAnalyzer
             int? testLimitPerFile = null,
             int worksheetIndex = 0,
             bool useCache = true,
-            string analysisMode = "BA")
+            string analysisMode = "BA",
+            TestCaseCache? externalCache = null)
         {
             var allResults = new List<FileResult>();
             var batchStartTime = DateTime.Now;
@@ -367,8 +368,8 @@ namespace AITestAnalyzer
             string outputDir = ExcelWriter.CreateOutputFolder();
 
             // Initialize shared cache for batch processing
-            TestCaseCache? sharedCache = null;
-            if (useCache)
+            TestCaseCache? sharedCache = externalCache;
+            if (useCache && sharedCache == null)
             {
                 sharedCache = new TestCaseCache();
                 int cacheSize = sharedCache.GetCacheSize();
