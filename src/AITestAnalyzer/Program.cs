@@ -105,6 +105,9 @@ namespace AITestAnalyzer
                 return;
             }
 
+            // ← NEW: Dry run check goes HERE, before routing
+            await HandleDryRunOption(selection, useCache, promptConfig);  // if they chose D, this exits after preview
+
             // ============================================================
             // STEP 3: Route to batch or single based on selection
             // ============================================================
@@ -117,6 +120,147 @@ namespace AITestAnalyzer
                 await RunSingleMode(appConfig, promptConfig, selection, useCache);
             }
         }
+
+
+        // ============================================================
+        // MI-4: DRY RUN PREVIEW — shows cost estimate before analysis
+        // Single file only. Batch mode skips this.
+        // ============================================================
+        static async Task HandleDryRunOption(SelectionResult selection, bool useCache, PromptConfig promptConfig)
+        {
+            // Batch mode — dry run not supported, proceed normally
+            if (selection.SelectedMode == SelectionResult.Mode.Batch)
+                return;
+
+            string analysisMode = selection.SelectedAnalysisMode == SelectionResult.AnalysisMode.QA ? "QA" : "BA";
+            int testLimit = selection.TestLimit;
+
+            // Show ready-to-run summary
+            Console.WriteLine();
+            WriteHeader("─── Ready to run ───────────────────────────────────");
+            Console.WriteLine($"   File:        {Path.GetFileName(selection.FilePath)}");
+            Console.WriteLine($"   Mode:        {analysisMode}");
+            Console.WriteLine($"   Sheet:       {selection.SheetIndex}");
+            Console.WriteLine($"   Tests:       {(testLimit == 0 ? "ALL" : testLimit.ToString())}");
+            Console.WriteLine($"   Cache:       {(useCache ? "Enabled" : "Disabled")}");
+            WriteHeader("────────────────────────────────────────────────────");
+            Console.WriteLine();
+
+            Console.Write("  Press ");
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.Write("Enter");
+            Console.ResetColor();
+            Console.Write(" to analyze, ");
+            Console.ForegroundColor = ConsoleColor.Yellow;
+            Console.Write("D");
+            Console.ResetColor();
+            Console.Write(" for dry-run preview, ");
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.Write("B");
+            Console.ResetColor();
+            Console.Write(" to go back: ");
+
+            // Clear any buffered keystrokes from FileSelector navigation
+            while (Console.KeyAvailable)
+                Console.ReadKey(intercept: true);
+
+            string? input = Console.ReadLine()?.Trim().ToUpper();
+
+            if (input == "B")
+            {
+                WriteInfo("Exiting. Run again to restart.");
+                Environment.Exit(0);
+            }
+
+            if (input != "D")
+                return; // Enter or anything else → proceed normally
+
+            // ── DRY RUN PREVIEW ──
+            Console.WriteLine();
+            WriteHeader("════════════════════════════════════════════════════");
+            WriteHeader("🔍 DRY RUN MODE — No API calls will be made");
+            WriteHeader("════════════════════════════════════════════════════");
+            Console.WriteLine();
+
+            try
+            {
+                var excelReader = new ExcelReader(selection.FilePath, selection.SheetIndex);
+                var (isValid, validationMsg) = excelReader.ValidateExcelStructure();
+
+                if (!isValid)
+                {
+                    WriteError($"Cannot preview: {validationMsg}");
+                    Environment.Exit(1);
+                }
+
+                int totalRowsInExcel = excelReader.CountTestRows();
+                int testsToCheck = (testLimit == 0 || testLimit > totalRowsInExcel)
+                    ? totalRowsInExcel
+                    : testLimit;
+
+                WriteInfo($"Scanning {testsToCheck} tests for cache coverage...");
+                Console.WriteLine();
+
+                int cacheHits = 0;
+
+                if (useCache)
+                {
+                    var cache = new TestCaseCache();
+                    string cachePrefix = analysisMode == "QA" ? "" : "ba_";
+
+                    for (int row = 2; row <= testsToCheck + 1; row++)
+                    {
+                        var testCase = excelReader.ReadTestCase(row);
+                        if (testCase == null || string.IsNullOrEmpty(testCase.TestId))
+                            continue;
+
+                        string hash = cachePrefix + cache.GenerateHash(testCase);
+                        if (cache.TryGetCached(hash, out _, CACHE_MAX_AGE_DAYS))
+                            cacheHits++;
+                    }
+                }
+
+                int apiCallsNeeded = testsToCheck - cacheHits;
+                double estimatedTokens = apiCallsNeeded * promptConfig.MaxTokens;
+                double estimatedCost = estimatedTokens * promptConfig.CostPerToken;
+                double cachePercent = testsToCheck > 0 ? (cacheHits * 100.0 / testsToCheck) : 0;
+
+                WriteHeader("📊 Analysis Preview:");
+                Console.WriteLine($"   File:              {Path.GetFileName(selection.FilePath)}");
+                Console.WriteLine($"   Mode:              {analysisMode}");
+                Console.WriteLine($"   Total tests:       {testsToCheck}");
+
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine($"   Cache hits:        {cacheHits} ({cachePercent:F1}%) — free & instant");
+                Console.ResetColor();
+
+                Console.ForegroundColor = apiCallsNeeded > 0 ? ConsoleColor.Yellow : ConsoleColor.Green;
+                Console.WriteLine($"   API calls needed:  {apiCallsNeeded}");
+                Console.ResetColor();
+
+                Console.WriteLine($"   Estimated tokens:  {estimatedTokens:N0}");
+
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine($"   Estimated cost:    ${estimatedCost:F6}");
+                Console.ResetColor();
+
+                Console.WriteLine();
+                if (apiCallsNeeded == 0)
+                    WriteSuccess("All tests cached — this run will be FREE!");
+                else
+                    WriteInfo($"To proceed, run again and press Enter at the prompt.");
+            }
+            catch (Exception ex)
+            {
+                WriteError($"Dry run failed: {ex.Message}");
+            }
+
+            Console.WriteLine();
+            WriteInfo("Press any key to exit...");
+            Console.ReadKey();
+            Environment.Exit(0);
+        }
+
 
         // ============================================================
         // TEST REQUIREMENT EXTRACTION (Day 15 Feature)
