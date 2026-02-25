@@ -130,7 +130,7 @@ namespace AITestAnalyzer
         /// <summary>
         /// Save cache to disk
         /// </summary>
-        private void SaveCache()
+        public void SaveCache()
         {
             string cachePath = Path.Combine(_cacheFolder, _cacheFile);
 
