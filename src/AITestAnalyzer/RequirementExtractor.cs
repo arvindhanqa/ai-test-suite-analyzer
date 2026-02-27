@@ -266,7 +266,6 @@ Return ONLY pipe-delimited lines (one per line). NO markdown, NO code blocks, NO
                 Console.ResetColor();
 
                 // Parse JSON response
-                // TODO: Add retry logic for intermittent JSON parsing errors (see issue Status: Open.#6)
                 var requirements = JsonSerializer.Deserialize<List<ExtractedRequirement>>(
                     jsonText,
                     new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
