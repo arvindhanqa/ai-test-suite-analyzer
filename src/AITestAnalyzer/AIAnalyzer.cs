@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using OpenAI;
 using OpenAI.Managers;
@@ -229,53 +230,89 @@ FEEDBACK:
         }
 
         /// <summary>
-        /// Parse AI response to extract coverage IDs and requirement feedback
+        /// Parse AI response to extract coverage IDs and requirement feedback.
+        /// Handles varied AI formatting: markdown bold, inline/separate-line IDs,
+        /// plain-text feedback, and inline COMPLETE on the FEEDBACK line.
         /// </summary>
         private (List<string> ids, string feedback) ParseCoverageResponse(string response)
         {
             try
             {
                 var lines = response.Split('\n', StringSplitOptions.RemoveEmptyEntries)
-                                   .Select(l => l.Trim())
-                                   .ToList();
+                                    .Select(l => StripMarkdown(l.Trim()))
+                                    .Where(l => !string.IsNullOrWhiteSpace(l))
+                                    .ToList();
 
-                // Extract COVERAGE_IDS line
-                var idsLine = lines.FirstOrDefault(l => l.StartsWith("COVERAGE_IDS:", StringComparison.OrdinalIgnoreCase));
                 var ids = new List<string>();
+                var feedbackLines = new List<string>();
 
-                if (idsLine != null)
+                var idsPattern = new Regex(@"^coverage[_\s-]*ids?\s*:(.*)", RegexOptions.IgnoreCase);
+                var feedbackPattern = new Regex(@"^feedback\s*:(.*)", RegexOptions.IgnoreCase);
+
+                bool lookingForIdsOnNextLine = false;
+                bool inFeedback = false;
+
+                foreach (var line in lines)
                 {
-                    string idsText = idsLine.Substring("COVERAGE_IDS:".Length).Trim();
-                    ids = idsText.Split(',')
-                                .Select(id => id.Trim())
-                                .Where(id => !string.IsNullOrWhiteSpace(id))
-                                .ToList();
+                    // ── IDs section ─────────────────────────────────────────────
+                    if (!ids.Any() && !inFeedback)
+                    {
+                        var idsMatch = idsPattern.Match(line);
+                        if (idsMatch.Success)
+                        {
+                            var idsText = idsMatch.Groups[1].Value.Trim();
+                            if (!string.IsNullOrWhiteSpace(idsText))
+                                ids = ParseIdList(idsText);
+                            else
+                                lookingForIdsOnNextLine = true;
+                            continue;
+                        }
+
+                        if (lookingForIdsOnNextLine)
+                        {
+                            lookingForIdsOnNextLine = false;
+                            ids = ParseIdList(line);
+                            continue;
+                        }
+                    }
+
+                    // ── Feedback section ─────────────────────────────────────────
+                    var feedbackMatch = feedbackPattern.Match(line);
+                    if (feedbackMatch.Success)
+                    {
+                        inFeedback = true;
+
+                        // Handle "FEEDBACK: COMPLETE" or "FEEDBACK: some inline text"
+                        var inlineText = feedbackMatch.Groups[1].Value.Trim();
+                        if (!string.IsNullOrWhiteSpace(inlineText))
+                        {
+                            if (!inlineText.Equals("COMPLETE", StringComparison.OrdinalIgnoreCase))
+                                feedbackLines.Add(inlineText);
+                            else
+                                break; // COMPLETE inline — we're done
+                        }
+                        continue;
+                    }
+
+                    if (inFeedback)
+                    {
+                        if (line.Equals("COMPLETE", StringComparison.OrdinalIgnoreCase))
+                            break;
+
+                        feedbackLines.Add(line);
+                    }
                 }
 
-                // Extract FEEDBACK section
-                var feedbackIndex = lines.FindIndex(l => l.StartsWith("FEEDBACK:", StringComparison.OrdinalIgnoreCase));
-
-                if (feedbackIndex < 0)
+                // Warn on partial parse so silent failures surface in output
+                if (!ids.Any() || (feedbackLines.Count == 0 && !response.Contains("COMPLETE", StringComparison.OrdinalIgnoreCase)))
                 {
-                    return (ids, string.Empty);
+                    string snippet = response.Length > 200 ? response[..200] : response;
+                    Console.WriteLine($"      ⚠️  ParseCoverageResponse: partial parse — " +
+                                      $"IDs found: {ids.Count}, Feedback lines: {feedbackLines.Count}");
+                    Console.WriteLine($"      ⚠️  Response snippet: {snippet}");
                 }
 
-                // Check if next line is "COMPLETE"
-                if (feedbackIndex + 1 < lines.Count &&
-                    lines[feedbackIndex + 1].Equals("COMPLETE", StringComparison.OrdinalIgnoreCase))
-                {
-                    return (ids, string.Empty); // No gaps = empty feedback
-                }
-
-                // Extract feedback lines (skip "FEEDBACK:" header)
-                var feedbackLines = lines
-                    .Skip(feedbackIndex + 1)
-                    .Where(l => l.StartsWith("❌") || l.StartsWith("*") || l.StartsWith("-"))
-                    .ToList();
-
-                string feedback = string.Join("\n", feedbackLines);
-
-                return (ids, feedback);
+                return (ids, string.Join("\n", feedbackLines));
             }
             catch (Exception ex)
             {
@@ -283,6 +320,17 @@ FEEDBACK:
                 return (new List<string>(), "ERROR: Could not parse AI response");
             }
         }
+
+        /// <summary>Splits a comma/semicolon-separated ID string into a clean list.</summary>
+        private static List<string> ParseIdList(string idsText) =>
+            idsText.Split(new[] { ',', ';' }, StringSplitOptions.RemoveEmptyEntries)
+                   .Select(id => id.Trim())
+                   .Where(id => !string.IsNullOrWhiteSpace(id))
+                   .ToList();
+
+        /// <summary>Strips markdown formatting characters so they don't break pattern matching.</summary>
+        private static string StripMarkdown(string line) => Regex.Replace(line, @"[\*_`#>~]", string.Empty);
+
         private string FormatRequirements(List<ExtractedRequirement> requirements)
         {
             var formatted = new StringBuilder();
