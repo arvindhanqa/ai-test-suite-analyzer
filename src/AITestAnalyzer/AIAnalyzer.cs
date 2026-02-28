@@ -37,16 +37,8 @@ namespace AITestAnalyzer
         /// </summary>
         public async Task<(string quality, int tokens)> AnalyzeTestQuality(TestCase testCase)
         {
-            int maxRetries = Constants.MAX_RETRIES;
-            int retryDelayMs = Constants.RETRY_DELAY_MS;
-
-            for (int attempt = 1; attempt <= maxRetries; attempt++)
-            {
-                try
-                {
-                    string systemMessage = "You are an expert QA analyst. Assess test case quality. Be concise and actionable.";
-
-                    string userPrompt = $@"TEST CASE:
+            string systemMessage = "You are an expert QA analyst. Assess test case quality. Be concise and actionable.";
+            string userPrompt = $@"TEST CASE:
 Feature: {testCase.Feature}
 Scenario: {testCase.Scenario}
 Steps: {testCase.Steps}
@@ -57,68 +49,34 @@ Quality: [ONE sentence - either 'GOOD' or specific issue]
 
 Be direct and actionable. Focus on: clarity, completeness, testability.";
 
-                    var completionResult = await _openAiService.ChatCompletion.CreateCompletion(
-                        new ChatCompletionCreateRequest
-                        {
-                            Messages = new List<ChatMessage>
-                            {
-                        ChatMessage.FromSystem(systemMessage),
-                        ChatMessage.FromUser(userPrompt)
-                            },
-                            Model = _promptConfig.Model,
-                            MaxTokens = Constants.TOKENS_QA_MODE,
-                            Temperature = (float)_promptConfig.Temperature
-                        });
-
-                    if (completionResult.Successful)
+            var result = await RetryHelper.ExecuteWithRetry(
+                operation: () => _openAiService.ChatCompletion.CreateCompletion(
+                    new ChatCompletionCreateRequest
                     {
-                        string analysis = completionResult.Choices.First().Message.Content!.Trim();
-                        int tokens = completionResult.Usage!.TotalTokens;
-
-                        // Extract quality feedback
-                        string quality = analysis;
-                        if (quality.StartsWith("Quality:", StringComparison.OrdinalIgnoreCase))
+                        Messages = new List<ChatMessage>
                         {
-                            quality = quality.Substring(8).Trim();
-                        }
+                    ChatMessage.FromSystem(systemMessage),
+                    ChatMessage.FromUser(userPrompt)
+                        },
+                        Model = _promptConfig.Model,
+                        MaxTokens = Constants.TOKENS_QA_MODE,
+                        Temperature = (float)_promptConfig.Temperature
+                    }),
+                isSuccess: r => r.Successful,
+                getErrorMessage: r => r.Error?.Message ?? "Unknown API error"
+            );
 
-                        return (quality, tokens);
-                    }
-                    else
-                    {
-                        string errorMsg = completionResult.Error?.Message ?? "Unknown API error";
-                        if (attempt < maxRetries)
-                        {
-                            Console.WriteLine($"      ⚠️  API error (attempt {attempt}/{maxRetries}): {errorMsg}");
-                            Console.WriteLine($"      ⏳ Retrying in {retryDelayMs / 1000} seconds...");
-                            await Task.Delay(retryDelayMs);
-                            retryDelayMs *= 2;
-                            continue;
-                        }
-                        else
-                        {
-                            return ("ERROR: API call failed after retries", 0);
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    if (attempt < maxRetries)
-                    {
-                        Console.WriteLine($"      ⚠️  Exception (attempt {attempt}/{maxRetries}): {ex.Message}");
-                        Console.WriteLine($"      ⏳ Retrying in {retryDelayMs / 1000} seconds...");
-                        await Task.Delay(retryDelayMs);
-                        retryDelayMs *= 2;
-                        continue;
-                    }
-                    else
-                    {
-                        return ($"ERROR: {ex.Message}", 0);
-                    }
-                }
-            }
+            if (result == null)
+                return ("ERROR: API call failed after retries", 0);
 
-            return ("ERROR: Unexpected retry loop exit", 0);
+            string analysis = result.Choices.First().Message.Content!.Trim();
+            int tokens = result.Usage!.TotalTokens;
+
+            string quality = analysis;
+            if (quality.StartsWith("Quality:", StringComparison.OrdinalIgnoreCase))
+                quality = quality.Substring(8).Trim();
+
+            return (quality, tokens);
         }
 
         /// <summary>
@@ -131,17 +89,10 @@ Be direct and actionable. Focus on: clarity, completeness, testability.";
             TestCase testCase,
             List<ExtractedRequirement> requirements)
         {
-            int maxRetries = Constants.MAX_RETRIES;
-            int retryDelayMs = Constants.RETRY_DELAY_MS;
-
-            for (int attempt = 1; attempt <= maxRetries; attempt++)
-            {
-                try
-                {
-                    string systemMessage = @"You are a BA analyzing test coverage against requirements. 
+            string systemMessage = @"You are a BA analyzing test coverage against requirements. 
 Provide CONCISE tweet-style feedback on gaps only. Be specific and actionable.";
 
-                    string userPrompt = $@"REQUIREMENTS:
+            string userPrompt = $@"REQUIREMENTS:
 {FormatRequirements(requirements)}
 
 TEST CASE:
@@ -169,64 +120,31 @@ FEEDBACK:
 ❌ Task priority validation missing (TM-03) - add step to verify priority field
 ❌ Due date validation missing (TM-05) - verify past dates rejected";
 
-                    var completionResult = await _openAiService.ChatCompletion.CreateCompletion(
-                        new ChatCompletionCreateRequest
+            var result = await RetryHelper.ExecuteWithRetry(
+                operation: () => _openAiService.ChatCompletion.CreateCompletion(
+                    new ChatCompletionCreateRequest
+                    {
+                        Messages = new List<ChatMessage>
                         {
-                            Messages = new List<ChatMessage>
-                            {
-                                ChatMessage.FromSystem(systemMessage),
-                                ChatMessage.FromUser(userPrompt)
-                            },
-                            Model = _promptConfig.Model,
-                            MaxTokens = Constants.TOKENS_BA_MODE,
-                            Temperature = (float)_promptConfig.Temperature
-                        });
+                    ChatMessage.FromSystem(systemMessage),
+                    ChatMessage.FromUser(userPrompt)
+                        },
+                        Model = _promptConfig.Model,
+                        MaxTokens = Constants.TOKENS_BA_MODE,
+                        Temperature = (float)_promptConfig.Temperature
+                    }),
+                isSuccess: r => r.Successful,
+                getErrorMessage: r => r.Error?.Message ?? "Unknown API error"
+            );
 
-                    if (completionResult.Successful)
-                    {
-                        string response = completionResult.Choices.First().Message.Content!.Trim();
-                        int tokens = completionResult.Usage!.TotalTokens;
+            if (result == null)
+                return ("ERROR: API call failed after retries", new List<string>(), 0);
 
-                        // Parse the response
-                        var (coverageIds, reqFeedback) = ParseCoverageResponse(response);
+            string response = result.Choices.First().Message.Content!.Trim();
+            int tokens = result.Usage!.TotalTokens;
 
-                        return (reqFeedback, coverageIds, tokens);
-                    }
-                    else
-                    {
-                        string errorMsg = completionResult.Error?.Message ?? "Unknown API error";
-                        if (attempt < maxRetries)
-                        {
-                            Console.WriteLine($"      ⚠️  API error (attempt {attempt}/{maxRetries}): {errorMsg}");
-                            Console.WriteLine($"      ⏳ Retrying in {retryDelayMs / 1000} seconds...");
-                            await Task.Delay(retryDelayMs);
-                            retryDelayMs *= 2;
-                            continue;
-                        }
-                        else
-                        {
-                            return ("ERROR: API call failed after retries", new List<string>(), 0);
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    if (attempt < maxRetries)
-                    {
-                        Console.WriteLine($"      ⚠️  Exception (attempt {attempt}/{maxRetries}): {ex.Message}");
-                        Console.WriteLine($"      ⏳ Retrying in {retryDelayMs / 1000} seconds...");
-                        await Task.Delay(retryDelayMs);
-                        retryDelayMs *= 2;
-                        continue;
-                    }
-                    else
-                    {
-                        return ($"ERROR: {ex.Message}", new List<string>(), 0);
-                    }
-                }
-            }
-
-            return ("ERROR: Unexpected retry loop exit", new List<string>(), 0);
+            var (coverageIds, reqFeedback) = ParseCoverageResponse(response);
+            return (reqFeedback, coverageIds, tokens);
         }
 
         /// <summary>
