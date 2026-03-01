@@ -82,6 +82,8 @@ namespace AITestAnalyzer
             // Check for --no-cache anywhere in args (still supported as CLI override)
             bool useCache = !args.Any(a => a.ToLower() == "--no-cache");
 
+            bool resumeBatch = args.Any(a => a.ToLower() == "--resume");
+
             WriteHeader("===============================================");
             WriteHeader("AI Test Suite Analyzer - Week 1");
             WriteHeader("===============================================");
@@ -113,7 +115,7 @@ namespace AITestAnalyzer
             // ============================================================
             if (selection.SelectedMode == FileSelector.SelectionResult.Mode.Batch)
             {
-                await RunBatchMode(appConfig, promptConfig, selection);
+                await RunBatchMode(appConfig, promptConfig, selection, resumeBatch);
             }
             else
             {
@@ -749,7 +751,7 @@ namespace AITestAnalyzer
         // BATCH MODE — receives everything from FileSelector.
         // No arg parsing here. BatchProcessor gets what it needs directly.
         // ============================================================
-        static async Task RunBatchMode(Configuration appConfig, PromptConfig promptConfig, SelectionResult selection)
+        static async Task RunBatchMode(Configuration appConfig, PromptConfig promptConfig, SelectionResult selection, bool resume = false)
         {
             string folderPath = selection.FolderPath;
             int worksheetIndex = selection.SheetIndex;
@@ -806,7 +808,8 @@ namespace AITestAnalyzer
                     worksheetIndex,
                     useCache,
                     batchMode,
-                    sharedCache);
+                    sharedCache,
+                    resume);
 
                 if (results.Count == 0)
                 {
@@ -928,6 +931,7 @@ namespace AITestAnalyzer
             Console.WriteLine("  dotnet run -- --clear-cache       # Clear all cached results");
             Console.WriteLine("  dotnet run -- --no-cache          # Disable cache for this run");
             Console.WriteLine("  dotnet run -- --test-requirements # 🆕 Test requirement extraction");
+            Console.WriteLine("  dotnet run -- --resume            # Resume interrupted batch run");
             Console.WriteLine();
             WriteInfo("The interactive menu lets you:");
             Console.WriteLine("  - Pick single file or batch mode");

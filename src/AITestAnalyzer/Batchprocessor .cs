@@ -347,7 +347,8 @@ namespace AITestAnalyzer
             int worksheetIndex = 0,
             bool useCache = true,
             string analysisMode = "BA",
-            TestCaseCache? externalCache = null)
+            TestCaseCache? externalCache = null,
+            bool resume = false)
         {
             var allResults = new List<FileResult>();
             var batchStartTime = DateTime.Now;
@@ -366,6 +367,37 @@ namespace AITestAnalyzer
 
             // Create output directory
             string outputDir = ExcelWriter.CreateOutputFolder();
+            // ── Checkpoint setup ────────────────────────────────────────
+            var checkpointManager = new CheckpointManager(folderPath);
+            BatchCheckpoint checkpoint;
+
+            if (resume && checkpointManager.CheckpointExists())
+            {
+                checkpoint = checkpointManager.Load() ?? new BatchCheckpoint
+                {
+                    BatchId = $"batch_{DateTime.Now:yyyyMMdd_HHmmss}",
+                    FolderPath = folderPath,
+                    TotalFiles = excelFiles.Count,
+                    StartedAt = DateTime.Now
+                };
+
+                int skipping = checkpoint.CompletedFileNames.Count;
+                WriteSuccess($"Resuming batch — {skipping} file(s) already completed, skipping them.");
+            }
+            else
+            {
+                // Fresh run — create new checkpoint
+                checkpoint = new BatchCheckpoint
+                {
+                    BatchId = $"batch_{DateTime.Now:yyyyMMdd_HHmmss}",
+                    FolderPath = folderPath,
+                    TotalFiles = excelFiles.Count,
+                    StartedAt = DateTime.Now
+                };
+
+                if (checkpointManager.CheckpointExists())
+                    checkpointManager.Delete(); // Clean stale checkpoint from previous run
+            }
 
             // Initialize shared cache for batch processing
             TestCaseCache? sharedCache = externalCache;
@@ -406,11 +438,18 @@ namespace AITestAnalyzer
             foreach (var filePath in excelFiles)
             {
                 fileNumber++;
+                string fileName = Path.GetFileName(filePath);
 
-                //progress file bar
+                // ── Resume: skip already-completed files ──────────────────
+                if (checkpoint.CompletedFileNames.Contains(fileName))
+                {
+                    WriteInfo($"Skipping (already done): {fileName}");
+                    continue;
+                }
+
                 Console.WriteLine();
                 WriteHeader(new string('─', 60));
-                WriteHeader($"📁 File {fileNumber} of {excelFiles.Count}: {Path.GetFileName(filePath)}");
+                WriteHeader($"📁 File {fileNumber} of {excelFiles.Count}: {fileName}");
                 WriteHeader($"   Remaining after this: {excelFiles.Count - fileNumber} file(s)");
                 WriteHeader(new string('─', 60));
 
@@ -425,13 +464,27 @@ namespace AITestAnalyzer
 
                 allResults.Add(result);
 
-                // Small delay between files to avoid overwhelming the API
+                // ── Save checkpoint only if file succeeded ────────────────
+                if (!string.IsNullOrEmpty(result.OutputPath))
+                {
+                    checkpoint.CompletedFileNames.Add(fileName);
+                    checkpointManager.Save(checkpoint);
+                }
+                else
+                {
+                    WriteWarning($"File had errors — not checkpointed, will retry on --resume: {fileName}");
+                }
+
                 if (fileNumber < excelFiles.Count)
                 {
                     WriteInfo("Pausing before next file...");
                     await Task.Delay(2000);
                 }
             }
+
+            // ── All done — clean up checkpoint ───────────────────────────
+            checkpointManager.Delete();
+            WriteSuccess("Checkpoint cleared — batch complete.");
 
             // Save shared cache after all files are processed
             if (useCache && sharedCache != null)
