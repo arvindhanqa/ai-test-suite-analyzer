@@ -257,7 +257,7 @@ FEEDBACK:
 
             foreach (var req in requirements)
             {
-                formatted.AppendLine($"- {req.Id}: {req.Topic} → {req.Subtopic}: {req.ExpectedAction}");
+                formatted.AppendLine($"- {req.Id}: {req.GetDisplayText()}: {req.Description}");
             }
 
             return formatted.ToString();
