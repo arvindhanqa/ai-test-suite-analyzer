@@ -260,7 +260,7 @@ namespace AITestAnalyzer
                     catch (Exception ex)
                     {
                         results.Add(($"Row{rowNumber}", $"ERROR: {ex.Message}", 0, ""));
-                        excelWriter.WriteAnalysis(rowNumber, $"ERROR: {ex.Message}", "None");
+                        excelWriter.WriteAnalysis(rowNumber, $"ERROR: {ex.Message}", "None", analysisMode);
                     }
                 }
 
