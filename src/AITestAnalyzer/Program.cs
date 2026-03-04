@@ -1,17 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using OfficeOpenXml;
-using OpenAI;
-using OpenAI.Managers;
-using OpenAI.ObjectModels;
-using OpenAI.ObjectModels.RequestModels;
 using static AITestAnalyzer.FileSelector;
-using static OpenAI.ObjectModels.StaticValues.ImageStatics;
 
 namespace AITestAnalyzer
 {
