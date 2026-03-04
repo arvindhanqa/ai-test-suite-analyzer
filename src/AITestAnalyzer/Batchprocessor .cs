@@ -291,8 +291,19 @@ namespace AITestAnalyzer
 
                 // Calculate results
                 result.TotalTests = results.Count;
-                result.GoodTests = results.Count(r => r.Result == "GOOD");
-                result.IssueTests = results.Count(r => r.Result != "GOOD" && !r.Result.StartsWith("ERROR:"));
+
+                // BUG-9 fix: BA mode result is requirement feedback, never literal "GOOD"
+                if (analysisMode == "BA")
+                {
+                    result.GoodTests = results.Count(r => !string.IsNullOrWhiteSpace(r.Coverage));
+                    result.IssueTests = results.Count(r => string.IsNullOrWhiteSpace(r.Coverage) && !r.Result.StartsWith("ERROR:"));
+                }
+                else
+                {
+                    result.GoodTests = results.Count(r => r.Result == "GOOD");
+                    result.IssueTests = results.Count(r => r.Result != "GOOD" && !r.Result.StartsWith("ERROR:"));
+                }
+
                 result.ErrorTests = results.Count(r => r.Result.StartsWith("ERROR:"));
                 result.TotalTokens = results.Sum(r => r.Tokens);
                 result.TotalCost = result.TotalTokens * _promptConfig.CostPerToken;
