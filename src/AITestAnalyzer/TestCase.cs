@@ -1,4 +1,4 @@
-﻿namespace AITestAnalyzer
+namespace AITestAnalyzer
 {
     public class TestCase
     {
@@ -22,7 +22,7 @@
             Status = string.Empty;
         }
 
-        // NEW: Constructor with parameters
+        //Constructor with parameters
         public TestCase(
             string testId,
             string feature,

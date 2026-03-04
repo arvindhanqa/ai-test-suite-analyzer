@@ -322,13 +322,13 @@ namespace AITestAnalyzer
                         headerRange.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
                         headerRange.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Medium);
                     }
-                    // ✨ NEW: Freeze panes on Quality Issues sheet
+                    // Freeze panes on Quality Issues sheet
                     issuesSheet.View.FreezePanes(2, 1); // Freeze header row
 
-                    // ✨ NEW: Auto-filter on Quality Issues sheet
+                    // Auto-filter on Quality Issues sheet
                     issuesSheet.Cells[1, 1, 1, 3].AutoFilter = true;
 
-                    // ✨ NEW: Auto-size columns
+                    // Auto-size columns
                     issuesSheet.Column(1).AutoFit(); // Test ID
                     issuesSheet.Column(2).Width = 80; // Issue Found (wider for readability)
                     issuesSheet.Column(3).AutoFit(); // Status
@@ -610,13 +610,13 @@ namespace AITestAnalyzer
                     var usedRange = statsSheet.Cells[1, 1, row, 3];
                     usedRange.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Medium);
 
-                    // ✨ NEW: Auto-size columns for better readability
+                    //Auto-size columns for better readability
                     for (int col = 1; col <= 2; col++)
                     {
                         statsSheet.Column(col).AutoFit(15, 50); // Min 15, Max 50 characters
                     }
 
-                    // ✨ NEW: Freeze panes to keep title visible
+                    //Freeze panes to keep title visible
                     statsSheet.View.FreezePanes(2, 1); // Freeze first row
 
                     package.Save();

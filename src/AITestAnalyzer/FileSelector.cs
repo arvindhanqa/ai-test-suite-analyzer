@@ -18,9 +18,9 @@ namespace AITestAnalyzer
         public class SelectionResult
         {
             public enum Mode { Single, Batch, Exit }
-            public enum AnalysisMode { QA, BA }  // NEW: QA or BA mode
+            public enum AnalysisMode { QA, BA }  // QA or BA mode
             public Mode SelectedMode { get; set; }
-            public AnalysisMode SelectedAnalysisMode { get; set; }  // NEW
+            public AnalysisMode SelectedAnalysisMode { get; set; }  
             public string FilePath { get; set; } = "";      // Single mode: path to .xlsx            
             public string FolderPath { get; set; } = "";    // Batch mode: path to folder
             public int TestLimit { get; set; } = 0;    // 0 = all tests
@@ -298,13 +298,13 @@ namespace AITestAnalyzer
                         continue; // Back to config screen to confirm before running
 
                     case "R":
-                        // NEW: Ask for analysis mode before returning
+                        // Ask for analysis mode before returning
                         var analysisMode = SelectAnalysisMode();
 
                         return new SelectionResult
                         {
                             SelectedMode = SelectionResult.Mode.Single,
-                            SelectedAnalysisMode = analysisMode,  // NEW
+                            SelectedAnalysisMode = analysisMode, 
                             FilePath = filePath,
                             TestLimit = testLimit,
                             SheetIndex = sheetIndex
@@ -420,13 +420,13 @@ namespace AITestAnalyzer
             string? confirm = Console.ReadLine()?.Trim().ToUpper();
             if (confirm == "B") return ShowMainMenu();
 
-            // NEW: Ask for analysis mode before returning
+            // Ask for analysis mode before returning
             var analysisMode = SelectAnalysisMode();
 
             return new SelectionResult
             {
                 SelectedMode = SelectionResult.Mode.Batch,
-                SelectedAnalysisMode = analysisMode,  // NEW
+                SelectedAnalysisMode = analysisMode,
                 FolderPath = folderPath,
                 TestLimit = testLimit,
                 SheetIndex = sheetIndex

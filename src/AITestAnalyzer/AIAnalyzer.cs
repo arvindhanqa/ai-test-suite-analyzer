@@ -13,7 +13,7 @@ namespace AITestAnalyzer
 {
     // ============================================================
     // METHOD 3: Analyze Test Case with AI
-    // FIXED: Now uses promptConfig.Model instead of hardcoded
+    // Now uses promptConfig.Model instead of hardcoded
     // OPTIMIZED: Only sends Feature, Scenario, Steps, Expected Result
     // ============================================================
     public class AIAnalyzer

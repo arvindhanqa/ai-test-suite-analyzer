@@ -13,8 +13,8 @@ namespace AITestAnalyzer
         public string TestId { get; set; } = "";
         public string Hash { get; set; } = "";
         public string AnalysisResult { get; set; } = "";  // Keep for backward compatibility
-        public string Quality { get; set; } = "";          // NEW: Quality feedback
-        public string Coverage { get; set; } = "";         // NEW: Coverage info
+        public string Quality { get; set; } = "";          //Quality feedback
+        public string Coverage { get; set; } = "";         // Coverage info
         public int Tokens { get; set; }
         public DateTime CachedAt { get; set; }
     }
@@ -206,8 +206,8 @@ namespace AITestAnalyzer
                 TestId = testId,
                 Hash = hash,
                 AnalysisResult = quality,  // Keep for backward compatibility with old cache
-                Quality = quality,          // NEW
-                Coverage = coverage,        // NEW
+                Quality = quality,         
+                Coverage = coverage,        
                 Tokens = tokens,
                 CachedAt = DateTime.Now
             };

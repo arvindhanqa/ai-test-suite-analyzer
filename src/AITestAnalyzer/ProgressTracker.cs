@@ -57,7 +57,7 @@ namespace AITestAnalyzer
 
         public void Complete()
         {
-            Console.WriteLine(); // New line after progress bar
+            Console.WriteLine(); // Add a new line after progress bar
             Console.WriteLine("   ✅ Analysis complete!");
             Console.WriteLine();
         }

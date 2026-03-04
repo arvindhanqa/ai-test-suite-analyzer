@@ -444,7 +444,7 @@ namespace AITestAnalyzer
             string excelPath = selection.FilePath;
             int worksheetIndex = selection.SheetIndex;
             int testLimit = selection.TestLimit; // 0 = all
-            string analysisMode = selection.SelectedAnalysisMode == SelectionResult.AnalysisMode.QA ? "QA" : "BA";  // NEW LINE
+            string analysisMode = selection.SelectedAnalysisMode == SelectionResult.AnalysisMode.QA ? "QA" : "BA"; 
 
             var aiAnalyzer = new AIAnalyzer(appConfig, promptConfig);
             Console.WriteLine();
@@ -523,7 +523,7 @@ namespace AITestAnalyzer
 
             var excelWriter = new ExcelWriter(outputPath, promptConfig, worksheetIndex);
             excelWriter.RenameOriginalSheet();
-            excelWriter.AddAnalysisColumnHeader(analysisMode);  // ADD MODE PARAMETER
+            excelWriter.AddAnalysisColumnHeader(analysisMode); 
             Console.WriteLine();
 
             // Validate Excel structure
@@ -682,7 +682,7 @@ namespace AITestAnalyzer
                 }
 
                 results.Add((testCase.TestId, quality, tokens, coverage));
-                excelWriter.WriteAnalysis(row, quality, coverage, analysisMode);  // ADD MODE PARAMETER
+                excelWriter.WriteAnalysis(row, quality, coverage, analysisMode);  
             }
 
             var endTime = DateTime.Now;
@@ -715,7 +715,7 @@ namespace AITestAnalyzer
             {
                 Console.WriteLine();
                 WriteInfo("Creating Coverage Gap Analysis...");
-                // END DEBUG
+                
                 excelWriter.CreateCoverageGapSheet(results, requirements);
                 WriteInfo("Creating BA Statistics Dashboard...");
                 excelWriter.CreateBAStatisticsDashboard(
