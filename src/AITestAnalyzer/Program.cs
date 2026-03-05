@@ -38,7 +38,7 @@ namespace AITestAnalyzer
                 // For requirement extraction testing
                 if (firstArg == "--test-requirements")
                 {
-                    await TestRequirementExtraction();
+                    await TestRequirementExtractionAsync();
                     return;
                 }
 
@@ -97,18 +97,18 @@ namespace AITestAnalyzer
             }
 
             // ← NEW: Dry run check goes HERE, before routing
-            await HandleDryRunOption(selection, useCache, promptConfig);  // if they chose D, this exits after preview
+            await HandleDryRunOptionAsync(selection, useCache, promptConfig);  // if they chose D, this exits after preview
 
             // ============================================================
             // STEP 3: Route to batch or single based on selection
             // ============================================================
             if (selection.SelectedMode == FileSelector.SelectionResult.Mode.Batch)
             {
-                await RunBatchMode(appConfig, promptConfig, selection, resumeBatch);
+                await RunBatchModeAsync(appConfig, promptConfig, selection, resumeBatch);
             }
             else
             {
-                await RunSingleMode(appConfig, promptConfig, selection, useCache);
+                await RunSingleModeAsync(appConfig, promptConfig, selection, useCache);
             }
         }
 
@@ -117,7 +117,7 @@ namespace AITestAnalyzer
         // MI-4: DRY RUN PREVIEW — shows cost estimate before analysis
         // Single file only. Batch mode skips this.
         // ============================================================
-        static async Task HandleDryRunOption(SelectionResult selection, bool useCache, PromptConfig promptConfig)
+        static async Task HandleDryRunOptionAsync(SelectionResult selection, bool useCache, PromptConfig promptConfig)
         {
             // Batch mode — dry run not supported, proceed normally
             if (selection.SelectedMode == SelectionResult.Mode.Batch)
@@ -256,7 +256,7 @@ namespace AITestAnalyzer
         // ============================================================
         // TEST REQUIREMENT EXTRACTION (Day 15 Feature)
         // ============================================================
-        static async Task TestRequirementExtraction()
+        static async Task TestRequirementExtractionAsync()
         {
             Console.Clear();
             WriteHeader("═══════════════════════════════════════════════════════════════════════");
@@ -315,7 +315,7 @@ namespace AITestAnalyzer
                 return;
             }
 
-            var connectionResult = await validator.ValidateOpenAIConnection();
+            var connectionResult = await validator.ValidateOpenAIConnectionAsync();
             if (!connectionResult.IsValid)
             {
                 WriteError($"OpenAI Connection Error: {connectionResult.ErrorMessage}");
@@ -370,7 +370,7 @@ namespace AITestAnalyzer
 
             // Extract with caching!
             WriteInfo("Extracting requirements (checking cache first)...");
-            var requirements = await extractor.ExtractRequirements(requirementFile, cache, maxAgeDays: 30);
+            var requirements = await extractor.ExtractRequirementsAsync(requirementFile, cache, maxAgeDays: 30);
 
             // Display results
             Console.WriteLine();
@@ -439,7 +439,7 @@ namespace AITestAnalyzer
         // ============================================================
         // SINGLE FILE MODE
         // ============================================================
-        static async Task RunSingleMode(Configuration appConfig, PromptConfig promptConfig, SelectionResult selection, bool useCache)
+        static async Task RunSingleModeAsync(Configuration appConfig, PromptConfig promptConfig, SelectionResult selection, bool useCache)
         {
             string excelPath = selection.FilePath;
             int worksheetIndex = selection.SheetIndex;
@@ -491,7 +491,7 @@ namespace AITestAnalyzer
 
                 try
                 {
-                    requirements = await reqExtractor.ExtractRequirements(reqPath, reqCache);
+                    requirements = await reqExtractor.ExtractRequirementsAsync(reqPath, reqCache);
                     WriteSuccess($"Loaded {requirements.Count} requirements");
                 }
                 catch (Exception ex)
@@ -509,7 +509,7 @@ namespace AITestAnalyzer
 
             Console.WriteLine();
 
-            bool configValid = await ValidateConfiguration(appConfig, promptConfig, excelPath, worksheetIndex);
+            bool configValid = await ValidateConfigurationAsync(appConfig, promptConfig, excelPath, worksheetIndex);
             if (!configValid)
             {
                 WriteInfo("Press any key to exit...");
@@ -630,7 +630,7 @@ namespace AITestAnalyzer
                         }
                         else
                         {
-                            (quality, tokens) = await aiAnalyzer.AnalyzeTestQuality(testCase);
+                            (quality, tokens) = await aiAnalyzer.AnalyzeTestQualityAsync(testCase);
                             cache.AddToCache(testCase.TestId, hash, quality, "", tokens);
                             apiCalls++;
                             await Task.Delay(1000);
@@ -638,7 +638,7 @@ namespace AITestAnalyzer
                     }
                     else
                     {
-                        (quality, tokens) = await aiAnalyzer.AnalyzeTestQuality(testCase);
+                        (quality, tokens) = await aiAnalyzer.AnalyzeTestQualityAsync(testCase);
                         apiCalls++;
                         await Task.Delay(1000);
                     }
@@ -661,7 +661,7 @@ namespace AITestAnalyzer
                         }
                         else
                         {
-                            var (reqFeedback, coverageIds, tokensUsed) = await aiAnalyzer.AnalyzeCoverageAndFeedback(testCase, requirements);
+                            var (reqFeedback, coverageIds, tokensUsed) = await aiAnalyzer.AnalyzeCoverageAndFeedbackAsync(testCase, requirements);
                             quality = reqFeedback;
                             coverage = string.Join(", ", coverageIds);
                             tokens = tokensUsed;
@@ -672,7 +672,7 @@ namespace AITestAnalyzer
                     }
                     else
                     {
-                        var (reqFeedback, coverageIds, tokensUsed) = await aiAnalyzer.AnalyzeCoverageAndFeedback(testCase, requirements);
+                        var (reqFeedback, coverageIds, tokensUsed) = await aiAnalyzer.AnalyzeCoverageAndFeedbackAsync(testCase, requirements);
                         quality = reqFeedback;
                         coverage = string.Join(", ", coverageIds);
                         tokens = tokensUsed;
@@ -740,7 +740,7 @@ namespace AITestAnalyzer
         // BATCH MODE — receives everything from FileSelector.
         // No arg parsing here. BatchProcessor gets what it needs directly.
         // ============================================================
-        static async Task RunBatchMode(Configuration appConfig, PromptConfig promptConfig, SelectionResult selection, bool resume = false)
+        static async Task RunBatchModeAsync(Configuration appConfig, PromptConfig promptConfig, SelectionResult selection, bool resume = false)
         {
             string folderPath = selection.FolderPath;
             int worksheetIndex = selection.SheetIndex;
@@ -770,7 +770,7 @@ namespace AITestAnalyzer
 
             // Test OpenAI connection
             WriteInfo("Testing OpenAI API connection...");
-            var connectionResult = await validator.ValidateOpenAIConnection();
+            var connectionResult = await validator.ValidateOpenAIConnectionAsync();
             if (!connectionResult.IsValid)
             {
                 WriteError($"OpenAI Connection Error: {connectionResult.ErrorMessage}");
@@ -870,14 +870,14 @@ namespace AITestAnalyzer
         // Validate Configuration
         // excelPath and worksheetIndex come from FileSelector now
         // ============================================================
-        static async Task<bool> ValidateConfiguration(Configuration appConfig, PromptConfig promptConfig, string excelPath, int worksheetIndex)
+        static async Task<bool> ValidateConfigurationAsync(Configuration appConfig, PromptConfig promptConfig, string excelPath, int worksheetIndex)
         {
             WriteInfo("Validating configuration...");
             Console.WriteLine();
 
             var validator = new ConfigurationValidator(appConfig, promptConfig);
 
-            var (isValid, errorMessage) = await validator.ValidateAll(excelPath, worksheetIndex);
+            var (isValid, errorMessage) = await validator.ValidateAllAsync(excelPath, worksheetIndex);
 
             if (!isValid)
             {

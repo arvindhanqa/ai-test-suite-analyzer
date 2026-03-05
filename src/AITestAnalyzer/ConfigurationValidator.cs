@@ -60,7 +60,7 @@ namespace AITestAnalyzer
         /// NOTE: This method never throws exceptions. All validation failures are caught
         /// internally and returned as (false, errorMessage) tuples for graceful error handling.
         /// </remarks>
-        public async Task<(bool IsValid, string ErrorMessage)> ValidateAll(string excelPath, int worksheetIndex)
+        public async Task<(bool IsValid, string ErrorMessage)> ValidateAllAsync(string excelPath, int worksheetIndex)
         {
             // 2. Validate Promptconfig file
             var promptconfigResult = ValidatePromptConfig();
@@ -84,7 +84,7 @@ namespace AITestAnalyzer
             }
 
             // 4. Validate OpenAI Connection (optional but recommended)
-            var connectionResult = await ValidateOpenAIConnection();
+            var connectionResult = await ValidateOpenAIConnectionAsync();
             if (!connectionResult.IsValid)
             {
                 return (false, connectionResult.ErrorMessage);
@@ -192,7 +192,7 @@ namespace AITestAnalyzer
         }
 
         // Validate OpenAI API connection
-        public async Task<ValidationResult> ValidateOpenAIConnection()
+        public async Task<ValidationResult> ValidateOpenAIConnectionAsync()
         {
             try
             {

@@ -6,7 +6,7 @@ namespace AITestAnalyzer
     /// </summary>
     public static class RetryHelper
     {
-        public static async Task<T?> ExecuteWithRetry<T>(
+        public static async Task<T?> ExecuteWithRetryAsync<T>(
             Func<Task<T>> operation,
             Func<T, bool> isSuccess,
             Func<T, string> getErrorMessage,

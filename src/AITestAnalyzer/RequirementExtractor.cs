@@ -28,7 +28,7 @@ namespace AITestAnalyzer
         /// Extract requirements from document text using AI (with caching and retry logic)
         /// Now uses smart compression: 8-15 word descriptions in pipe-delimited format
         /// </summary>
-        public async Task<List<ExtractedRequirement>> ExtractRequirements(
+        public async Task<List<ExtractedRequirement>> ExtractRequirementsAsync(
             string documentPath,
             RequirementCache cache,
             int maxAgeDays = Constants.CACHE_MAX_AGE_DAYS)

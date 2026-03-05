@@ -35,7 +35,7 @@ namespace AITestAnalyzer
         /// <summary>
         /// QA MODE: Analyzes test quality without requirements
         /// </summary>
-        public async Task<(string quality, int tokens)> AnalyzeTestQuality(TestCase testCase)
+        public async Task<(string quality, int tokens)> AnalyzeTestQualityAsync(TestCase testCase)
         {
             string systemMessage = "You are an expert QA analyst. Assess test case quality. Be concise and actionable.";
             string userPrompt = $@"TEST CASE:
@@ -49,7 +49,7 @@ Quality: [ONE sentence - either 'GOOD' or specific issue]
 
 Be direct and actionable. Focus on: clarity, completeness, testability.";
 
-            var result = await RetryHelper.ExecuteWithRetry(
+            var result = await RetryHelper.ExecuteWithRetryAsync(
                 operation: () => _openAiService.ChatCompletion.CreateCompletion(
                     new ChatCompletionCreateRequest
                     {
@@ -85,7 +85,7 @@ Be direct and actionable. Focus on: clarity, completeness, testability.";
         /// <param name="testCase">Test case to analyze</param>
         /// <param name="requirements">List of requirements to validate against</param>
         /// <returns>Tuple containing (requirement feedback, coverage IDs, tokens)</returns>
-        public async Task<(string reqFeedback, List<string> coverageIds, int tokens)> AnalyzeCoverageAndFeedback(
+        public async Task<(string reqFeedback, List<string> coverageIds, int tokens)> AnalyzeCoverageAndFeedbackAsync(
             TestCase testCase,
             List<ExtractedRequirement> requirements)
         {
@@ -120,7 +120,7 @@ FEEDBACK:
 ❌ Task priority validation missing (TM-03) - add step to verify priority field
 ❌ Due date validation missing (TM-05) - verify past dates rejected";
 
-            var result = await RetryHelper.ExecuteWithRetry(
+            var result = await RetryHelper.ExecuteWithRetryAsync(
                 operation: () => _openAiService.ChatCompletion.CreateCompletion(
                     new ChatCompletionCreateRequest
                     {

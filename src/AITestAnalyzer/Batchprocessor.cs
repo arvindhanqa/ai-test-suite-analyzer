@@ -136,7 +136,7 @@ namespace AITestAnalyzer
 
                     try
                     {
-                        requirements = await reqExtractor.ExtractRequirements(reqPath, reqCache);
+                        requirements = await reqExtractor.ExtractRequirementsAsync(reqPath, reqCache);
                     }
                     catch
                     {
@@ -217,12 +217,12 @@ namespace AITestAnalyzer
                             {
                                 if (analysisMode == "QA")
                                 {
-                                    (quality, tokens) = await aiAnalyzer.AnalyzeTestQuality(testCase);
+                                    (quality, tokens) = await aiAnalyzer.AnalyzeTestQualityAsync(testCase);
                                     coverage = "";
                                 }
                                 else
                                 {
-                                    var (reqFeedback, coverageIds, tokensUsed) = await aiAnalyzer.AnalyzeCoverageAndFeedback(testCase, requirements);
+                                    var (reqFeedback, coverageIds, tokensUsed) = await aiAnalyzer.AnalyzeCoverageAndFeedbackAsync(testCase, requirements);
                                     quality = reqFeedback;
                                     coverage = string.Join(", ", coverageIds);
                                     tokens = tokensUsed;
@@ -237,12 +237,12 @@ namespace AITestAnalyzer
                         {
                             if (analysisMode == "QA")
                             {
-                                (quality, tokens) = await aiAnalyzer.AnalyzeTestQuality(testCase);
+                                (quality, tokens) = await aiAnalyzer.AnalyzeTestQualityAsync(testCase);
                                 coverage = "";
                             }
                             else
                             {
-                                var (reqFeedback, coverageIds, tokensUsed) = await aiAnalyzer.AnalyzeCoverageAndFeedback(testCase, requirements);
+                                var (reqFeedback, coverageIds, tokensUsed) = await aiAnalyzer.AnalyzeCoverageAndFeedbackAsync(testCase, requirements);
                                 quality = reqFeedback;
                                 coverage = string.Join(", ", coverageIds);
                                 tokens = tokensUsed;
