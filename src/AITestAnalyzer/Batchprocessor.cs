@@ -72,7 +72,7 @@ namespace AITestAnalyzer
             int worksheetIndex = 0,
             bool useCache = true,
             TestCaseCache? sharedCache = null,
-            string analysisMode = "BA")
+            AnalysisMode analysisMode = AnalysisMode.BA)
         {
             var result = new FileResult
             {
@@ -103,7 +103,7 @@ namespace AITestAnalyzer
                 var aiAnalyzer = new AIAnalyzer(_config, _promptConfig);
                 List<ExtractedRequirement> requirements = new List<ExtractedRequirement>();
 
-                if (analysisMode == "BA")
+                if (analysisMode == AnalysisMode.BA)
                 {
                     var reqCache = new RequirementCache();
                     var reqExtractor = new RequirementExtractor(_config, _promptConfig);
@@ -201,7 +201,7 @@ namespace AITestAnalyzer
 
                         // Check cache if enabled
                         string baseHash = cache?.GenerateHash(testCase) ?? "";
-                        string cacheHash = analysisMode == "QA" ? baseHash : "ba_" + baseHash;
+                        string cacheHash = analysisMode == AnalysisMode.QA ? baseHash : "ba_" + baseHash;
 
                         if (useCache && cache != null)
                         {
@@ -215,7 +215,7 @@ namespace AITestAnalyzer
                             }
                             else
                             {
-                                if (analysisMode == "QA")
+                                if (analysisMode == AnalysisMode.QA)
                                 {
                                     (quality, tokens) = await aiAnalyzer.AnalyzeTestQualityAsync(testCase);
                                     coverage = "";
@@ -235,7 +235,7 @@ namespace AITestAnalyzer
                         }
                         else
                         {
-                            if (analysisMode == "QA")
+                            if (analysisMode == AnalysisMode.QA)
                             {
                                 (quality, tokens) = await aiAnalyzer.AnalyzeTestQualityAsync(testCase);
                                 coverage = "";
@@ -269,13 +269,13 @@ namespace AITestAnalyzer
                 // Create summary sheets
                 var endTime = DateTime.Now;
 
-                if (analysisMode == "QA")
+                if (analysisMode == AnalysisMode.QA)
                 {
                     excelWriter.CreateQualityIssuesSheet(results);
                     excelWriter.CreateStatisticsDashboard(results, fileStartTime, endTime);
                 }
 
-                if (analysisMode == "BA")
+                if (analysisMode == AnalysisMode.BA)
                 {
                     WriteInfo("Creating Coverage Gap Analysis...");
                     excelWriter.CreateCoverageGapSheet(results, requirements);
@@ -293,7 +293,7 @@ namespace AITestAnalyzer
                 result.TotalTests = results.Count;
 
                 // BUG-9 fix: BA mode result is requirement feedback, never literal "GOOD"
-                if (analysisMode == "BA")
+                if (analysisMode == AnalysisMode.BA)
                 {
                     result.GoodTests = results.Count(r => !string.IsNullOrWhiteSpace(r.Coverage));
                     result.IssueTests = results.Count(r => string.IsNullOrWhiteSpace(r.Coverage) && !r.Result.StartsWith("ERROR:"));
@@ -357,7 +357,7 @@ namespace AITestAnalyzer
             int? testLimitPerFile = null,
             int worksheetIndex = 0,
             bool useCache = true,
-            string analysisMode = "BA",
+            AnalysisMode analysisMode = AnalysisMode.BA,
             TestCaseCache? externalCache = null,
             bool resume = false)
         {
@@ -520,14 +520,14 @@ namespace AITestAnalyzer
         // ============================================================
         // METHOD 4: Display combined batch summary
         // ============================================================
-        private void DisplayBatchSummary(List<FileResult> results, DateTime startTime, DateTime endTime, bool cacheEnabled, string analysisMode)
+        private void DisplayBatchSummary(List<FileResult> results, DateTime startTime, DateTime endTime, bool cacheEnabled, AnalysisMode analysisMode)
         {
             var totalTime = (endTime - startTime).TotalSeconds;
 
             WriteHeader("\n" + new string('═', 70));
             WriteHeader("📊 BATCH PROCESSING SUMMARY");
             WriteHeader(new string('═', 70));
-            string colLabel = analysisMode == "BA" ? "Coverage" : "Quality ";
+            string colLabel = analysisMode == AnalysisMode.BA ? "Coverage" : "Quality ";
             // Per-file summary table
             Console.WriteLine("\n┌─────────────────────────────────┬────────┬─────────┬────────┬──────────┬────────────┐");
             Console.WriteLine($"│ File                            │ Tests  │ {colLabel} │ Cache  │ Tokens   │ Cost       │");
@@ -539,7 +539,7 @@ namespace AITestAnalyzer
                     ? result.FileName.Substring(0, 28) + "..."
                     : result.FileName.PadRight(31);
 
-                string quality = analysisMode == "BA" ? "  N/A   " : $"{result.QualityScore:F1}%";
+                string quality = analysisMode == AnalysisMode.BA ? "  N/A   " : $"{result.QualityScore:F1}%";
                 string cacheInfo = $"{result.CacheHits}/{result.TotalTests}";
 
                 Console.Write($"│ {fileName} │ ");

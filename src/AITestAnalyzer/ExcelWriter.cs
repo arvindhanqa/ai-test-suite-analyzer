@@ -79,13 +79,13 @@ namespace AITestAnalyzer
         // METHOD 4: Add AI Analysis Column Header
         // ============================================================
         // Add analysis column header with formatting
-        public void AddAnalysisColumnHeader(string mode = "BA")
+        public void AddAnalysisColumnHeader(AnalysisMode mode = AnalysisMode.BA)
         {
             using (var package = new ExcelPackage(new FileInfo(_outputPath)))
             {
                 var worksheet = package.Workbook.Worksheets[_worksheetIndex];
 
-                if (mode == "QA")
+                if (mode == AnalysisMode.QA)
                 {
                     // ============================================================
                     // QA MODE: 1 column only (AI Analysis)
@@ -180,7 +180,7 @@ namespace AITestAnalyzer
         /// - Sets column width to 50 characters
         /// - Handles exceptions gracefully (logs warning, continues processing)
         /// </remarks>
-        public void WriteAnalysis(int rowNumber, string analysis, string coverage, string mode = "BA")
+        public void WriteAnalysis(int rowNumber, string analysis, string coverage, AnalysisMode mode = AnalysisMode.BA)
         {
             try
             {
@@ -188,7 +188,7 @@ namespace AITestAnalyzer
                 {
                     var worksheet = package.Workbook.Worksheets[_worksheetIndex];
 
-                    if (mode == "QA")
+                    if (mode == AnalysisMode.QA)
                     {
                         // ============================================================
                         // QA MODE: Write to column H only (AI Analysis)

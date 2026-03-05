@@ -57,7 +57,7 @@ namespace AITestAnalyzer
         /// - Cache disabled (--no-cache) → Shows warning instead of cache section
         /// </remarks>
         public static void Display(List<(string TestId, string Result, int Tokens, string Coverage)> results,
-                                  DateTime startTime, DateTime endTime, string outputPath, int cacheHits, int apiCalls, bool cacheEnabled, PromptConfig promptConfig, string analysisMode = "QA")
+                                  DateTime startTime, DateTime endTime, string outputPath, int cacheHits, int apiCalls, bool cacheEnabled, PromptConfig promptConfig, AnalysisMode analysisMode = AnalysisMode.QA)
         {
             int goodTests = results.Count(r => r.Result.StartsWith("GOOD", StringComparison.OrdinalIgnoreCase));
             int issueTests = results.Count - goodTests;
@@ -125,7 +125,7 @@ namespace AITestAnalyzer
 
             Console.WriteLine($"Tests analyzed: {results.Count}");
 
-            if (analysisMode == "QA")
+            if (analysisMode == AnalysisMode.QA)
             {
                 Console.ForegroundColor = ConsoleColor.Green;
                 Console.WriteLine($"✅ Good tests: {goodTests} ({(goodTests * 100.0 / results.Count):F0}%)");

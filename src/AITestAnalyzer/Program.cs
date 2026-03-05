@@ -123,7 +123,8 @@ namespace AITestAnalyzer
             if (selection.SelectedMode == SelectionResult.Mode.Batch)
                 return;
 
-            string analysisMode = selection.SelectedAnalysisMode == AnalysisMode.QA ? "QA" : "BA";
+            AnalysisMode analysisMode = selection.SelectedAnalysisMode;
+
             int testLimit = selection.TestLimit;
 
             // Show ready-to-run summary
@@ -197,7 +198,7 @@ namespace AITestAnalyzer
                 if (useCache)
                 {
                     var cache = new TestCaseCache();
-                    string cachePrefix = analysisMode == "QA" ? "" : "ba_";
+                    string cachePrefix = analysisMode == AnalysisMode.QA ? "" : "ba_";
 
                     for (int row = 2; row <= testsToCheck + 1; row++)
                     {
@@ -444,7 +445,7 @@ namespace AITestAnalyzer
             string excelPath = selection.FilePath;
             int worksheetIndex = selection.SheetIndex;
             int testLimit = selection.TestLimit; // 0 = all
-            string analysisMode = selection.SelectedAnalysisMode == AnalysisMode.QA ? "QA" : "BA"; 
+            AnalysisMode analysisMode = selection.SelectedAnalysisMode;
 
             var aiAnalyzer = new AIAnalyzer(appConfig, promptConfig);
             Console.WriteLine();
@@ -454,7 +455,7 @@ namespace AITestAnalyzer
             // ============================================================
             List<ExtractedRequirement> requirements = new List<ExtractedRequirement>();
 
-            if (analysisMode == "BA")
+            if (analysisMode == AnalysisMode.BA)
             {
                 WriteInfo("BA MODE: Loading requirements for coverage analysis...");
 
@@ -617,7 +618,7 @@ namespace AITestAnalyzer
                 int tokens = 0;
 
                 // QA MODE: Quality analysis only
-                if (analysisMode == "QA")
+                if (analysisMode == AnalysisMode.QA)
                 {
                     if (useCache && cache != null)
                     {
@@ -700,7 +701,7 @@ namespace AITestAnalyzer
             }
 
             // Create summary sheets (only for QA mode)
-            if (analysisMode == "QA")
+            if (analysisMode == AnalysisMode.QA)
             {
                 Console.WriteLine();
                 WriteInfo("Creating Quality Issues Summary...");
@@ -711,7 +712,7 @@ namespace AITestAnalyzer
             }
 
             // BA Mode: Coverage Gap Analysis sheet
-            if (analysisMode == "BA")
+            if (analysisMode == AnalysisMode.BA)
             {
                 Console.WriteLine();
                 WriteInfo("Creating Coverage Gap Analysis...");
@@ -789,7 +790,7 @@ namespace AITestAnalyzer
             {
                 int? limitParam = (testLimit == 0) ? null : (int?)testLimit;
 
-                string batchMode = selection.SelectedAnalysisMode == AnalysisMode.QA ? "QA" : "BA";
+                AnalysisMode batchMode = selection.SelectedAnalysisMode;
 
                 var results = await batchProcessor.ProcessBatchAsync(
                     folderPath,
