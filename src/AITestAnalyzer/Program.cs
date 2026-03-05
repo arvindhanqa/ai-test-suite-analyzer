@@ -123,7 +123,7 @@ namespace AITestAnalyzer
             if (selection.SelectedMode == SelectionResult.Mode.Batch)
                 return;
 
-            string analysisMode = selection.SelectedAnalysisMode == SelectionResult.AnalysisMode.QA ? "QA" : "BA";
+            string analysisMode = selection.SelectedAnalysisMode == AnalysisMode.QA ? "QA" : "BA";
             int testLimit = selection.TestLimit;
 
             // Show ready-to-run summary
@@ -444,7 +444,7 @@ namespace AITestAnalyzer
             string excelPath = selection.FilePath;
             int worksheetIndex = selection.SheetIndex;
             int testLimit = selection.TestLimit; // 0 = all
-            string analysisMode = selection.SelectedAnalysisMode == SelectionResult.AnalysisMode.QA ? "QA" : "BA"; 
+            string analysisMode = selection.SelectedAnalysisMode == AnalysisMode.QA ? "QA" : "BA"; 
 
             var aiAnalyzer = new AIAnalyzer(appConfig, promptConfig);
             Console.WriteLine();
@@ -789,7 +789,7 @@ namespace AITestAnalyzer
             {
                 int? limitParam = (testLimit == 0) ? null : (int?)testLimit;
 
-                string batchMode = selection.SelectedAnalysisMode == SelectionResult.AnalysisMode.QA ? "QA" : "BA";
+                string batchMode = selection.SelectedAnalysisMode == AnalysisMode.QA ? "QA" : "BA";
 
                 var results = await batchProcessor.ProcessBatchAsync(
                     folderPath,

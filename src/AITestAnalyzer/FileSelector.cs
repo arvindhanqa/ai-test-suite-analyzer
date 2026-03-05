@@ -18,7 +18,6 @@ namespace AITestAnalyzer
         public class SelectionResult
         {
             public enum Mode { Single, Batch, Exit }
-            public enum AnalysisMode { QA, BA }  // QA or BA mode
             public Mode SelectedMode { get; set; }
             public AnalysisMode SelectedAnalysisMode { get; set; }  
             public string FilePath { get; set; } = "";      // Single mode: path to .xlsx            
@@ -86,7 +85,7 @@ namespace AITestAnalyzer
         /// <summary>
         /// Prompts user to select QA Mode or BA Mode for analysis
         /// </summary>
-        public static SelectionResult.AnalysisMode SelectAnalysisMode()
+        public static AnalysisMode SelectAnalysisMode()
         {
             while (true)
             {
@@ -118,9 +117,9 @@ namespace AITestAnalyzer
                 switch (choice)
                 {
                     case "1":
-                        return SelectionResult.AnalysisMode.QA;
+                        return AnalysisMode.QA;
                     case "2":
-                        return SelectionResult.AnalysisMode.BA;
+                        return AnalysisMode.BA;
                     default:
                         WriteWarning("Invalid choice. Please enter 1 or 2.");
                         PauseForUser();
