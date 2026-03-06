@@ -1,4 +1,4 @@
-﻿using OfficeOpenXml;
+using OfficeOpenXml;
 using System;
 using System.IO;
 
@@ -138,6 +138,62 @@ namespace AITestAnalyzer
                 Console.WriteLine($"      ⚠️  Error reading row {rowNumber}: {ex.Message}");
                 return null; // Return null on error, continue processing other tests
             }
+        }
+
+        /// <summary>
+        /// Reads all test cases from the worksheet in a single file open operation.
+        /// Use this instead of calling ReadTestCase() in a loop to avoid repeated file I/O.
+        /// </summary>
+        /// <param name="limit">Max test cases to read. 0 = read all.</param>
+        /// <returns>List of TestCase objects. Empty list if file is unreadable.</returns>
+        public List<TestCase> ReadAllTestCases(int limit = 0)
+        {
+            var testCases = new List<TestCase>();
+
+            try
+            {
+                using (var package = new ExcelPackage(new FileInfo(_excelPath)))
+                {
+                    var worksheet = package.Workbook.Worksheets[_worksheetIndex];
+
+                    if (worksheet.Dimension == null)
+                        return testCases;
+
+                    int lastRow = worksheet.Dimension.End.Row;
+                    int row = 2; // Row 1 is header
+                    int count = 0;
+
+                    while (row <= lastRow)
+                    {
+                        if (limit > 0 && count >= limit)
+                            break;
+
+                        string? testId = worksheet.Cells[row, 1].Value?.ToString()?.Trim();
+
+                        if (string.IsNullOrWhiteSpace(testId))
+                            break; // Empty Test ID = end of data
+
+                        testCases.Add(new TestCase(
+                            testId: testId,
+                            feature: worksheet.Cells[row, 2].Value?.ToString()?.Trim() ?? "Not Specified",
+                            scenario: worksheet.Cells[row, 3].Value?.ToString()?.Trim() ?? "Not Specified",
+                            priority: worksheet.Cells[row, 4].Value?.ToString()?.Trim() ?? "Medium",
+                            steps: worksheet.Cells[row, 5].Value?.ToString()?.Trim() ?? "Not Specified",
+                            expectedResult: worksheet.Cells[row, 6].Value?.ToString()?.Trim() ?? "Not Specified",
+                            status: worksheet.Cells[row, 7].Value?.ToString()?.Trim() ?? "Not Run"
+                        ));
+
+                        count++;
+                        row++;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ ERROR: Could not read test cases from Excel: {ex.Message}");
+            }
+
+            return testCases;
         }
 
         /// <summary>

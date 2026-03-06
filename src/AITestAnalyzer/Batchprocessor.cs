@@ -181,18 +181,15 @@ namespace AITestAnalyzer
                 int cacheHits = 0;
                 int apiCalls = 0;
 
-                for (int i = 0; i < testsToAnalyze; i++)
+                var testCases = excelReader.ReadAllTestCases(testsToAnalyze);
+
+                for (int i = 0; i < testCases.Count; i++)
                 {
                     int rowNumber = i + 2; // Excel rows start at 1, header is row 1
 
                     try
                     {
-                        var testCase = excelReader.ReadTestCase(rowNumber);
-
-                        if (testCase == null || string.IsNullOrEmpty(testCase.TestId))
-                        {
-                            continue;
-                        }
+var testCase = testCases[i];
 
                         string analysisResult;  // Declare at loop level
                         string quality;

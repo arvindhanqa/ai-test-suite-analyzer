@@ -200,12 +200,9 @@ namespace AITestAnalyzer
                     var cache = new TestCaseCache();
                     string cachePrefix = analysisMode == AnalysisMode.QA ? "" : "ba_";
 
-                    for (int row = 2; row <= testsToCheck + 1; row++)
+                    var testCases = excelReader.ReadAllTestCases(testsToCheck);
+                    foreach (var testCase in testCases)
                     {
-                        var testCase = excelReader.ReadTestCase(row);
-                        if (testCase == null || string.IsNullOrEmpty(testCase.TestId))
-                            continue;
-
                         string hash = cachePrefix + cache.GenerateHash(testCase);
                         if (cache.TryGetCached(hash, out _, CACHE_MAX_AGE_DAYS))
                             cacheHits++;
@@ -601,14 +598,13 @@ namespace AITestAnalyzer
             int cacheHits = 0;
             int apiCalls = 0;
 
+            var testCases = excelReader.ReadAllTestCases(totalTests);
             var progressTracker = new ProgressTracker(totalTests, startTime);
-            int startRow = 2;
 
-            for (int row = startRow; row < startRow + totalTests; row++)
+            for (int i = 0; i < testCases.Count; i++)
             {
-                TestCase? testCase = excelReader.ReadTestCase(rowNumber: row);
-                if (testCase == null)
-                    continue;
+                TestCase testCase = testCases[i];
+                int row = i + 2; // Excel row number for WriteAnalysis
 
                 processedCount++;
                 progressTracker.DisplayProgress(processedCount, testCase.TestId);
