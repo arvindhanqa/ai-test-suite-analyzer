@@ -13,6 +13,7 @@ namespace AITestAnalyzer
         private readonly string _outputPath;
         private readonly int _worksheetIndex;
         private readonly PromptConfig _promptConfig;
+        private readonly List<(int Row, string Analysis, string Coverage, AnalysisMode Mode)> _pendingWrites = new();
 
         public ExcelWriter(string outputPath, PromptConfig promptConfig, int worksheetIndex = 0)
         {
@@ -163,109 +164,88 @@ namespace AITestAnalyzer
             }
         }
 
-        /// <summary>
-        /// Writes AI analysis feedback to Excel file with color-coded formatting
-        /// </summary>
-        /// <param name="rowNumber">Excel row number to write to (1-based indexing, same as ReadTestCase). Row 1 is header, row 2 is first test.</param>
-        /// <param name="analysis">AI-generated feedback string. Expected formats: "GOOD" (green), "Issue: [description]" (orange), or "ERROR: [message]" (red)</param>
-        /// <remarks>
-        /// BEHAVIOR:
-        /// - Writes to column 8 (AI Analysis column)
-        /// - Applies color coding based on analysis content:
-        ///   * "GOOD" → Green text
-        ///   * Starts with "Issue:" → Orange text
-        ///   * Starts with "ERROR:" → Red text
-        /// - Enables text wrapping for long feedback
-        /// - Adds thin border around cell
-        /// - Sets column width to 50 characters
-        /// - Handles exceptions gracefully (logs warning, continues processing)
-        /// </remarks>
         public void WriteAnalysis(int rowNumber, string analysis, string coverage, AnalysisMode mode = AnalysisMode.BA)
         {
+            _pendingWrites.Add((rowNumber, analysis, coverage, mode));
+        }
+
+        /// <summary>
+        /// Writes all buffered analysis results to Excel in a single file open/save operation.
+        /// Call once after the analysis loop completes. Clears the buffer after writing.
+        /// </summary>
+        public void FlushAnalysis()
+        {
+            if (_pendingWrites.Count == 0)
+                return;
+
             try
             {
                 using (var package = new ExcelPackage(new FileInfo(_outputPath)))
                 {
                     var worksheet = package.Workbook.Worksheets[_worksheetIndex];
 
-                    if (mode == AnalysisMode.QA)
+                    foreach (var (rowNumber, analysis, coverage, mode) in _pendingWrites)
                     {
-                        // ============================================================
-                        // QA MODE: Write to column H only (AI Analysis)
-                        // ============================================================
-
-                        worksheet.Cells[rowNumber, 8].Value = analysis;
-
-                        // Color coding
-                        if (analysis == "GOOD")
+                        if (mode == AnalysisMode.QA)
                         {
-                            worksheet.Cells[rowNumber, 8].Style.Font.Color.SetColor(System.Drawing.Color.Green);
-                        }
-                        else if (analysis.StartsWith("Issue:") || analysis.StartsWith("Steps"))
-                        {
-                            worksheet.Cells[rowNumber, 8].Style.Font.Color.SetColor(System.Drawing.Color.Orange);
-                        }
-                        else if (analysis.StartsWith("ERROR:"))
-                        {
-                            worksheet.Cells[rowNumber, 8].Style.Font.Color.SetColor(System.Drawing.Color.Red);
-                        }
+                            worksheet.Cells[rowNumber, 8].Value = analysis;
 
-                        worksheet.Cells[rowNumber, 8].Style.WrapText = true;
-                        worksheet.Cells[rowNumber, 8].Style.VerticalAlignment = OfficeOpenXml.Style.ExcelVerticalAlignment.Top;
-                        worksheet.Cells[rowNumber, 8].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
-                    }
-                    else // BA Mode
-                    {
-                        // ============================================================
-                        // BA MODE: Write to columns H and I (Requirement Feedback | Coverage)
-                        // ============================================================
+                            if (analysis == "GOOD")
+                                worksheet.Cells[rowNumber, 8].Style.Font.Color.SetColor(System.Drawing.Color.Green);
+                            else if (analysis.StartsWith("Issue:") || analysis.StartsWith("Steps"))
+                                worksheet.Cells[rowNumber, 8].Style.Font.Color.SetColor(System.Drawing.Color.Orange);
+                            else if (analysis.StartsWith("ERROR:"))
+                                worksheet.Cells[rowNumber, 8].Style.Font.Color.SetColor(System.Drawing.Color.Red);
 
-                        // Write requirement feedback to column H
-                        worksheet.Cells[rowNumber, 8].Value = analysis;
-                        worksheet.Cells[rowNumber, 8].Style.WrapText = true;
-                        worksheet.Cells[rowNumber, 8].Style.VerticalAlignment = OfficeOpenXml.Style.ExcelVerticalAlignment.Top;
-                        worksheet.Cells[rowNumber, 8].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
-
-                        // Color code requirement feedback
-                        if (string.IsNullOrWhiteSpace(analysis))
-                        {
-                            // No issues = green background
-                            worksheet.Cells[rowNumber, 8].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
-                            worksheet.Cells[rowNumber, 8].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGreen);
-                        }
-                        else if (analysis.StartsWith("ERROR:"))
-                        {
-                            worksheet.Cells[rowNumber, 8].Style.Font.Color.SetColor(System.Drawing.Color.Red);
-                        }
-
-                        // Write coverage to column I
-                        worksheet.Cells[rowNumber, 9].Value = coverage;
-                        worksheet.Cells[rowNumber, 9].Style.WrapText = true;
-                        worksheet.Cells[rowNumber, 9].Style.VerticalAlignment = OfficeOpenXml.Style.ExcelVerticalAlignment.Top;
-                        worksheet.Cells[rowNumber, 9].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
-
-                        // Color code coverage
-                        if (string.IsNullOrWhiteSpace(coverage) || coverage == "None")
-                        {
-                            worksheet.Cells[rowNumber, 9].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
-                            worksheet.Cells[rowNumber, 9].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightYellow);
+                            worksheet.Cells[rowNumber, 8].Style.WrapText = true;
+                            worksheet.Cells[rowNumber, 8].Style.VerticalAlignment = OfficeOpenXml.Style.ExcelVerticalAlignment.Top;
+                            worksheet.Cells[rowNumber, 8].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
                         }
                         else
                         {
-                            worksheet.Cells[rowNumber, 9].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
-                            worksheet.Cells[rowNumber, 9].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGreen);
+                            worksheet.Cells[rowNumber, 8].Value = analysis;
+                            worksheet.Cells[rowNumber, 8].Style.WrapText = true;
+                            worksheet.Cells[rowNumber, 8].Style.VerticalAlignment = OfficeOpenXml.Style.ExcelVerticalAlignment.Top;
+                            worksheet.Cells[rowNumber, 8].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
+
+                            if (string.IsNullOrWhiteSpace(analysis))
+                            {
+                                worksheet.Cells[rowNumber, 8].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                                worksheet.Cells[rowNumber, 8].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGreen);
+                            }
+                            else if (analysis.StartsWith("ERROR:"))
+                                worksheet.Cells[rowNumber, 8].Style.Font.Color.SetColor(System.Drawing.Color.Red);
+
+                            worksheet.Cells[rowNumber, 9].Value = coverage;
+                            worksheet.Cells[rowNumber, 9].Style.WrapText = true;
+                            worksheet.Cells[rowNumber, 9].Style.VerticalAlignment = OfficeOpenXml.Style.ExcelVerticalAlignment.Top;
+                            worksheet.Cells[rowNumber, 9].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
+
+                            if (string.IsNullOrWhiteSpace(coverage) || coverage == "None")
+                            {
+                                worksheet.Cells[rowNumber, 9].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                                worksheet.Cells[rowNumber, 9].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightYellow);
+                            }
+                            else
+                            {
+                                worksheet.Cells[rowNumber, 9].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                                worksheet.Cells[rowNumber, 9].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGreen);
+                            }
                         }
                     }
 
                     package.Save();
                 }
+
+                int writeCount = _pendingWrites.Count;
+                _pendingWrites.Clear();
+                Console.WriteLine($"   ✅ Wrote {writeCount} analysis results to Excel");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"   ⚠️  Warning: Could not write to Excel row {rowNumber}: {ex.Message}");
+                Console.WriteLine($"   ⚠️  Warning: Could not flush analysis to Excel: {ex.Message}");
             }
         }
-
 
         /// <summary>
         /// Creates the "Quality Issues Summary" sheet containing only test cases that need improvement

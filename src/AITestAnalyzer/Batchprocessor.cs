@@ -262,6 +262,7 @@ var testCase = testCases[i];
                 }
 
                 progressTracker.Complete();
+                excelWriter.FlushAnalysis(); // BUG-3: write all results in single file open
 
                 // Create summary sheets
                 var endTime = DateTime.Now;

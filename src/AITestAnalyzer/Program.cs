@@ -684,6 +684,7 @@ namespace AITestAnalyzer
 
             var endTime = DateTime.Now;
             progressTracker.Complete();
+            excelWriter.FlushAnalysis(); // BUG-3: write all results in single file open
 
             // Save cache
             if (useCache && cache != null)
