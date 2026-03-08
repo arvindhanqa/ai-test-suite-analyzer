@@ -64,9 +64,9 @@ namespace AITestAnalyzer
                 Console.WriteLine();
                 Console.WriteLine("  What would you like to do?");
                 Console.WriteLine();
-                WriteMenItem("1", "Analyze a single Excel file");
-                WriteMenItem("2", "Batch analyze all Excel files in a folder");
-                WriteMenItem("3", "Exit");
+                WriteMenuItem("1", "Analyze a single Excel file");
+                WriteMenuItem("2", "Batch analyze all Excel files in a folder");
+                WriteMenuItem("3", "Exit");
                 Console.WriteLine();
                 string? choice = ReadIntegerInput($"Enter your choice (1-3): ", 1, 3);
 
@@ -152,8 +152,8 @@ namespace AITestAnalyzer
                     foreach (var loc in GetSearchLocations())
                         Console.WriteLine($"    - {loc}");
                     Console.WriteLine();
-                    WriteMenItem("1", "Type a file path manually");
-                    WriteMenItem("B", "Back to main menu");
+                    WriteMenuItem("1", "Type a file path manually");
+                    WriteMenuItem("B", "Back to main menu");
                     Console.WriteLine();
                     WritePrompt("Your choice: ");
 
@@ -175,8 +175,8 @@ namespace AITestAnalyzer
                     Console.WriteLine();
                 }
 
-                WriteMenItem("T", "Type a file path manually");
-                WriteMenItem("B", "Back to main menu");
+                WriteMenuItem("T", "Type a file path manually");
+                WriteMenuItem("B", "Back to main menu");
                 Console.WriteLine();
                 WritePrompt($"Select file (1-{files.Count}, T, or B): ");
 
@@ -227,8 +227,8 @@ namespace AITestAnalyzer
                     Console.WriteLine();
                 }
 
-                WriteMenItem("T", "Type a folder path manually");
-                WriteMenItem("B", "Back to main menu");
+                WriteMenuItem("T", "Type a folder path manually");
+                WriteMenuItem("B", "Back to main menu");
                 Console.WriteLine();
 
                 string prompt = folders.Count > 0
@@ -558,13 +558,10 @@ namespace AITestAnalyzer
             locations.Add(Path.Combine(appDir, "..", "data"));                    // ../data/
             locations.Add(Path.Combine(appDir, "..", "..", "data"));              // ../../data/
             locations.Add(Path.Combine(appDir, "..", "..", "..", "data"));        // ../../../data/ (bin/Debug/net10.0)
+            locations.Add(Path.Combine(appDir, "..", "..", "..", "..", "data"));           // ../../../../data
+            locations.Add(Path.Combine(appDir, "..", "..", "..", "..", "..", "data"));     // ../../../../../data
             locations.Add(appDir);                                                 // current dir itself
             locations.Add(Path.Combine(appDir, ".."));                            // parent dir
-
-            // Also check the known project path directly
-            string knownDataPath = @"C:\Projects\ai-test-analyzer\ai-test-suite-analyzer\data";
-            if (Directory.Exists(knownDataPath))
-                locations.Add(knownDataPath);
 
             // Normalize all paths
             return locations.Select(l => Path.GetFullPath(l)).Distinct().ToList();
@@ -659,7 +656,7 @@ namespace AITestAnalyzer
             Console.ResetColor();
         }
 
-        private static void WriteMenItem(string key, string description)
+        private static void WriteMenuItem(string key, string description)
         {
             Console.ForegroundColor = ConsoleColor.Cyan;
             Console.Write($"    [{key}] ");

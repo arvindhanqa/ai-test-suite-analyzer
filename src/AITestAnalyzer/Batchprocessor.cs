@@ -15,7 +15,6 @@ namespace AITestAnalyzer
         private readonly Configuration _config;
         private readonly PromptConfig _promptConfig;
         private const int CACHE_MAX_AGE_DAYS = Constants.CACHE_MAX_AGE_DAYS;
-        private const int EstimatedTokensPerCachedTest = 150;
 
         public BatchProcessor(Configuration config, PromptConfig promptConfig)
         {
@@ -604,7 +603,7 @@ var testCase = testCases[i];
 
                 if (totalCacheHits > 0)
                 {
-                    int savedTokens = totalCacheHits * EstimatedTokensPerCachedTest; // Estimated
+                    int savedTokens = totalCacheHits * Constants.ESTIMATED_TOKENS_PER_CACHED_TEST; // Estimated
                     double savedCost = savedTokens * _promptConfig.CostPerToken;
                     Console.ForegroundColor = ConsoleColor.Green;
                     Console.WriteLine($"   💰 Tokens saved:      ~{savedTokens:N0}");

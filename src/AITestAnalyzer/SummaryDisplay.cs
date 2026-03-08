@@ -7,8 +7,6 @@ namespace AITestAnalyzer
 {
     public class SummaryDisplay
     {
-        private const int EstimatedTokensPerCachedTest = 150; // Used to estimate cache savings
-
         /// <summary>
         /// Displays comprehensive analysis summary to console with color-coded statistics and cache performance metrics
         /// </summary>
@@ -97,7 +95,7 @@ namespace AITestAnalyzer
                 if (cacheHits > 0)
                 {
                     // Calculate savings (approximate)
-                    int avgTokensPerTest = EstimatedTokensPerCachedTest; // Estimated average
+                    int avgTokensPerTest = Constants.ESTIMATED_TOKENS_PER_CACHED_TEST; // Estimated average
                     int savedTokens = cacheHits * avgTokensPerTest;
                     double savedCost = savedTokens * promptConfig.CostPerToken;
 
