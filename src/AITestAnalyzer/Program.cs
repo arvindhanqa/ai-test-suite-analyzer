@@ -343,17 +343,21 @@ namespace AITestAnalyzer
             }
             Console.WriteLine();
 
-            // File path
-            string requirementFile = @"C:\Projects\ai-test-analyzer\ai-test-suite-analyzer\data\requirements_taskflow.md";
+            // File path — prompt user instead of hardcoding
+            Console.Write("📁 Enter path to requirement file: ");
+            string? requirementFile = Console.ReadLine()?.Trim().Trim('"').Trim('\'');
 
-            WriteInfo($"Looking for: {requirementFile}");
+            if (string.IsNullOrWhiteSpace(requirementFile))
+            {
+                WriteError("No path entered.");
+                WriteInfo("Press any key to exit...");
+                Console.ReadKey();
+                return;
+            }
 
             if (!File.Exists(requirementFile))
             {
                 WriteError($"File not found: {requirementFile}");
-                Console.WriteLine();
-                WriteWarning("Please update the path in Program.cs TestRequirementExtraction() method");
-                Console.WriteLine();
                 WriteInfo("Press any key to exit...");
                 Console.ReadKey();
                 return;

@@ -558,13 +558,10 @@ namespace AITestAnalyzer
             locations.Add(Path.Combine(appDir, "..", "data"));                    // ../data/
             locations.Add(Path.Combine(appDir, "..", "..", "data"));              // ../../data/
             locations.Add(Path.Combine(appDir, "..", "..", "..", "data"));        // ../../../data/ (bin/Debug/net10.0)
+            locations.Add(Path.Combine(appDir, "..", "..", "..", "..", "data"));           // ../../../../data
+            locations.Add(Path.Combine(appDir, "..", "..", "..", "..", "..", "data"));     // ../../../../../data
             locations.Add(appDir);                                                 // current dir itself
             locations.Add(Path.Combine(appDir, ".."));                            // parent dir
-
-            // Also check the known project path directly
-            string knownDataPath = @"C:\Projects\ai-test-analyzer\ai-test-suite-analyzer\data";
-            if (Directory.Exists(knownDataPath))
-                locations.Add(knownDataPath);
 
             // Normalize all paths
             return locations.Select(l => Path.GetFullPath(l)).Distinct().ToList();
