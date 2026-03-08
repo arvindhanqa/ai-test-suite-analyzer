@@ -19,5 +19,6 @@ namespace AITestAnalyzer
 
         //Hash Lenght
         public const int HASH_LENGTH = 16;
+        public const int ESTIMATED_TOKENS_PER_CACHED_TEST = 150;
     }
 }
