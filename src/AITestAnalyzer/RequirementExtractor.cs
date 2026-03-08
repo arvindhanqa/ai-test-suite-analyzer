@@ -47,82 +47,54 @@ namespace AITestAnalyzer
             Console.WriteLine("🔍 Extracting requirements using AI...");
             Console.ResetColor();
 
-            // RETRY LOGIC (Fix for Issue #6)
-            const int maxRetries = Constants.MAX_RETRIES;
-            Exception? lastException = null;
-
-            for (int attempt = 1; attempt <= maxRetries; attempt++)
-            {
-                try
-                {
-                    if (attempt > 1)
+            var completionResult = await RetryHelper.ExecuteWithRetryAsync(
+                operation: () => _openAiService.ChatCompletion.CreateCompletion(
+                    new ChatCompletionCreateRequest
                     {
-                        Console.ForegroundColor = ConsoleColor.Yellow;
-                        Console.WriteLine($"🔄 Retry attempt {attempt}/{maxRetries}...");
-                        Console.ResetColor();
-                    }
-
-                    var completionResult = await _openAiService.ChatCompletion.CreateCompletion(
-                        new ChatCompletionCreateRequest
+                        Messages = new List<ChatMessage>
                         {
-                            Messages = new List<ChatMessage>
-                            {
-                        ChatMessage.FromSystem("You extract requirements in ultra-compact pipe-delimited format. Use 8-15 word descriptions that preserve core meaning."),
-                        ChatMessage.FromUser(BuildSmartCompressionPrompt(documentText))
-                            },
-                            Model = _model,
-                            MaxTokens = Constants.TOKENS_REQUIREMENT_EXTRACTION,  // INCREASED from 2000
-                            Temperature = 0
-                        });
+                ChatMessage.FromSystem("You extract requirements in ultra-compact pipe-delimited format. Use 8-15 word descriptions that preserve core meaning."),
+                ChatMessage.FromUser(BuildSmartCompressionPrompt(documentText))
+                        },
+                        Model = _model,
+                        MaxTokens = Constants.TOKENS_REQUIREMENT_EXTRACTION,
+                        Temperature = 0
+                    }),
+                isSuccess: result => result?.Successful == true,
+                getErrorMessage: result => result?.Error?.Message ?? "Unknown error"
+            );
 
-                    if (!completionResult.Successful)
-                    {
-                        throw new Exception($"API Error: {completionResult.Error?.Message ?? "Unknown error"}");
-                    }
-
-                    string response = completionResult.Choices.First().Message.Content!.Trim();
-                    int tokens = completionResult.Usage!.TotalTokens;
-
-                    Console.ForegroundColor = ConsoleColor.Gray;
-                    Console.WriteLine($"📊 Tokens used: {tokens:N0}");
-                    Console.ResetColor();
-
-                    // Parse pipe-delimited format
-                    var requirements = ParsePipeDelimitedResponse(response);
-
-                    if (requirements.Count == 0)
-                    {
-                        throw new Exception("No requirements parsed from response");
-                    }
-
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine($"✅ Extracted {requirements.Count} requirements");
-                    Console.ResetColor();
-
-                    // Cache the results
-                    cache.AddToCache(documentPath, requirements, tokens);
-
-                    return requirements;
-                }
-                catch (Exception ex)
-                {
-                    lastException = ex;
-                    Console.ForegroundColor = ConsoleColor.Red;
-                    Console.WriteLine($"❌ Attempt {attempt}/{maxRetries} failed: {ex.Message}");
-                    Console.ResetColor();
-
-                    if (attempt < maxRetries)
-                    {
-                        await Task.Delay(Constants.RETRY_DELAY_MS); // Wait 1 second before retry
-                    }
-                }
+            if (completionResult == null)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine($"❌ Extraction failed after {Constants.MAX_RETRIES} attempts.");
+                Console.ResetColor();
+                return new List<ExtractedRequirement>();
             }
 
-            // All retries failed
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"❌ Extraction failed after {maxRetries} attempts. Last error: {lastException?.Message}");
+            string response = completionResult.Choices.First().Message.Content!.Trim();
+            int tokens = completionResult.Usage!.TotalTokens;
+
+            Console.ForegroundColor = ConsoleColor.Gray;
+            Console.WriteLine($"📊 Tokens used: {tokens:N0}");
             Console.ResetColor();
-            return new List<ExtractedRequirement>();
+
+            var requirements = ParsePipeDelimitedResponse(response);
+
+            if (requirements.Count == 0)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("❌ No requirements parsed from response.");
+                Console.ResetColor();
+                return new List<ExtractedRequirement>();
+            }
+
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine($"✅ Extracted {requirements.Count} requirements");
+            Console.ResetColor();
+
+            cache.AddToCache(documentPath, requirements, tokens);
+            return requirements;
         }
 
         /// <summary>
