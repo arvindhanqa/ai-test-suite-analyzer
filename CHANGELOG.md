@@ -36,12 +36,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Days 10-11: Scalability (batch processing, interactive menu, second test suite)
 - Days 12-14: Code quality (XML documentation, nullable warning fixes)
 
+## [1.1.0] - 2026-02-16
+
+### Added
+- **BA Mode**: Requirement coverage analysis and gap reporting
+- Requirement extraction and caching (`RequirementExtractor`, `RequirementCache`)
+- Coverage Gap Analysis sheet with color-coded requirement status
+- BA Mode Statistics Dashboard sheet
+- Single-pass AI design — quality analysis + coverage in one API call (major cost reduction)
+- `RetryHelper` for resilient API calls with exponential backoff
+- Second test dataset (TaskFlow) for broader testing coverage
+- XML documentation expanded to all public APIs
+- README with screenshots
+
+### Changed
+- 93%+ API call reduction via intelligent caching in BA Mode
+
+## [1.2.0] - 2026-03-09
+
+### Added
+- Checkpoint/resume capability (`--resume` flag) for interrupted batch runs
+- Dry-run preview mode showing estimated cost before processing
+- Graceful shutdown on Ctrl+C with cache save
+- Batch progress indicators showing "X of Y files" during processing
+- Centralized constants in `Constants.cs` — eliminated magic numbers/strings
+- Centralized cost-per-token configuration
+- CI/CD pipeline via GitHub Actions with build status badge
+- Unit test suite (xUnit + FluentAssertions, 13 passing tests)
+
+### Fixed
+- BA Mode blank requirements bug (silent critical failure)
+- Path normalization bug causing duplicate cache entries
+- Coverage data lost on cache reads (root cause fix)
+- Reduced file I/O from ~110 operations to ~4 per run (BUG-2, BUG-3)
+
+### Changed
+- Async suffix applied consistently to all async methods (C# convention)
+- Stale dev comments removed throughout codebase
+
 ## [Unreleased]
 
-### Planned Features (Weeks 5-8)
-- Coverage gap analysis against requirements documents
-- Flow correctness validation (test steps vs requirement flows)
-- Step completeness checks (all validation steps present)
+## [Unreleased]
+
+### Planned
+- JSON export option (`--format json`)
+- Parallel batch processing with rate limit throttling
+- Dependency injection via Microsoft.Extensions.DI
+- Interfaces on service classes for testability
+- Integration tests with mocked API
+- GitHub release v1.0.0 tag
 
 ---
 
