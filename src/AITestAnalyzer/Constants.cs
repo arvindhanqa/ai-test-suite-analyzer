@@ -20,5 +20,12 @@ namespace AITestAnalyzer
         //Hash Lenght
         public const int HASH_LENGTH = 16;
         public const int ESTIMATED_TOKENS_PER_CACHED_TEST = 150;
+
+        // Expected Excel column headers (case-insensitive match)
+        public const string HeaderTestId = "Test ID";
+        public const string HeaderFeature = "Feature";
+        public const string HeaderScenario = "Scenario";
+        public const string HeaderPriority = "Priority";
+        public const string HeaderSteps = "Steps";
     }
 }

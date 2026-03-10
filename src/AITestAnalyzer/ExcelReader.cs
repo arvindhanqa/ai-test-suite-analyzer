@@ -242,12 +242,12 @@ namespace AITestAnalyzer
                     // Validate expected column header names
                     var expectedHeaders = new[]
                     {
-                (col: 1, name: "Test ID"),
-                (col: 2, name: "Feature"),
-                (col: 3, name: "Scenario"),
-                (col: 4, name: "Priority"),
-                (col: 5, name: "Steps")
-            };
+                        (col: 1, name: Constants.HeaderTestId),
+                        (col: 2, name: Constants.HeaderFeature),
+                        (col: 3, name: Constants.HeaderScenario),
+                        (col: 4, name: Constants.HeaderPriority),
+                        (col: 5, name: Constants.HeaderSteps)
+                    };
 
                     foreach (var expected in expectedHeaders)
                     {
