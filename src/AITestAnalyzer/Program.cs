@@ -4,7 +4,7 @@ using static AITestAnalyzer.FileSelector;
 
 namespace AITestAnalyzer
 {
-    class Program
+    internal class Program
     {
         private const string Version = "1.0.0";
         private const string AppName = "AI Test Suite Analyzer";
@@ -12,7 +12,7 @@ namespace AITestAnalyzer
 
         private static TestCaseCache? _activeCache;
         private static RequirementCache? _activeReqCache;
-        static async Task Main(string[] args)
+        private static async Task Main(string[] args)
         {
             ExcelPackage.License.SetNonCommercialPersonal("Aravindhan Rajasekaran");
 
@@ -117,7 +117,7 @@ namespace AITestAnalyzer
         // MI-4: DRY RUN PREVIEW — shows cost estimate before analysis
         // Single file only. Batch mode skips this.
         // ============================================================
-        static async Task HandleDryRunOptionAsync(SelectionResult selection, bool useCache, PromptConfig promptConfig)
+        private static async Task HandleDryRunOptionAsync(SelectionResult selection, bool useCache, PromptConfig promptConfig)
         {
             // Batch mode — dry run not supported, proceed normally
             if (selection.SelectedMode == SelectionResult.Mode.Batch)
@@ -254,7 +254,7 @@ namespace AITestAnalyzer
         // ============================================================
         // TEST REQUIREMENT EXTRACTION (Day 15 Feature)
         // ============================================================
-        static async Task TestRequirementExtractionAsync()
+        private static async Task TestRequirementExtractionAsync()
         {
             Console.Clear();
             WriteHeader("═══════════════════════════════════════════════════════════════════════");
@@ -284,7 +284,7 @@ namespace AITestAnalyzer
                 return;
             }
 
-            var appConfig = new Configuration { ApiKey = apiKey, Model = model };
+            var appConfig = new Configuration { ApiKey = apiKey};
             var promptConfig = new PromptConfig
             {
                 MaxTokens = 4000,
@@ -441,7 +441,7 @@ namespace AITestAnalyzer
         // ============================================================
         // SINGLE FILE MODE
         // ============================================================
-        static async Task RunSingleModeAsync(Configuration appConfig, PromptConfig promptConfig, SelectionResult selection, bool useCache)
+        private static async Task RunSingleModeAsync(Configuration appConfig, PromptConfig promptConfig, SelectionResult selection, bool useCache)
         {
             string excelPath = selection.FilePath;
             int worksheetIndex = selection.SheetIndex;
@@ -742,7 +742,7 @@ namespace AITestAnalyzer
         // BATCH MODE — receives everything from FileSelector.
         // No arg parsing here. BatchProcessor gets what it needs directly.
         // ============================================================
-        static async Task RunBatchModeAsync(Configuration appConfig, PromptConfig promptConfig, SelectionResult selection, bool resume = false)
+        private static async Task RunBatchModeAsync(Configuration appConfig, PromptConfig promptConfig, SelectionResult selection, bool resume = false)
         {
             string folderPath = selection.FolderPath;
             int worksheetIndex = selection.SheetIndex;
@@ -825,7 +825,7 @@ namespace AITestAnalyzer
         // Load Configuration — API key + prompt settings only.
         // No ExcelPath. No WorksheetIndex. FileSelector provides those.
         // ============================================================
-        static (Configuration? appConfig, PromptConfig? promptConfig) LoadConfiguration()
+        private static (Configuration? appConfig, PromptConfig? promptConfig) LoadConfiguration()
         {
             WriteInfo("Loading configuration...");
 
@@ -848,7 +848,6 @@ namespace AITestAnalyzer
             var appConfig = new Configuration
             {
                 ApiKey = apiKey,
-                Model = model
             };
 
             var promptConfig = new PromptConfig
@@ -872,7 +871,7 @@ namespace AITestAnalyzer
         // Validate Configuration
         // excelPath and worksheetIndex come from FileSelector now
         // ============================================================
-        static async Task<bool> ValidateConfigurationAsync(Configuration appConfig, PromptConfig promptConfig, string excelPath, int worksheetIndex)
+        private static async Task<bool> ValidateConfigurationAsync(Configuration appConfig, PromptConfig promptConfig, string excelPath, int worksheetIndex)
         {
             WriteInfo("Validating configuration...");
             Console.WriteLine();
@@ -911,7 +910,7 @@ namespace AITestAnalyzer
         // ============================================================
         // Display Help
         // ============================================================
-        static void DisplayHelp()
+        private static void DisplayHelp()
         {
             WriteHeader($"{AppName} v{Version}");
             Console.WriteLine();
@@ -948,7 +947,7 @@ namespace AITestAnalyzer
         // ============================================================
         // Display Version
         // ============================================================
-        static void DisplayVersion()
+        private static void DisplayVersion()
         {
             WriteSuccess($"{AppName} v{Version}");
             Console.WriteLine("Copyright (c) 2026 Aravindhan Rajasekaran");
@@ -960,7 +959,7 @@ namespace AITestAnalyzer
         // ============================================================
         // COLOR HELPER METHODS
         // ============================================================
-        static void WriteSuccess(string message)
+        private static void WriteSuccess(string message)
         {
             Console.ForegroundColor = ConsoleColor.Green;
             Console.Write("✅ ");
@@ -968,7 +967,7 @@ namespace AITestAnalyzer
             Console.WriteLine(message);
         }
 
-        static void WriteWarning(string message)
+        private static void WriteWarning(string message)
         {
             Console.ForegroundColor = ConsoleColor.Yellow;
             Console.Write("⚠️  ");
@@ -976,7 +975,7 @@ namespace AITestAnalyzer
             Console.WriteLine(message);
         }
 
-        static void WriteError(string message)
+        private static void WriteError(string message)
         {
             Console.ForegroundColor = ConsoleColor.Red;
             Console.Write("❌ ");
@@ -984,7 +983,7 @@ namespace AITestAnalyzer
             Console.WriteLine(message);
         }
 
-        static void WriteInfo(string message)
+        private static void WriteInfo(string message)
         {
             Console.ForegroundColor = ConsoleColor.Cyan;
             Console.Write("📊 ");
@@ -992,7 +991,7 @@ namespace AITestAnalyzer
             Console.WriteLine(message);
         }
 
-        static void WriteHeader(string message)
+        private static void WriteHeader(string message)
         {
             Console.ForegroundColor = ConsoleColor.Cyan;
             Console.WriteLine(message);
