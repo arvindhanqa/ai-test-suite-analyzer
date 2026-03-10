@@ -222,42 +222,52 @@ namespace AITestAnalyzer
             {
                 using (var package = new ExcelPackage(new FileInfo(_excelPath)))
                 {
-                    // Check if workbook has any worksheets
                     if (package.Workbook.Worksheets.Count == 0)
-                    {
                         return (false, "Excel file has no worksheets");
-                    }
 
                     var worksheet = package.Workbook.Worksheets[_worksheetIndex];
 
-                    // Check if worksheet has any data
                     if (worksheet.Dimension == null)
-                    {
                         return (false, "Excel worksheet is empty");
-                    }
 
-                    // Check minimum columns (need at least: Test ID, Feature, Scenario, Steps, Expected Result)
                     int colCount = worksheet.Dimension.End.Column;
                     if (colCount < 5)
-                    {
                         return (false, $"Excel has only {colCount} columns, need at least 5 (Test ID, Feature, Scenario, Priority, Steps, Expected Result, Status)");
-                    }
 
                     // Check header row exists
                     var testIdHeader = worksheet.Cells[1, 1].Value?.ToString();
                     if (string.IsNullOrWhiteSpace(testIdHeader))
-                    {
                         return (false, "First row (header) is empty. Expected column headers.");
+
+                    // Validate expected column header names
+                    var expectedHeaders = new[]
+                    {
+                (col: 1, name: "Test ID"),
+                (col: 2, name: "Feature"),
+                (col: 3, name: "Scenario"),
+                (col: 4, name: "Priority"),
+                (col: 5, name: "Steps")
+            };
+
+                    foreach (var expected in expectedHeaders)
+                    {
+                        string? actual = worksheet.Cells[1, expected.col].Value?.ToString()?.Trim();
+                        if (!string.Equals(actual, expected.name, StringComparison.OrdinalIgnoreCase))
+                        {
+                            return (false, $"Column {expected.col} header mismatch. Expected '{expected.name}', found '{actual ?? "empty"}'");
+                        }
                     }
 
-                    // Check if there's at least one data row
+                    // Check at least one data row exists
                     int rowCount = worksheet.Dimension.End.Row;
                     if (rowCount < 2)
-                    {
                         return (false, "Excel has only header row, no test cases found");
-                    }
 
-                    // All validations passed
+                    // Check TestId column has actual data in first data row
+                    string? firstTestId = worksheet.Cells[2, 1].Value?.ToString()?.Trim();
+                    if (string.IsNullOrWhiteSpace(firstTestId))
+                        return (false, "Test ID column (column 1) has no data in first data row. Is this the right worksheet?");
+
                     return (true, "Excel structure is valid");
                 }
             }
