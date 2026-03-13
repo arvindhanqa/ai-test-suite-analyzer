@@ -62,7 +62,7 @@ namespace AITestAnalyzer
         }
 
         // ============================================================
-        // METHOD 2: Process a single file
+        // METHOD 2: Process a single file — orchestrator only
         // ============================================================
         public async Task<FileResult> ProcessSingleFileAsync(
             string inputPath,
@@ -73,11 +73,7 @@ namespace AITestAnalyzer
             TestCaseCache? sharedCache = null,
             AnalysisMode analysisMode = AnalysisMode.BA)
         {
-            var result = new FileResult
-            {
-                FileName = Path.GetFileName(inputPath)
-            };
-
+            var result = new FileResult { FileName = Path.GetFileName(inputPath) };
             var fileStartTime = DateTime.Now;
 
             try
@@ -86,66 +82,21 @@ namespace AITestAnalyzer
                 WriteHeader($"📁 Processing: {result.FileName}");
                 WriteInfo($"{'═',60}");
 
-                // Prepare output file with unique name based on input file
+                // Prepare output file
                 string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
                 string baseName = Path.GetFileNameWithoutExtension(inputPath);
-                string outputFileName = $"{baseName}_analysis_{timestamp}.xlsx";
-                string outputPath = Path.Combine(outputDir, outputFileName);
-
+                string outputPath = Path.Combine(outputDir, $"{baseName}_analysis_{timestamp}.xlsx");
                 File.Copy(inputPath, outputPath, overwrite: true);
                 result.OutputPath = outputPath;
-                WriteSuccess($"Output file: {outputFileName}");
+                WriteSuccess($"Output file: {Path.GetFileName(outputPath)}");
 
                 // Initialize components
                 var excelReader = new ExcelReader(inputPath, worksheetIndex);
                 var excelWriter = new ExcelWriter(outputPath, _promptConfig, worksheetIndex);
                 var aiAnalyzer = new AIAnalyzer(_config, _promptConfig);
-                List<ExtractedRequirement> requirements = new List<ExtractedRequirement>();
 
-                if (analysisMode == AnalysisMode.BA)
-                {
-                    var reqCache = new RequirementCache();
-                    var reqExtractor = new RequirementExtractor(_config, _promptConfig);
-
-                    string testFileName = Path.GetFileNameWithoutExtension(inputPath);
-                    string reqFileName = testFileName.Replace("test_cases_", "requirements_") + ".md";
-                    string dataFolder = Path.GetDirectoryName(inputPath) ?? ".";
-                    string reqPath = Path.Combine(dataFolder, reqFileName);
-
-                    if (!File.Exists(reqPath))
-                    {
-                        Console.WriteLine($"⚠️  Auto-detection failed. Could not find: {reqFileName}");
-                        Console.Write("📁 Enter requirement file path (or press Enter to skip): ");
-                        string? userInput = Console.ReadLine();
-
-                        if (string.IsNullOrWhiteSpace(userInput))
-                        {
-                            Console.WriteLine("⚠️  No requirements provided. Analysis will be quality-only (no coverage tracking).");
-                            reqPath = "";
-                        }
-                        else
-                        {
-                            reqPath = userInput;
-                        }
-                    }
-                    else
-                    {
-                        Console.WriteLine($"✅ Auto-detected requirement file: {Path.GetFileName(reqPath)}");
-                    }
-
-                    try
-                    {
-                        requirements = await reqExtractor.ExtractRequirementsAsync(reqPath, reqCache);
-                    }
-                    catch
-                    {
-                        requirements = new List<ExtractedRequirement>();
-                    }
-                }
-                else
-                {
-                    WriteInfo("QA MODE: Skipping requirements (not needed)");
-                }
+                // Load requirements (BA mode only)
+                var requirements = await LoadBatchRequirementsAsync(inputPath, analysisMode);
 
                 // Validate Excel structure
                 var (excelIsValid, validationMessage) = excelReader.ValidateExcelStructure();
@@ -155,158 +106,31 @@ namespace AITestAnalyzer
                     return result;
                 }
 
-                // Count tests
+                // Resolve test count
                 int totalRowsInExcel = excelReader.CountTestRows();
-                int testsToAnalyze = testLimit ?? totalRowsInExcel;
-                testsToAnalyze = Math.Min(testsToAnalyze, totalRowsInExcel);
-
+                int testsToAnalyze = Math.Min(testLimit ?? totalRowsInExcel, totalRowsInExcel);
                 WriteInfo($"Tests in file: {totalRowsInExcel}, Analyzing: {testsToAnalyze}");
 
                 // Prepare Excel output
                 excelWriter.RenameOriginalSheet();
                 excelWriter.AddAnalysisColumnHeader(analysisMode);
 
-                // Initialize or use shared cache
-                TestCaseCache? cache = sharedCache;
-                if (useCache && cache == null)
-                {
-                    cache = new TestCaseCache();
-                }
+                // Initialize cache
+                TestCaseCache? cache = sharedCache ?? (useCache ? new TestCaseCache() : null);
 
-                // Process tests
-                var results = new List<(string TestId, string Result, int Tokens, string Coverage)>();
-                var progressTracker = new ProgressTracker(testsToAnalyze, fileStartTime);
+                // Process all tests
+                var (results, cacheHits, apiCalls) = await ProcessBatchTestsAsync(
+                    excelReader, excelWriter, aiAnalyzer, cache,
+                    requirements, analysisMode, useCache, testsToAnalyze, fileStartTime);
 
-                int cacheHits = 0;
-                int apiCalls = 0;
-
-                var testCases = excelReader.ReadAllTestCases(testsToAnalyze);
-
-                for (int i = 0; i < testCases.Count; i++)
-                {
-                    int rowNumber = i + 2; // Excel rows start at 1, header is row 1
-
-                    try
-                    {
-var testCase = testCases[i];
-
-                        string analysisResult;  // Declare at loop level
-                        string quality;
-                        string coverage;
-                        int tokens;
-
-                        // Check cache if enabled
-                        string baseHash = cache?.GenerateHash(testCase) ?? "";
-                        string cacheHash = analysisMode == AnalysisMode.QA ? baseHash : "ba_" + baseHash;
-
-                        if (useCache && cache != null)
-                        {
-                            if (cache.TryGetCached(cacheHash, out CachedResult? cachedResult, CACHE_MAX_AGE_DAYS))
-                            {
-                                quality = cachedResult!.Quality;
-                                coverage = cachedResult.Coverage;
-                                analysisResult = quality;
-                                tokens = 0;
-                                cacheHits++;
-                            }
-                            else
-                            {
-                                if (analysisMode == AnalysisMode.QA)
-                                {
-                                    (quality, tokens) = await aiAnalyzer.AnalyzeTestQualityAsync(testCase);
-                                    coverage = "";
-                                }
-                                else
-                                {
-                                    var (reqFeedback, coverageIds, tokensUsed) = await aiAnalyzer.AnalyzeCoverageAndFeedbackAsync(testCase, requirements);
-                                    quality = reqFeedback;
-                                    coverage = string.Join(", ", coverageIds);
-                                    tokens = tokensUsed;
-                                }
-                                analysisResult = quality;
-                                cache.AddToCache(testCase.TestId, cacheHash, quality, coverage, tokens);
-                                apiCalls++;
-                                await Task.Delay(1000);
-                            }
-                        }
-                        else
-                        {
-                            if (analysisMode == AnalysisMode.QA)
-                            {
-                                (quality, tokens) = await aiAnalyzer.AnalyzeTestQualityAsync(testCase);
-                                coverage = "";
-                            }
-                            else
-                            {
-                                var (reqFeedback, coverageIds, tokensUsed) = await aiAnalyzer.AnalyzeCoverageAndFeedbackAsync(testCase, requirements);
-                                quality = reqFeedback;
-                                coverage = string.Join(", ", coverageIds);
-                                tokens = tokensUsed;
-                            }
-                            analysisResult = quality;
-                            apiCalls++;
-                            await Task.Delay(1000);
-                        }
-
-                        excelWriter.WriteAnalysis(rowNumber, quality, coverage, analysisMode);
-                        results.Add((testCase.TestId, analysisResult, tokens, coverage));
-
-                        progressTracker.DisplayProgress(i + 1, testCase.TestId);
-                    }
-                    catch (Exception ex)
-                    {
-                        results.Add(($"Row{rowNumber}", $"ERROR: {ex.Message}", 0, ""));
-                        excelWriter.WriteAnalysis(rowNumber, $"ERROR: {ex.Message}", "None", analysisMode);
-                    }
-                }
-
-                progressTracker.Complete();
-                excelWriter.FlushAnalysis(); // BUG-3: write all results in single file open
-
-                // Create summary sheets
                 var endTime = DateTime.Now;
 
-                if (analysisMode == AnalysisMode.QA)
-                {
-                    excelWriter.CreateQualityIssuesSheet(results);
-                    excelWriter.CreateStatisticsDashboard(results, fileStartTime, endTime);
-                }
+                // Create output sheets
+                CreateBatchOutputSheets(excelWriter, results, requirements,
+                    analysisMode, fileStartTime, endTime, cacheHits);
 
-                if (analysisMode == AnalysisMode.BA)
-                {
-                    WriteInfo("Creating Coverage Gap Analysis...");
-                    excelWriter.CreateCoverageGapSheet(results, requirements);
-                    WriteInfo("Creating BA Statistics Dashboard...");
-                    excelWriter.CreateBAStatisticsDashboard(
-                        results,
-                        requirements,
-                        results.Sum(r => r.Tokens),
-                        cacheHits,
-                        endTime - fileStartTime
-                    );
-                }
-
-                // Calculate results
-                result.TotalTests = results.Count;
-
-                // BUG-9 fix: BA mode result is requirement feedback, never literal "GOOD"
-                if (analysisMode == AnalysisMode.BA)
-                {
-                    result.GoodTests = results.Count(r => !string.IsNullOrWhiteSpace(r.Coverage));
-                    result.IssueTests = results.Count(r => string.IsNullOrWhiteSpace(r.Coverage) && !r.Result.StartsWith("ERROR:"));
-                }
-                else
-                {
-                    result.GoodTests = results.Count(r => r.Result == "GOOD");
-                    result.IssueTests = results.Count(r => r.Result != "GOOD" && !r.Result.StartsWith("ERROR:"));
-                }
-
-                result.ErrorTests = results.Count(r => r.Result.StartsWith("ERROR:"));
-                result.TotalTokens = results.Sum(r => r.Tokens);
-                result.TotalCost = result.TotalTokens * _promptConfig.CostPerToken;
-                result.TimeTaken = (endTime - fileStartTime).TotalSeconds;
-                result.CacheHits = cacheHits;
-                result.ApiCalls = apiCalls;
+                // Calculate and return file result
+                CalculateFileResult(result, results, analysisMode, cacheHits, apiCalls, fileStartTime, endTime);
 
                 WriteSuccess($"Completed: {result.FileName}");
                 WriteInfo($"   Quality: {result.QualityScore:F1}% | Tests: {result.TotalTests} | Cache: {cacheHits}/{result.TotalTests} | Cost: ${result.TotalCost:F6}");
@@ -317,6 +141,196 @@ var testCase = testCases[i];
             }
 
             return result;
+        }
+
+        // ============================================================
+        // HELPER: Load requirements for BA mode batch processing
+        // ============================================================
+        private async Task<List<ExtractedRequirement>> LoadBatchRequirementsAsync(
+            string inputPath, AnalysisMode analysisMode)
+        {
+            if (analysisMode == AnalysisMode.QA)
+            {
+                WriteInfo("QA MODE: Skipping requirements (not needed)");
+                return new List<ExtractedRequirement>();
+            }
+
+            var reqCache = new RequirementCache();
+            var reqExtractor = new RequirementExtractor(_config, _promptConfig);
+
+            string testFileName = Path.GetFileNameWithoutExtension(inputPath);
+            string reqFileName = testFileName.Replace("test_cases_", "requirements_") + ".md";
+            string dataFolder = Path.GetDirectoryName(inputPath) ?? ".";
+            string reqPath = Path.Combine(dataFolder, reqFileName);
+
+            if (!File.Exists(reqPath))
+            {
+                Console.WriteLine($"⚠️  Auto-detection failed. Could not find: {reqFileName}");
+                Console.Write("📁 Enter requirement file path (or press Enter to skip): ");
+                string? userInput = Console.ReadLine();
+
+                if (string.IsNullOrWhiteSpace(userInput))
+                {
+                    Console.WriteLine("⚠️  No requirements provided. Analysis will be quality-only.");
+                    return new List<ExtractedRequirement>();
+                }
+
+                reqPath = userInput;
+            }
+            else
+            {
+                Console.WriteLine($"✅ Auto-detected requirement file: {Path.GetFileName(reqPath)}");
+            }
+
+            try
+            {
+                return await reqExtractor.ExtractRequirementsAsync(reqPath, reqCache);
+            }
+            catch
+            {
+                return new List<ExtractedRequirement>();
+            }
+        }
+
+        // ============================================================
+        // HELPER: Process all tests in a single batch file
+        // ============================================================
+        private async Task<(List<(string TestId, string Result, int Tokens, string Coverage)> results, int cacheHits, int apiCalls)>
+            ProcessBatchTestsAsync(
+                ExcelReader excelReader, ExcelWriter excelWriter, AIAnalyzer aiAnalyzer,
+                TestCaseCache? cache, List<ExtractedRequirement> requirements,
+                AnalysisMode analysisMode, bool useCache, int testsToAnalyze, DateTime fileStartTime)
+        {
+            var results = new List<(string TestId, string Result, int Tokens, string Coverage)>();
+            var progressTracker = new ProgressTracker(testsToAnalyze, fileStartTime);
+            int cacheHits = 0;
+            int apiCalls = 0;
+
+            var testCases = excelReader.ReadAllTestCases(testsToAnalyze);
+
+            for (int i = 0; i < testCases.Count; i++)
+            {
+                int rowNumber = i + 2;
+
+                try
+                {
+                    var testCase = testCases[i];
+                    string baseHash = cache?.GenerateHash(testCase) ?? "";
+                    string cacheHash = analysisMode == AnalysisMode.QA ? baseHash : "ba_" + baseHash;
+
+                    string quality;
+                    string coverage;
+                    int tokens;
+
+                    if (useCache && cache != null && cache.TryGetCached(cacheHash, out CachedResult? cachedResult, CACHE_MAX_AGE_DAYS))
+                    {
+                        quality = cachedResult!.Quality;
+                        coverage = cachedResult.Coverage;
+                        tokens = 0;
+                        cacheHits++;
+                    }
+                    else
+                    {
+                        (quality, coverage, tokens) = await CallAIAsync(aiAnalyzer, testCase, requirements, analysisMode);
+
+                        if (useCache && cache != null)
+                            cache.AddToCache(testCase.TestId, cacheHash, quality, coverage, tokens);
+
+                        apiCalls++;
+                        await Task.Delay(1000);
+                    }
+
+                    excelWriter.WriteAnalysis(rowNumber, quality, coverage, analysisMode);
+                    results.Add((testCase.TestId, quality, tokens, coverage));
+                    progressTracker.DisplayProgress(i + 1, testCase.TestId);
+                }
+                catch (Exception ex)
+                {
+                    results.Add(($"Row{rowNumber}", $"ERROR: {ex.Message}", 0, ""));
+                    excelWriter.WriteAnalysis(rowNumber, $"ERROR: {ex.Message}", "None", analysisMode);
+                }
+            }
+
+            progressTracker.Complete();
+            excelWriter.FlushAnalysis();
+
+            return (results, cacheHits, apiCalls);
+        }
+
+        // ============================================================
+        // HELPER: Call AI for QA or BA mode — single test
+        // ============================================================
+        private async Task<(string quality, string coverage, int tokens)> CallAIAsync(
+            AIAnalyzer aiAnalyzer, TestCase testCase,
+            List<ExtractedRequirement> requirements, AnalysisMode analysisMode)
+        {
+            if (analysisMode == AnalysisMode.QA)
+            {
+                var (quality, tokens) = await aiAnalyzer.AnalyzeTestQualityAsync(testCase);
+                return (quality, "", tokens);
+            }
+            else
+            {
+                var (reqFeedback, coverageIds, tokensUsed) = await aiAnalyzer.AnalyzeCoverageAndFeedbackAsync(testCase, requirements);
+                return (reqFeedback, string.Join(", ", coverageIds), tokensUsed);
+            }
+        }
+
+        // ============================================================
+        // HELPER: Create output sheets after batch file processing
+        // ============================================================
+        private void CreateBatchOutputSheets(
+            ExcelWriter excelWriter,
+            List<(string TestId, string Result, int Tokens, string Coverage)> results,
+            List<ExtractedRequirement> requirements,
+            AnalysisMode analysisMode, DateTime startTime, DateTime endTime, int cacheHits)
+        {
+            if (analysisMode == AnalysisMode.QA)
+            {
+                excelWriter.CreateQualityIssuesSheet(results);
+                excelWriter.CreateStatisticsDashboard(results, startTime, endTime);
+            }
+            else
+            {
+                WriteInfo("Creating Coverage Gap Analysis...");
+                excelWriter.CreateCoverageGapSheet(results, requirements);
+                WriteInfo("Creating BA Statistics Dashboard...");
+                excelWriter.CreateBAStatisticsDashboard(
+                    results, requirements,
+                    results.Sum(r => r.Tokens),
+                    cacheHits,
+                    endTime - startTime);
+            }
+        }
+
+        // ============================================================
+        // HELPER: Calculate FileResult stats after processing
+        // ============================================================
+        private void CalculateFileResult(
+            FileResult result,
+            List<(string TestId, string Result, int Tokens, string Coverage)> results,
+            AnalysisMode analysisMode, int cacheHits, int apiCalls,
+            DateTime startTime, DateTime endTime)
+        {
+            result.TotalTests = results.Count;
+
+            if (analysisMode == AnalysisMode.BA)
+            {
+                result.GoodTests = results.Count(r => !string.IsNullOrWhiteSpace(r.Coverage));
+                result.IssueTests = results.Count(r => string.IsNullOrWhiteSpace(r.Coverage) && !r.Result.StartsWith("ERROR:"));
+            }
+            else
+            {
+                result.GoodTests = results.Count(r => r.Result == "GOOD");
+                result.IssueTests = results.Count(r => r.Result != "GOOD" && !r.Result.StartsWith("ERROR:"));
+            }
+
+            result.ErrorTests = results.Count(r => r.Result.StartsWith("ERROR:"));
+            result.TotalTokens = results.Sum(r => r.Tokens);
+            result.TotalCost = result.TotalTokens * _promptConfig.CostPerToken;
+            result.TimeTaken = (endTime - startTime).TotalSeconds;
+            result.CacheHits = cacheHits;
+            result.ApiCalls = apiCalls;
         }
 
         // ============================================================
