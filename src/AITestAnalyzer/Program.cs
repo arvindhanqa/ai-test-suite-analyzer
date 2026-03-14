@@ -73,6 +73,9 @@ namespace AITestAnalyzer
 
             bool resumeBatch = args.Any(a => a.ToLower() == "--resume");
 
+            bool exportJson = args.Any(a => a.ToLower() == "--format") &&
+                  args.SkipWhile(a => a.ToLower() != "--format").Skip(1).FirstOrDefault()?.ToLower() == "json";
+
             WriteHeader("===============================================");
             WriteHeader("AI Test Suite Analyzer - Week 1");
             WriteHeader("===============================================");
@@ -108,7 +111,7 @@ namespace AITestAnalyzer
             }
             else
             {
-                await RunSingleModeAsync(appConfig, promptConfig, selection, useCache);
+                await RunSingleModeAsync(appConfig, promptConfig, selection, useCache, exportJson);
             }
         }
 
@@ -441,7 +444,7 @@ namespace AITestAnalyzer
         // ============================================================
         // SINGLE FILE MODE — orchestrator only, delegates to helpers
         // ============================================================
-        private static async Task RunSingleModeAsync(Configuration appConfig, PromptConfig promptConfig, SelectionResult selection, bool useCache)
+        private static async Task RunSingleModeAsync(Configuration appConfig, PromptConfig promptConfig, SelectionResult selection, bool useCache, bool exportJson = false)
         {
             var aiAnalyzer = new AIAnalyzer(appConfig, promptConfig);
             Console.WriteLine();
@@ -475,6 +478,14 @@ namespace AITestAnalyzer
             // Save cache + create output sheets
             SaveCache(cache, useCache);
             CreateOutputSheets(excelWriter, results, requirements, selection.SelectedAnalysisMode, startTime, endTime, cacheHits);
+            if (exportJson)
+            {
+                string jsonPath = JsonExporter.Export(
+                    results, selection.SelectedAnalysisMode,
+                    cacheHits, apiCalls, startTime, endTime,
+                    promptConfig, outputPath);
+                WriteSuccess($"JSON export: {Path.GetFileName(jsonPath)}");
+            }
 
             // Display summary
             Console.WriteLine();
@@ -995,6 +1006,7 @@ namespace AITestAnalyzer
             Console.WriteLine("  dotnet run -- --no-cache          # Disable cache for this run");
             Console.WriteLine("  dotnet run -- --test-requirements # 🆕 Test requirement extraction");
             Console.WriteLine("  dotnet run -- --resume            # Resume interrupted batch run");
+            Console.WriteLine("  dotnet run -- --format json               # Export results as JSON");
             Console.WriteLine();
             WriteInfo("The interactive menu lets you:");
             Console.WriteLine("  - Pick single file or batch mode");
