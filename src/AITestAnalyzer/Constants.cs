@@ -27,5 +27,10 @@ namespace AITestAnalyzer
         public const string HeaderScenario = "Scenario";
         public const string HeaderPriority = "Priority";
         public const string HeaderSteps = "Steps";
+
+        // Result values
+        public const string RESULT_GOOD = "GOOD";
+        public const string RESULT_ERROR_PREFIX = "ERROR:";
+        public const string NO_COVERAGE = "None";
     }
 }
