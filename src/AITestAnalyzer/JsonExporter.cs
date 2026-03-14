@@ -18,7 +18,7 @@ namespace AITestAnalyzer
             double totalCost = totalTokens * promptConfig.CostPerToken;
             double durationSeconds = (endTime - startTime).TotalSeconds;
 
-            int goodTests = results.Count(r => r.Result == Constants.RESULT_GOOD);
+            int goodTests = results.Count(r => r.Result.StartsWith(Constants.RESULT_GOOD));
             int errorTests = results.Count(r => r.Result.StartsWith(Constants.RESULT_ERROR_PREFIX));
             int issueTests = results.Count - goodTests - errorTests;
             double qualityScore = results.Count > 0 ? goodTests * 100.0 / results.Count : 0;
