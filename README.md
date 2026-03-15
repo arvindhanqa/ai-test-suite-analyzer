@@ -24,9 +24,9 @@ Manual test case review is:
 
 ## ✨ Features
 
-### 🆕 Dual Analysis Modes (Phase 2)
+### Dual Analysis Modes
 
-The tool now supports two distinct analysis modes depending on your role and goal:
+The tool supports two distinct analysis modes depending on your role and goal:
 
 #### QA Mode — Test Quality Analysis
 For QA Engineers who want to assess test case quality without requirements.
@@ -77,13 +77,16 @@ VR-AUTH-001  email must be valid format...                       0      ❌ NOT 
 ### Core Capabilities
 - 📊 **AI-Powered Analysis**: Uses GPT-4o-mini to evaluate test quality and requirement coverage
 - 📈 **Multi-Sheet Excel Output**: Separate sheets for detailed analysis, issues, and statistics
+- 📄 **JSON Export**: Export results as JSON for CI/CD pipeline integration (`--format json`)
 - ⚡ **Real-Time Progress**: Visual progress bar with ETA calculation
 - 💰 **Cost-Optimized**: 84% token reduction through prompt engineering
 - 🎨 **Color-Coded Feedback**: Green for good tests, orange for issues, red for errors
 - 📋 **Actionable Insights**: Specific, concise improvement suggestions per test
 - 🔄 **Retry Logic**: Automatic retry with exponential backoff for API failures
-- ✅ **Excel Validation**: Pre-flight checks before processing
+- ✅ **Excel Validation**: Column header and data pre-flight checks before processing
 - 🎯 **Professional Output**: Freeze panes, auto-filters, optimized column widths
+- 💾 **Batch Checkpoint/Resume**: Resume interrupted batch runs with `--resume`
+- 🔍 **Dry-Run Preview**: Estimate cost before running with the `D` key at the prompt
 
 ---
 
@@ -108,6 +111,19 @@ After selecting a file, you choose your analysis mode:
 
     [1] QA Mode  — Test quality analysis (no requirements needed)
     [2] BA Mode  — Requirement coverage validation
+```
+
+**Ready-to-run confirmation prompt:**
+```
+─── Ready to run ───────────────────────────────────
+   File:        test_cases_shopease.xlsx
+   Mode:        QA
+   Sheet:       0
+   Tests:       ALL
+   Cache:       Enabled
+────────────────────────────────────────────────────
+
+  Press Enter to analyze, D for dry-run preview, B to go back:
 ```
 
 **Single file flow:**
@@ -165,6 +181,7 @@ Process multiple Excel files in a single run with full mode support:
 - **Separate Output Files**: Each input file gets its own timestamped report
 - **Shared Cache**: Cache works across files — same test in two files = one API call
 - **Aggregate Statistics**: Combined summary across all files
+- **Checkpoint/Resume**: Interrupted batch runs can be resumed with `--resume`
 
 **Example batch summary:**
 ```
@@ -185,6 +202,44 @@ Process multiple Excel files in a single run with full mode support:
 
 ---
 
+### JSON Export
+
+Export analysis results as JSON for CI/CD pipeline integration:
+
+```bash
+dotnet run -- --format json
+```
+
+Output file is created alongside the Excel report:
+
+```json
+{
+  "metadata": {
+    "generatedAt": "2026-03-14T00:11:17",
+    "analysisMode": "QA",
+    "totalTests": 56,
+    "cacheHits": 48,
+    "apiCalls": 8,
+    "totalTokens": 1200,
+    "estimatedCostUsd": 0.00018,
+    "durationSeconds": 12.4
+  },
+  "summary": {
+    "goodTests": 42,
+    "testsWithIssues": 14,
+    "errors": 0,
+    "qualityScorePct": 75.0
+  },
+  "results": [
+    { "testId": "TC-001", "analysis": "GOOD - clear steps and expected result", "coverage": "", "tokens": 0 }
+  ]
+}
+```
+
+Use in CI/CD to fail a build if `qualityScorePct` drops below a threshold.
+
+---
+
 ## 🏗️ Architecture
 
 ```
@@ -201,29 +256,38 @@ AIAnalyzer.AnalyzeTestQuality   AIAnalyzer.AnalyzeCoverageAndFeedback
 ExcelWriter (1 column)     ExcelWriter (2 columns + Gap Sheet)
       ↓                            ↓
 [AI Analysis Sheet]        [Requirement Feedback + Coverage + Gap Analysis]
+      ↓
+JsonExporter (optional --format json)
 
 BatchProcessor → Applies selected mode across all files → Aggregate Summary
+CheckpointManager → Saves progress after each file → Resume with --resume
 ```
 
 ### Code Structure
 ```
 AITestAnalyzer/
 ├── Program.cs                  # Main orchestration + mode routing
+├── AnalysisMode.cs             # Top-level enum (QA / BA)
+├── Constants.cs                # All magic numbers and string constants
 ├── Configuration.cs            # App configuration model
-├── PromptConfig.cs             # AI prompt configuration
+├── PromptConfig.cs             # AI prompt configuration + cost per token
 ├── TestCase.cs                 # Test case data model
 ├── FileSelector.cs             # Interactive menu + mode selection
-├── ExcelReader.cs              # Excel reading + validation
-├── ExcelWriter.cs              # Mode-aware Excel writing + formatting
+├── ExcelReader.cs              # Excel reading + validation (single file open)
+├── ExcelWriter.cs              # Mode-aware Excel writing + buffered flush
+├── JsonExporter.cs             # JSON export for CI/CD integration
 ├── AIAnalyzer.cs               # OpenAI integration (2 analysis methods)
+├── RetryHelper.cs              # Generic retry with exponential backoff
 ├── ProgressTracker.cs          # Real-time progress display
 ├── SummaryDisplay.cs           # Console output formatting
 ├── TestCaseCache.cs            # Dual-mode cache (QA + BA namespaces)
 ├── RequirementExtractor.cs     # AI requirement extraction
 ├── RequirementCache.cs         # Requirement document cache
 ├── ExtractedRequirement.cs     # Requirement data model
-├── ConfigurationValidator.cs   # Startup validation
-└── BatchProcessor.cs           # Multi-file batch (mode-aware)
+├── ConfigurationValidator.cs   # Startup validation (API key + PromptConfig)
+├── BatchProcessor.cs           # Multi-file batch (mode-aware + checkpoint)
+├── BatchCheckpoint.cs          # Checkpoint data model
+└── CheckpointManager.cs        # Save/load/delete checkpoint state
 ```
 
 **Key Design Principles:**
@@ -231,6 +295,7 @@ AITestAnalyzer/
 - ✅ Modular "lego block" architecture — modes snap in cleanly
 - ✅ Context-aware analysis (93% API cost reduction vs separate passes)
 - ✅ Backward-compatible cache migration
+- ✅ Buffered Excel I/O (~110 file operations → ~4 per run)
 
 ---
 
@@ -287,10 +352,20 @@ The interactive menu handles everything from here.
 dotnet run
 ```
 
+### JSON Export
+```bash
+dotnet run -- --format json    # Export results as JSON alongside Excel
+```
+
 ### Cache Controls
 ```bash
 dotnet run -- --no-cache       # Force fresh analysis
 dotnet run -- --clear-cache    # Clear all cached results
+```
+
+### Batch Resume
+```bash
+dotnet run -- --resume         # Resume interrupted batch run
 ```
 
 ### Help and Version
@@ -338,7 +413,10 @@ dotnet run -- --version
 - **Excel Processing**: EPPlus 7.x
 - **AI Integration**: Betalgo.OpenAI 8.7.2
 - **AI Model**: OpenAI GPT-4o-mini (temperature: 0.2)
+- **JSON Export**: System.Text.Json
 - **Configuration**: Microsoft.Extensions.Configuration
+- **Testing**: xUnit + FluentAssertions
+- **CI/CD**: GitHub Actions
 - **Platform**: Windows 10/11
 
 ---
@@ -353,19 +431,29 @@ ai-test-suite-analyzer/
 │       ├── AIAnalyzer.cs
 │       ├── ExcelReader.cs
 │       ├── ExcelWriter.cs
+│       ├── JsonExporter.cs
+│       ├── RetryHelper.cs
+│       ├── Constants.cs
+│       ├── AnalysisMode.cs
 │       ├── TestCaseCache.cs
 │       ├── RequirementExtractor.cs
 │       ├── RequirementCache.cs
-│       ├── ExtractedRequirement.cs
 │       ├── BatchProcessor.cs
+│       ├── BatchCheckpoint.cs
+│       ├── CheckpointManager.cs
 │       ├── ProgressTracker.cs
 │       ├── SummaryDisplay.cs
 │       ├── ConfigurationValidator.cs
 │       ├── Configuration.cs
 │       ├── PromptConfig.cs
 │       ├── TestCase.cs
+│       ├── ExtractedRequirement.cs
 │       ├── appsettings.json
 │       └── PromptConfig.json
+├── tests/
+│   └── AITestAnalyzer.Tests/
+│       ├── ConfigurationValidatorTests.cs
+│       └── TestCaseCacheTests.cs
 ├── data/
 │   ├── requirements_shopease.md
 │   ├── test_cases_shopease.xlsx
@@ -373,12 +461,13 @@ ai-test-suite-analyzer/
 │   └── test_cases_taskflow.xlsx
 ├── cache/                          # Cache storage (gitignored)
 ├── output/                         # Generated analysis reports
-├── docs/
-│   └── daily-logs/                 # Development progress logs
+├── .editorconfig                   # Code formatting standards
+├── CHANGELOG.md                    # Version history
 └── README.md
 ```
 
 ---
+
 ## 📸 Screenshots
 
 ### 🖥️ Interactive Menu
@@ -404,7 +493,8 @@ ai-test-suite-analyzer/
 | Coverage Gap Analysis | BA Statistics Dashboard |
 |----------------------|------------------------|
 | ![Coverage Gap](docs/screenshots/05-coverage-gap-analysis.png) | ![BA Dashboard](docs/screenshots/06-ba-statistics-dashboard.png) |
-``
+
+---
 
 ## 🎯 Roadmap
 
@@ -433,21 +523,37 @@ ai-test-suite-analyzer/
 - [x] Dual-mode cache (separate QA/BA namespaces, no collisions)
 - [x] Batch mode fully mode-aware (QA/BA across all files)
 
-### Phase 3 ✅ IN PROGRESS (Days 21-23)
-- [x] BA Mode cache + batch mode fix (Day 21)
-- [x] Coverage Gap Analysis sheet — color-coded per-requirement status (Day 22)
-- [x] Fix FormatRequirements to include IDs in AI prompt (Day 22)
-- [x] Fix coverage storage to use raw IDs for accurate gap mapping (Day 22)
-- [x] Dead code cleanup — removed unused AIAnalyzer methods (Day 23)
-- [x] Fix row height truncation in Coverage Gap sheet (Day 23)
-- [ ] QA Mode summary sheets in batch
-- [ ] Export enhancements
+### Phase 3 ✅ COMPLETE (Days 21-26)
+- [x] Coverage Gap Analysis sheet — color-coded per-requirement status
+- [x] BA Statistics Dashboard sheet
+- [x] Fix FormatRequirements to include IDs in AI prompt (BUG-1)
+- [x] Dead code cleanup
 
-### Future
+### Phase 4 ✅ IN PROGRESS (Days 27-90)
+- [x] All 9 code review bugs closed (BUG-1 through BUG-9)
+- [x] Performance: ExcelReader opens file once for all rows (BUG-2)
+- [x] Performance: ExcelWriter buffers all writes, single flush (BUG-3)
+- [x] Batch checkpoint/resume with `--resume` flag (MI-5)
+- [x] RetryHelper — generic reusable retry with exponential backoff (MI-7)
+- [x] Dry-run cost preview — press D before analysis starts (MI-4)
+- [x] .editorconfig — consistent code formatting (ME-1)
+- [x] CHANGELOG.md — version history (ME-2)
+- [x] 0 compiler warnings (ME-3)
+- [x] Async suffix on all async methods (CS-2)
+- [x] Constants.cs — no magic numbers or strings (CS-4)
+- [x] AnalysisMode promoted to top-level enum (CS-5)
+- [x] JSON export with `--format json` flag (EN-3)
+- [ ] Interfaces on service classes (TD-1) — Week 10
+- [ ] Dependency injection (ME-10) — Week 11
+- [ ] Integration tests (TD-5) — Week 12
+- [ ] Folder structure reorganisation — Week 12
+- [ ] Video demo + LinkedIn launch post — Week 13
+
+### Future (Post April 19)
 - [ ] Web interface (Blazor)
 - [ ] JIRA/TestRail integration
-- [ ] CI/CD pipeline integration
 - [ ] Local LLM support (Ollama)
+- [ ] Test case generation from requirements (v2.0)
 
 ---
 
@@ -455,7 +561,7 @@ ai-test-suite-analyzer/
 
 **Aravindhan Rajasekaran**
 - **Current Role**: Lead Test Engineer @ Acumatica (2020-Present)
-- **Experience**: 10+ years in QA, Test Automation, and Software Development
+- **Experience**: 13+ years in QA, Test Automation, and Software Development
 - **Expertise**: C#, Java, Python, Selenium, API Testing, CI/CD
 - **Certifications**: ISTQB Certified, Certified Scrum Master
 - **GitHub**: [@arvindhanqa](https://github.com/arvindhanqa)
@@ -475,13 +581,14 @@ ai-test-suite-analyzer/
 
 This is a personal project built as part of a 90-day commitment (January 20 - April 19, 2026) to build practical AI-powered tooling and demonstrate the ability to ship complete software from concept to production.
 
-**Status (Day 23)**: Phase 3 in progress. Coverage Gap Analysis sheet complete. Dual-mode QA/BA analysis verified in single and batch modes. 23 consecutive days of commits.
+**Status (Day 55)**: Phase 4 in progress. All 9 code review bugs closed. JSON export shipped. 55 consecutive days of commits — streak unbroken.
 
 ### Development Progress
-- **Days 1-7 (Phase 0)**: Foundation — setup, data, Excel processing, OpenAI integration, cost optimization
-- **Days 8-14 (Phase 1)**: Professional features — progress bar, caching, error handling, CLI, batch processing, interactive menu
-- **Days 15-20 (Phase 2)**: Intelligence — requirement extraction, dual-mode analysis (QA/BA), coverage tracking, mode-aware cache
-- **Days 21-23 (Phase 3)**: Polish — BA Mode cache for batch, Coverage Gap Analysis sheet, dead code cleanup
+- **Days 1-7**: Foundation — setup, data, Excel processing, OpenAI integration, cost optimization
+- **Days 8-14**: Professional features — progress bar, caching, error handling, CLI, batch processing, interactive menu
+- **Days 15-20**: Intelligence — requirement extraction, dual-mode analysis (QA/BA), coverage tracking
+- **Days 21-26**: Polish — Coverage Gap Analysis sheet, BA Statistics Dashboard
+- **Days 27-55**: Quality — all bugs fixed, performance improvements, code standards, JSON export
 
 ---
 
@@ -504,4 +611,4 @@ Built with:
 
 ---
 
-*Last Updated: February 13, 2026 (Day 23)*
+*Last Updated: March 15, 2026 (Day 55)*
