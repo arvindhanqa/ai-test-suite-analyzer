@@ -4,7 +4,7 @@ using System.IO;
 
 namespace AITestAnalyzer
 {
-    public class ExcelReader
+    public class ExcelReader : IExcelReader
     {
 
         private readonly string _excelPath;
