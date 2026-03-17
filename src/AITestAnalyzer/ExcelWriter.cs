@@ -8,7 +8,7 @@ using OfficeOpenXml.Style;
 
 namespace AITestAnalyzer
 {
-    public class ExcelWriter
+    public class ExcelWriter : IExcelWriter
     {
         private readonly string _outputPath;
         private readonly int _worksheetIndex;
