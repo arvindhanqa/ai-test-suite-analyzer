@@ -16,7 +16,7 @@ namespace AITestAnalyzer
     // Now uses promptConfig.Model instead of hardcoded
     // OPTIMIZED: Only sends Feature, Scenario, Steps, Expected Result
     // ============================================================
-    public class AIAnalyzer
+    public class AIAnalyzer : IAIAnalyzer
     {
         private readonly Configuration _config;
         private readonly PromptConfig _promptConfig;
