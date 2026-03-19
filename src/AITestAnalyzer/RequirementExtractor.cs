@@ -10,7 +10,7 @@ namespace AITestAnalyzer
     /// Extracts structured requirements from any document format using AI.
     /// Uses semantic analysis (Topic/Subtopic/Action) instead of ID patterns.
     /// </summary>
-    public class RequirementExtractor
+    public class RequirementExtractor : IRequirementExtractor
     {
         private readonly OpenAIService _openAiService;
         private readonly string _model;
