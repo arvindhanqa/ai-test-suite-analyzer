@@ -19,7 +19,7 @@ namespace AITestAnalyzer
         public DateTime CachedAt { get; set; }
     }
 
-    public class TestCaseCache
+    public class TestCaseCache : ITestCaseCache
     {
         private readonly string _cacheFilePath;
         private Dictionary<string, CachedResult> _cache;
