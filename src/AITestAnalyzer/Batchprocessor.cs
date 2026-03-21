@@ -70,7 +70,7 @@ namespace AITestAnalyzer
             int? testLimit = null,
             int worksheetIndex = 0,
             bool useCache = true,
-            TestCaseCache? sharedCache = null,
+            ITestCaseCache? sharedCache = null,
             AnalysisMode analysisMode = AnalysisMode.BA)
         {
             var result = new FileResult { FileName = Path.GetFileName(inputPath) };
@@ -116,7 +116,7 @@ namespace AITestAnalyzer
                 excelWriter.AddAnalysisColumnHeader(analysisMode);
 
                 // Initialize cache
-                TestCaseCache? cache = sharedCache ?? (useCache ? new TestCaseCache() : null);
+                ITestCaseCache? cache = sharedCache ?? (useCache ? new TestCaseCache() : null);
 
                 // Process all tests
                 var (results, cacheHits, apiCalls) = await ProcessBatchTestsAsync(
@@ -198,7 +198,7 @@ namespace AITestAnalyzer
         private async Task<(List<(string TestId, string Result, int Tokens, string Coverage)> results, int cacheHits, int apiCalls)>
             ProcessBatchTestsAsync(
                 ExcelReader excelReader, ExcelWriter excelWriter, AIAnalyzer aiAnalyzer,
-                TestCaseCache? cache, List<ExtractedRequirement> requirements,
+                ITestCaseCache? cache, List<ExtractedRequirement> requirements,
                 AnalysisMode analysisMode, bool useCache, int testsToAnalyze, DateTime fileStartTime)
         {
             var results = new List<(string TestId, string Result, int Tokens, string Coverage)>();
@@ -369,7 +369,7 @@ namespace AITestAnalyzer
             int worksheetIndex = 0,
             bool useCache = true,
             AnalysisMode analysisMode = AnalysisMode.BA,
-            TestCaseCache? externalCache = null,
+            ITestCaseCache? externalCache = null,
             bool resume = false)
         {
             var allResults = new List<FileResult>();
@@ -422,7 +422,7 @@ namespace AITestAnalyzer
             }
 
             // Initialize shared cache for batch processing
-            TestCaseCache? sharedCache = externalCache;
+            ITestCaseCache? sharedCache = externalCache;
             if (useCache && sharedCache == null)
             {
                 sharedCache = new TestCaseCache();

@@ -10,7 +10,7 @@ namespace AITestAnalyzer
         private const string AppName = "AI Test Suite Analyzer";
         private const int CACHE_MAX_AGE_DAYS = Constants.CACHE_MAX_AGE_DAYS;
 
-        private static TestCaseCache? _activeCache;
+        private static ITestCaseCache? _activeCache;
         private static RequirementCache? _activeReqCache;
         private static async Task Main(string[] args)
         {
@@ -607,7 +607,7 @@ namespace AITestAnalyzer
         // ============================================================
         // HELPER: Initialize cache system
         // ============================================================
-        private static TestCaseCache? InitializeCache(bool useCache)
+        private static ITestCaseCache? InitializeCache(bool useCache)
         {
             if (!useCache)
             {
@@ -646,7 +646,7 @@ namespace AITestAnalyzer
         // ============================================================
         private static async Task<(List<(string TestId, string Result, int Tokens, string Coverage)> results, int cacheHits, int apiCalls)>
             ProcessTestsAsync(ExcelReader excelReader, ExcelWriter excelWriter, AIAnalyzer aiAnalyzer,
-                TestCaseCache? cache, List<ExtractedRequirement> requirements,
+                ITestCaseCache? cache, List<ExtractedRequirement> requirements,
                 SelectionResult selection, bool useCache, int totalTests)
         {
             var results = new List<(string TestId, string Result, int Tokens, string Coverage)>();
@@ -695,7 +695,7 @@ namespace AITestAnalyzer
         // HELPER: Process single test in QA mode
         // ============================================================
         private static async Task<(string quality, string coverage, int tokens, int cacheHits, int apiCalls)>
-            ProcessQATestAsync(TestCase testCase, AIAnalyzer aiAnalyzer, TestCaseCache? cache,
+            ProcessQATestAsync(TestCase testCase, AIAnalyzer aiAnalyzer, ITestCaseCache? cache,
                 bool useCache, int cacheHits, int apiCalls)
         {
             string quality;
@@ -732,7 +732,7 @@ namespace AITestAnalyzer
         // HELPER: Process single test in BA mode
         // ============================================================
         private static async Task<(string quality, string coverage, int tokens, int cacheHits, int apiCalls)>
-            ProcessBATestAsync(TestCase testCase, AIAnalyzer aiAnalyzer, TestCaseCache? cache,
+            ProcessBATestAsync(TestCase testCase, AIAnalyzer aiAnalyzer, ITestCaseCache? cache,
                 List<ExtractedRequirement> requirements, bool useCache, int cacheHits, int apiCalls)
         {
             string quality;
@@ -778,7 +778,7 @@ namespace AITestAnalyzer
         // ============================================================
         // HELPER: Save cache after processing
         // ============================================================
-        private static void SaveCache(TestCaseCache? cache, bool useCache)
+        private static void SaveCache(ITestCaseCache? cache, bool useCache)
         {
             if (!useCache || cache == null)
                 return;
