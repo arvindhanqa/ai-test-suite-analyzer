@@ -10,7 +10,7 @@ namespace AITestAnalyzer.Tests
         public void GenerateHash_SameContent_ReturnsSameHash()
         {
             // ARRANGE
-            var cache = new TestCaseCache();  // ← CREATE INSTANCE!
+            ITestCaseCache cache = new TestCaseCache();  // ← CREATE INSTANCE!
             
             var testCase1 = new TestCase
             {
@@ -40,7 +40,7 @@ namespace AITestAnalyzer.Tests
         public void GenerateHash_DifferentContent_ReturnsDifferentHash()
         {
             // ARRANGE
-            var cache = new TestCaseCache();
+            ITestCaseCache cache = new TestCaseCache();
             
             var testCase1 = new TestCase
             {
@@ -70,7 +70,7 @@ namespace AITestAnalyzer.Tests
         public void GenerateHash_ReturnsValidSHA256Hash()
         {
             // ARRANGE
-            var cache = new TestCaseCache();
+            ITestCaseCache cache = new TestCaseCache();
             var testCase = new TestCase
             {
                 Feature = "Test",
