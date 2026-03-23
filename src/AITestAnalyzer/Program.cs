@@ -1,4 +1,5 @@
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using OfficeOpenXml;
 using static AITestAnalyzer.FileSelector;
 
@@ -1081,6 +1082,28 @@ namespace AITestAnalyzer
             Console.ForegroundColor = ConsoleColor.Cyan;
             Console.WriteLine(message);
             Console.ResetColor();
+        }
+
+        // ============================================================
+        // HELPER: Build DI service container
+        // ============================================================
+        private static IServiceProvider BuildServiceProvider(
+            Configuration appConfig, PromptConfig promptConfig)
+        {
+            var services = new ServiceCollection();
+
+            // Register config as singletons
+            services.AddSingleton(appConfig);
+            services.AddSingleton(promptConfig);
+
+            // Register core services against their interfaces
+            services.AddSingleton<IAIAnalyzer>(
+                _ => new AIAnalyzer(appConfig, promptConfig));
+            services.AddSingleton<ITestCaseCache, TestCaseCache>();
+            services.AddSingleton<IRequirementExtractor>(
+                _ => new RequirementExtractor(appConfig, promptConfig));
+
+            return services.BuildServiceProvider();
         }
     }
 }
