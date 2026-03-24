@@ -88,6 +88,8 @@ namespace AITestAnalyzer
             var (appConfig, promptConfig) = LoadConfiguration();
             if (appConfig == null || promptConfig == null) return;
 
+            // Build DI container
+            var serviceProvider = BuildServiceProvider(appConfig, promptConfig);
             // ============================================================
             // STEP 2: FileSelector — user picks file, mode, sheet, limit
             // ============================================================
@@ -1102,6 +1104,10 @@ namespace AITestAnalyzer
             services.AddSingleton<ITestCaseCache, TestCaseCache>();
             services.AddSingleton<IRequirementExtractor>(
                 _ => new RequirementExtractor(appConfig, promptConfig));
+            services.AddSingleton<BatchProcessor>(
+                _ => new BatchProcessor(appConfig, promptConfig));
+            services.AddSingleton<ConfigurationValidator>(
+                _ => new ConfigurationValidator(appConfig, new PromptConfig()));
 
             return services.BuildServiceProvider();
         }
