@@ -110,11 +110,11 @@ namespace AITestAnalyzer
             // ============================================================
             if (selection.SelectedMode == FileSelector.SelectionResult.Mode.Batch)
             {
-                await RunBatchModeAsync(appConfig, promptConfig, selection, resumeBatch);
+                await RunBatchModeAsync(appConfig, promptConfig, selection, resumeBatch, serviceProvider);
             }
             else
             {
-                await RunSingleModeAsync(appConfig, promptConfig, selection, useCache, exportJson);
+                await RunSingleModeAsync(appConfig, promptConfig, selection, useCache, exportJson, serviceProvider);
             }
         }
 
@@ -447,9 +447,10 @@ namespace AITestAnalyzer
         // ============================================================
         // SINGLE FILE MODE — orchestrator only, delegates to helpers
         // ============================================================
-        private static async Task RunSingleModeAsync(Configuration appConfig, PromptConfig promptConfig, SelectionResult selection, bool useCache, bool exportJson = false)
+        private static async Task RunSingleModeAsync(Configuration appConfig, PromptConfig promptConfig, SelectionResult selection, bool useCache, bool exportJson = false, IServiceProvider? serviceProvider = null)
         {
-            var aiAnalyzer = new AIAnalyzer(appConfig, promptConfig);
+            var aiAnalyzer = serviceProvider?.GetRequiredService<IAIAnalyzer>()
+                ?? new AIAnalyzer(appConfig, promptConfig);
             Console.WriteLine();
 
             // Load requirements (BA mode only)
@@ -648,7 +649,7 @@ namespace AITestAnalyzer
         // HELPER: Process all test cases — QA and BA mode
         // ============================================================
         private static async Task<(List<(string TestId, string Result, int Tokens, string Coverage)> results, int cacheHits, int apiCalls)>
-            ProcessTestsAsync(ExcelReader excelReader, ExcelWriter excelWriter, AIAnalyzer aiAnalyzer,
+            ProcessTestsAsync(ExcelReader excelReader, ExcelWriter excelWriter, IAIAnalyzer aiAnalyzer,
                 ITestCaseCache? cache, List<ExtractedRequirement> requirements,
                 SelectionResult selection, bool useCache, int totalTests)
         {
@@ -698,7 +699,7 @@ namespace AITestAnalyzer
         // HELPER: Process single test in QA mode
         // ============================================================
         private static async Task<(string quality, string coverage, int tokens, int cacheHits, int apiCalls)>
-            ProcessQATestAsync(TestCase testCase, AIAnalyzer aiAnalyzer, ITestCaseCache? cache,
+            ProcessQATestAsync(TestCase testCase, IAIAnalyzer aiAnalyzer, ITestCaseCache? cache,
                 bool useCache, int cacheHits, int apiCalls)
         {
             string quality;
@@ -735,7 +736,7 @@ namespace AITestAnalyzer
         // HELPER: Process single test in BA mode
         // ============================================================
         private static async Task<(string quality, string coverage, int tokens, int cacheHits, int apiCalls)>
-            ProcessBATestAsync(TestCase testCase, AIAnalyzer aiAnalyzer, ITestCaseCache? cache,
+            ProcessBATestAsync(TestCase testCase, IAIAnalyzer aiAnalyzer, ITestCaseCache? cache,
                 List<ExtractedRequirement> requirements, bool useCache, int cacheHits, int apiCalls)
         {
             string quality;
@@ -829,7 +830,7 @@ namespace AITestAnalyzer
         // BATCH MODE — receives everything from FileSelector.
         // No arg parsing here. BatchProcessor gets what it needs directly.
         // ============================================================
-        private static async Task RunBatchModeAsync(Configuration appConfig, PromptConfig promptConfig, SelectionResult selection, bool resume = false)
+        private static async Task RunBatchModeAsync(Configuration appConfig, PromptConfig promptConfig, SelectionResult selection, bool resume = false, IServiceProvider? serviceProvider = null)
         {
             string folderPath = selection.FolderPath;
             int worksheetIndex = selection.SheetIndex;
@@ -869,7 +870,8 @@ namespace AITestAnalyzer
             Console.WriteLine();
 
             // Run batch — pass testLimit as nullable (null = no limit)
-            var batchProcessor = new BatchProcessor(appConfig, promptConfig);
+            var batchProcessor = serviceProvider?.GetRequiredService<BatchProcessor>()
+                ?? new BatchProcessor(appConfig, promptConfig);
             var sharedCache = new TestCaseCache();
             _activeCache = sharedCache;
             _activeReqCache = new RequirementCache();
