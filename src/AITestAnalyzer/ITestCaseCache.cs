@@ -10,5 +10,6 @@ namespace AITestAnalyzer
         int GetExpiredCount(int maxAgeDays = Constants.CACHE_MAX_AGE_DAYS);
         void ClearCache();
         int CleanExpiredEntries(int maxAgeDays = Constants.CACHE_MAX_AGE_DAYS);
+        Task SaveCacheAsync();
     }
 }

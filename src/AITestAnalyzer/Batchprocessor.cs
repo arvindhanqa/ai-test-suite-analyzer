@@ -517,7 +517,7 @@ namespace AITestAnalyzer
                 {
                     WriteInfo($"Cleaned {cleaned} expired cache entries");
                 }
-                sharedCache.SaveCache();
+                await sharedCache.SaveCacheAsync();
                 WriteSuccess("Cache saved successfully");
             }
 

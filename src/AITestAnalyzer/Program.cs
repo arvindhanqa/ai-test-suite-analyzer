@@ -480,7 +480,7 @@ namespace AITestAnalyzer
             var endTime = DateTime.Now;
 
             // Save cache + create output sheets
-            SaveCache(cache, useCache);
+            await SaveCacheAsync(cache, useCache);
             CreateOutputSheets(excelWriter, results, requirements, selection.SelectedAnalysisMode, startTime, endTime, cacheHits);
             if (exportJson)
             {
@@ -782,7 +782,7 @@ namespace AITestAnalyzer
         // ============================================================
         // HELPER: Save cache after processing
         // ============================================================
-        private static void SaveCache(ITestCaseCache? cache, bool useCache)
+        private static async Task SaveCacheAsync(ITestCaseCache? cache, bool useCache)
         {
             if (!useCache || cache == null)
                 return;
@@ -792,7 +792,7 @@ namespace AITestAnalyzer
             int cleaned = cache.CleanExpiredEntries(CACHE_MAX_AGE_DAYS);
             if (cleaned > 0)
                 WriteInfo($"Cleaned {cleaned} expired cache entries");
-            cache.SaveCache();
+            await cache.SaveCacheAsync();
             WriteSuccess("Cache saved successfully");
         }
 

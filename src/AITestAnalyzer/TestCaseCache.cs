@@ -118,6 +118,16 @@ namespace AITestAnalyzer
             File.WriteAllText(_cacheFilePath, json);
         }
 
+        // Save cache to disk (async)
+        public async Task SaveCacheAsync()
+        {
+            var cacheList = new List<CachedResult>(_cache.Values);
+            string json = JsonSerializer.Serialize(cacheList, new JsonSerializerOptions
+            {
+                WriteIndented = true
+            });
+            await File.WriteAllTextAsync(_cacheFilePath, json);
+        }
 
         /// <summary>
         /// Generates a content-based hash for cache deduplication and change detection
