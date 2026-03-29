@@ -67,7 +67,9 @@ namespace AITestAnalyzer
             if (completionResult == null)
             {
                 Console.ForegroundColor = ConsoleColor.Red;
-                Console.WriteLine($"❌ Extraction failed after {Constants.MAX_RETRIES} attempts.");
+                Console.WriteLine($"❌ Requirement extraction failed after {Constants.MAX_RETRIES} attempts " +
+                                  $"for file '{Path.GetFileName(documentPath)}'. " +
+                                  $"Check your API key, network connection, and that the file is readable.");
                 Console.ResetColor();
                 return new List<ExtractedRequirement>();
             }
