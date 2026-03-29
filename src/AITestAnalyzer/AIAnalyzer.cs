@@ -67,8 +67,8 @@ Be direct and actionable. Focus on: clarity, completeness, testability.";
             );
 
             if (result == null)
-                return ("ERROR: API call failed after retries", 0);
-
+                return ($"ERROR: OpenAI API call failed after {Constants.MAX_RETRIES} retries " +
+                            $"for test '{testCase.TestId}'. Check your API key and network connection.", 0);
             string analysis = result.Choices.First().Message.Content!.Trim();
             int tokens = result.Usage!.TotalTokens;
 
@@ -138,8 +138,9 @@ FEEDBACK:
             );
 
             if (result == null)
-                return ("ERROR: API call failed after retries", new List<string>(), 0);
-
+                return ($"ERROR: OpenAI API call failed after {Constants.MAX_RETRIES} retries " +
+                        $"for test '{testCase.TestId}'. Check your API key and network connection.",
+                        new List<string>(), 0);
             string response = result.Choices.First().Message.Content!.Trim();
             int tokens = result.Usage!.TotalTokens;
 
