@@ -187,7 +187,9 @@ namespace AITestAnalyzer
             }
             catch (Exception ex)
             {
-                return ValidationResult.Failure($"Error validating worksheet index: {ex.Message}");
+                return ValidationResult.Failure(
+                    $"Error reading '{Path.GetFileName(excelPath)}' to validate worksheet index: {ex.Message}. " +
+                    $"Ensure the file is not open in another program.");
             }
         }
 
@@ -227,8 +229,9 @@ namespace AITestAnalyzer
             }
             catch (Exception ex)
             {
-                return ValidationResult.Failure($"Failed to connect to OpenAI API: {ex.Message}\n" +
-                    $"   Please check your internet connection and API key");
+                return ValidationResult.Failure(
+                    $"Failed to connect to OpenAI API: {ex.Message}. " +
+                    $"Check your internet connection and verify your API key in appsettings.json.");
             }
         }
 
