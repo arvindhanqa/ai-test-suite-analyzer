@@ -58,7 +58,7 @@ namespace AITestAnalyzer
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ ERROR: Could not count rows in Excel: {ex.Message}");
+                Console.WriteLine($"❌ ERROR: Could not count rows in '{Path.GetFileName(_excelPath)}': {ex.Message}. Ensure the file is not open in another program.");
                 return 0;
             }
         }
@@ -190,7 +190,7 @@ namespace AITestAnalyzer
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ ERROR: Could not read test cases from Excel: {ex.Message}");
+                Console.WriteLine($"❌ ERROR: Could not read test cases from '{Path.GetFileName(_excelPath)}': {ex.Message}. Ensure the file is not open in another program.");
             }
 
             return testCases;
@@ -273,7 +273,7 @@ namespace AITestAnalyzer
             }
             catch (Exception ex)
             {
-                return (false, $"Error reading Excel file: {ex.Message}");
+                return (false, $"Error reading '{Path.GetFileName(_excelPath)}': {ex.Message}. Ensure the file is not open in another program.");
             }
         }
     }
