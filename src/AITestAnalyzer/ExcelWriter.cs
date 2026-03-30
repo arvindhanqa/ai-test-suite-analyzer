@@ -72,7 +72,7 @@ namespace AITestAnalyzer
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"   ⚠️  Warning: Could not rename sheet: {ex.Message}");
+                Console.WriteLine($"   ⚠️  Warning: Could not rename sheet in '{Path.GetFileName(_outputPath)}': {ex.Message}");
             }
         }
 
@@ -243,7 +243,7 @@ namespace AITestAnalyzer
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"   ⚠️  Warning: Could not flush analysis to Excel: {ex.Message}");
+                Console.WriteLine($"   ⚠️  Warning: Could not flush {_pendingWrites.Count} analysis results to '{Path.GetFileName(_outputPath)}': {ex.Message}");
             }
         }
 
@@ -348,7 +348,7 @@ namespace AITestAnalyzer
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"   ⚠️  Warning: Could not create issues sheet: {ex.Message}");
+                Console.WriteLine($"   ⚠️  Warning: Could not create 'Quality Issues Summary' sheet in '{Path.GetFileName(_outputPath)}': {ex.Message}");
             }
         }
 
@@ -605,7 +605,7 @@ namespace AITestAnalyzer
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"   ⚠️ Warning: Could not create statistics sheet: {ex.Message}");
+                Console.WriteLine($"   ⚠️  Warning: Could not create 'Statistics Dashboard' sheet in '{Path.GetFileName(_outputPath)}': {ex.Message}");
             }
         }
 
@@ -819,7 +819,7 @@ namespace AITestAnalyzer
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"   ⚠️  Warning: Could not create coverage gap sheet: {ex.Message}");
+                Console.WriteLine($"   ⚠️  Warning: Could not create 'Coverage Gap Analysis' sheet in '{Path.GetFileName(_outputPath)}': {ex.Message}");
             }
         }
 
@@ -981,7 +981,7 @@ namespace AITestAnalyzer
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"   ⚠️  Warning: Could not create BA statistics sheet: {ex.Message}");
+                Console.WriteLine($"   ⚠️  Warning: Could not create 'BA Statistics Dashboard' sheet in '{Path.GetFileName(_outputPath)}': {ex.Message}");
             }
         }
 
