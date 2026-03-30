@@ -137,7 +137,7 @@ namespace AITestAnalyzer
             }
             catch (Exception ex)
             {
-                WriteError($"Failed to process {result.FileName}: {ex.Message}");
+                WriteError($"Failed to process '{result.FileName}': {ex.GetType().Name} — {ex.Message}. This file will be skipped.");
             }
 
             return result;
@@ -246,8 +246,8 @@ namespace AITestAnalyzer
                 }
                 catch (Exception ex)
                 {
-                    results.Add(($"Row{rowNumber}", $"ERROR: {ex.Message}", 0, ""));
-                    excelWriter.WriteAnalysis(rowNumber, $"ERROR: {ex.Message}", "None", analysisMode);
+                    results.Add(($"Row{rowNumber}", $"ERROR: Failed to process row {rowNumber} — {ex.Message}", 0, ""));
+                    excelWriter.WriteAnalysis(rowNumber, $"ERROR: Failed to process row {rowNumber} — {ex.Message}", "None", analysisMode);
                 }
             }
 
