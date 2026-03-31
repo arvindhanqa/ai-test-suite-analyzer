@@ -3,5 +3,6 @@
     <File Path="LICENSE.txt" />
     <File Path="README.md" />
   </Folder>
+  <Project Path="../AITestAnalyzer.IntegrationTests/AITestAnalyzer.IntegrationTests.csproj" Id="7f7ba741-4bfb-4b3a-a130-4096de775833" />
   <Project Path="AITestAnalyzer.csproj" />
 </Solution>
