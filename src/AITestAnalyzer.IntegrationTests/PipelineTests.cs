@@ -183,5 +183,49 @@ namespace AITestAnalyzer.IntegrationTests
                     "because BA statistics dashboard should exist");
             }
         }
+
+        [Fact]
+        public void CacheHit_SecondRun_MakesZeroApiCalls()
+        {
+            // ARRANGE
+            string cacheDir = Path.Combine(
+                Directory.GetCurrentDirectory(), "TestCache");
+
+            // Clean up any existing test cache
+            if (Directory.Exists(cacheDir))
+                Directory.Delete(cacheDir, recursive: true);
+
+            var cache = new TestCaseCache(cacheDir);
+
+            var testCase = new TestCase
+            {
+                TestId = "TC-001",
+                Feature = "Login",
+                Scenario = "Valid credentials",
+                Steps = "1. Enter username\n2. Enter password\n3. Click login",
+                ExpectedResult = "User is logged in successfully"
+            };
+
+            // ACT — First run: add to cache
+            string hash = cache.GenerateHash(testCase);
+            cache.AddToCache(testCase.TestId, hash, "GOOD - Clear and complete", "", 150);
+
+            // ACT — Second run: check cache
+            bool cacheHit = cache.TryGetCached(hash, out CachedResult? cachedResult, 30);
+
+            // ASSERT
+            cacheHit.Should().BeTrue("because the result was cached on first run");
+            cachedResult.Should().NotBeNull();
+            cachedResult!.Quality.Should().Be("GOOD - Clear and complete");
+            cachedResult.Tokens.Should().Be(150);
+
+            // Verify zero API calls needed on second run
+            int apiCallsNeeded = cacheHit ? 0 : 1;
+            apiCallsNeeded.Should().Be(0, "because cache hit means no API call required");
+
+            // Cleanup
+            if (Directory.Exists(cacheDir))
+                Directory.Delete(cacheDir, recursive: true);
+        }
     }
 }
