@@ -3,6 +3,8 @@ using FluentAssertions;
 using Moq;
 using AITestAnalyzer;
 using OfficeOpenXml;
+using System.Text.Json;
+
 
 namespace AITestAnalyzer.IntegrationTests
 {
@@ -226,6 +228,92 @@ namespace AITestAnalyzer.IntegrationTests
             // Cleanup
             if (Directory.Exists(cacheDir))
                 Directory.Delete(cacheDir, recursive: true);
+        }
+
+        [Fact]
+        public void JsonExport_ProducesValidJsonFile_WithCorrectStructure()
+        {
+            // ARRANGE
+            string outputDir = Path.Combine(
+                Directory.GetCurrentDirectory(), "TestOutput");
+
+            Directory.CreateDirectory(outputDir);
+
+            string outputPath = Path.Combine(outputDir,
+                $"integration_test_json_{DateTime.Now:yyyyMMdd_HHmmss}.xlsx");
+
+            var promptConfig = new PromptConfig
+            {
+                Model = "gpt-4o-mini",
+                MaxTokens = 150,
+                Temperature = 0.2,
+                CostPerToken = 0.00000015,
+                SystemMessage = "Test",
+                UserTemplate = "Test"
+            };
+
+            var results = new List<(string TestId, string Result, int Tokens, string Coverage)>
+    {
+        ("TC-001", "GOOD - Clear steps", 150, ""),
+        ("TC-002", "GOOD - Well defined", 145, ""),
+        ("TC-003", "INCOMPLETE - Missing expected result", 160, ""),
+        ("TC-004", "GOOD - Complete test", 148, ""),
+        ("TC-005", "GOOD - All fields present", 152, "")
+    };
+
+            // ACT
+            string jsonPath = JsonExporter.Export(
+                results,
+                AnalysisMode.QA,
+                cacheHits: 2,
+                apiCalls: 3,
+                startTime: DateTime.Now.AddSeconds(-10),
+                endTime: DateTime.Now,
+                promptConfig: promptConfig,
+                outputPath: outputPath);
+
+            // ASSERT — file exists
+            File.Exists(jsonPath).Should().BeTrue("JSON file should be created");
+            jsonPath.Should().EndWith(".json", "output path should have .json extension");
+
+            // ASSERT — JSON structure is valid
+            string jsonContent = File.ReadAllText(jsonPath);
+            jsonContent.Should().NotBeNullOrEmpty("JSON file should not be empty");
+
+            using var doc = System.Text.Json.JsonDocument.Parse(jsonContent);
+            var root = doc.RootElement;
+
+            // Verify metadata section
+            root.TryGetProperty("metadata", out var metadata).Should().BeTrue(
+                "JSON should contain metadata section");
+            metadata.GetProperty("analysisMode").GetString().Should().Be("QA");
+            metadata.GetProperty("totalTests").GetInt32().Should().Be(5);
+            metadata.GetProperty("cacheHits").GetInt32().Should().Be(2);
+            metadata.GetProperty("apiCalls").GetInt32().Should().Be(3);
+
+            // Verify summary section
+            root.TryGetProperty("summary", out var summary).Should().BeTrue(
+                "JSON should contain summary section");
+            summary.GetProperty("goodTests").GetInt32().Should().Be(4);
+            summary.GetProperty("testsWithIssues").GetInt32().Should().Be(1);
+            summary.GetProperty("qualityScorePct").GetDouble().Should().Be(80.0);
+
+            // Verify results array
+            root.TryGetProperty("results", out var resultsArray).Should().BeTrue(
+                "JSON should contain results array");
+            resultsArray.GetArrayLength().Should().Be(5,
+                "results array should have one entry per test");
+
+            // Verify first result structure
+            var firstResult = resultsArray[0];
+            firstResult.TryGetProperty("testId", out _).Should().BeTrue();
+            firstResult.TryGetProperty("analysis", out _).Should().BeTrue();
+            firstResult.TryGetProperty("coverage", out _).Should().BeTrue();
+            firstResult.TryGetProperty("tokens", out _).Should().BeTrue();
+
+            // Cleanup
+            if (File.Exists(jsonPath))
+                File.Delete(jsonPath);
         }
     }
 }
