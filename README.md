@@ -160,6 +160,7 @@ A production-ready dual-layer cache system:
 - Mode-separated: QA results use plain hash, BA results use `ba_` prefix hash — no collisions
 - 30-day expiry with automatic cleanup
 - Persistent across application restarts
+- Async save (`SaveCacheAsync`) for non-blocking I/O
 
 **Requirement Cache**
 - Requirement documents extracted once, cached by file path + modification date
@@ -261,27 +262,35 @@ JsonExporter (optional --format json)
 
 BatchProcessor → Applies selected mode across all files → Aggregate Summary
 CheckpointManager → Saves progress after each file → Resume with --resume
+
+DI Container (BuildServiceProvider) → Resolves IAIAnalyzer, ITestCaseCache,
+                                       IRequirementExtractor, BatchProcessor
 ```
 
 ### Code Structure
 ```
 AITestAnalyzer/
-├── Program.cs                  # Main orchestration + mode routing
+├── Program.cs                  # Main orchestration + DI container + mode routing
 ├── AnalysisMode.cs             # Top-level enum (QA / BA)
 ├── Constants.cs                # All magic numbers and string constants
 ├── Configuration.cs            # App configuration model
 ├── PromptConfig.cs             # AI prompt configuration + cost per token
 ├── TestCase.cs                 # Test case data model
 ├── FileSelector.cs             # Interactive menu + mode selection
+├── IExcelReader.cs             # Interface for Excel reading
 ├── ExcelReader.cs              # Excel reading + validation (single file open)
+├── IExcelWriter.cs             # Interface for Excel writing
 ├── ExcelWriter.cs              # Mode-aware Excel writing + buffered flush
 ├── JsonExporter.cs             # JSON export for CI/CD integration
+├── IAIAnalyzer.cs              # Interface for AI analysis
 ├── AIAnalyzer.cs               # OpenAI integration (2 analysis methods)
+├── IRequirementExtractor.cs    # Interface for requirement extraction
+├── RequirementExtractor.cs     # AI requirement extraction
+├── ITestCaseCache.cs           # Interface for test case cache
+├── TestCaseCache.cs            # Dual-mode cache (QA + BA namespaces)
 ├── RetryHelper.cs              # Generic retry with exponential backoff
 ├── ProgressTracker.cs          # Real-time progress display
 ├── SummaryDisplay.cs           # Console output formatting
-├── TestCaseCache.cs            # Dual-mode cache (QA + BA namespaces)
-├── RequirementExtractor.cs     # AI requirement extraction
 ├── RequirementCache.cs         # Requirement document cache
 ├── ExtractedRequirement.cs     # Requirement data model
 ├── ConfigurationValidator.cs   # Startup validation (API key + PromptConfig)
@@ -292,10 +301,13 @@ AITestAnalyzer/
 
 **Key Design Principles:**
 - ✅ Single Responsibility (each class has one job)
+- ✅ Interface-driven design — 5 service interfaces for testability
+- ✅ Dependency Injection via `Microsoft.Extensions.DependencyInjection`
 - ✅ Modular "lego block" architecture — modes snap in cleanly
 - ✅ Context-aware analysis (93% API cost reduction vs separate passes)
 - ✅ Backward-compatible cache migration
 - ✅ Buffered Excel I/O (~110 file operations → ~4 per run)
+- ✅ Async I/O for cache persistence (`SaveCacheAsync`)
 
 ---
 
@@ -415,7 +427,8 @@ dotnet run -- --version
 - **AI Model**: OpenAI GPT-4o-mini (temperature: 0.2)
 - **JSON Export**: System.Text.Json
 - **Configuration**: Microsoft.Extensions.Configuration
-- **Testing**: xUnit + FluentAssertions
+- **Dependency Injection**: Microsoft.Extensions.DependencyInjection
+- **Testing**: xUnit + FluentAssertions + Moq
 - **CI/CD**: GitHub Actions
 - **Platform**: Windows 10/11
 
@@ -428,15 +441,15 @@ ai-test-suite-analyzer/
 │   └── AITestAnalyzer/
 │       ├── Program.cs
 │       ├── FileSelector.cs
-│       ├── AIAnalyzer.cs
-│       ├── ExcelReader.cs
-│       ├── ExcelWriter.cs
+│       ├── AIAnalyzer.cs + IAIAnalyzer.cs
+│       ├── ExcelReader.cs + IExcelReader.cs
+│       ├── ExcelWriter.cs + IExcelWriter.cs
 │       ├── JsonExporter.cs
 │       ├── RetryHelper.cs
 │       ├── Constants.cs
 │       ├── AnalysisMode.cs
-│       ├── TestCaseCache.cs
-│       ├── RequirementExtractor.cs
+│       ├── TestCaseCache.cs + ITestCaseCache.cs
+│       ├── RequirementExtractor.cs + IRequirementExtractor.cs
 │       ├── RequirementCache.cs
 │       ├── BatchProcessor.cs
 │       ├── BatchCheckpoint.cs
@@ -451,9 +464,15 @@ ai-test-suite-analyzer/
 │       ├── appsettings.json
 │       └── PromptConfig.json
 ├── tests/
-│   └── AITestAnalyzer.Tests/
-│       ├── ConfigurationValidatorTests.cs
-│       └── TestCaseCacheTests.cs
+│   ├── AITestAnalyzer.Tests/            # Unit tests (21 tests)
+│   │   ├── AIAnalyzerTests.cs
+│   │   ├── ExcelReaderTests.cs
+│   │   ├── ConfigurationValidatorTests.cs
+│   │   └── TestCaseCacheTests.cs
+│   └── AITestAnalyzer.IntegrationTests/ # Integration tests (5 tests)
+│       ├── PipelineTests.cs
+│       └── TestData/
+│           └── test_cases_shopease.xlsx
 ├── data/
 │   ├── requirements_shopease.md
 │   ├── test_cases_shopease.xlsx
@@ -543,11 +562,16 @@ ai-test-suite-analyzer/
 - [x] Constants.cs — no magic numbers or strings (CS-4)
 - [x] AnalysisMode promoted to top-level enum (CS-5)
 - [x] JSON export with `--format json` flag (EN-3)
-- [ ] Interfaces on service classes (TD-1) — Week 10
-- [ ] Dependency injection (ME-10) — Week 11
-- [ ] Integration tests (TD-5) — Week 12
-- [ ] Folder structure reorganisation — Week 12
-- [ ] Video demo + LinkedIn launch post — Week 13
+- [x] 5 service interfaces — IExcelReader, IExcelWriter, IAIAnalyzer, IRequirementExtractor, ITestCaseCache (TD-1)
+- [x] Dependency injection container with Microsoft.Extensions.DI (ME-10)
+- [x] SaveCacheAsync — async cache persistence (TD-2)
+- [x] Improved error messages across all classes (TD-4)
+- [x] Mock-based unit tests with Moq — 21 unit tests passing
+- [x] Integration test project — 5 end-to-end tests passing (TD-5)
+- [ ] Folder structure reorganisation (Issue #33) — Week 12
+- [ ] v1.0.0 release tag — Week 13
+- [ ] Video demo — Week 13
+- [ ] LinkedIn launch post — Week 13
 
 ### Future (Post April 19)
 - [ ] Web interface (Blazor)
@@ -581,7 +605,7 @@ ai-test-suite-analyzer/
 
 This is a personal project built as part of a 90-day commitment (January 20 - April 19, 2026) to build practical AI-powered tooling and demonstrate the ability to ship complete software from concept to production.
 
-**Status (Day 55)**: Phase 4 in progress. All 9 code review bugs closed. JSON export shipped. 55 consecutive days of commits — streak unbroken.
+**Status (Day 76)**: Phase 4 in progress. All interfaces extracted. DI container wired. 26 tests passing (21 unit + 5 integration). 76 consecutive days of commits — streak unbroken.
 
 ### Development Progress
 - **Days 1-7**: Foundation — setup, data, Excel processing, OpenAI integration, cost optimization
@@ -589,6 +613,7 @@ This is a personal project built as part of a 90-day commitment (January 20 - Ap
 - **Days 15-20**: Intelligence — requirement extraction, dual-mode analysis (QA/BA), coverage tracking
 - **Days 21-26**: Polish — Coverage Gap Analysis sheet, BA Statistics Dashboard
 - **Days 27-55**: Quality — all bugs fixed, performance improvements, code standards, JSON export
+- **Days 56-76**: Architecture — 5 interfaces, DI container, async I/O, improved errors, 26 tests passing
 
 ---
 
@@ -611,4 +636,4 @@ Built with:
 
 ---
 
-*Last Updated: March 15, 2026 (Day 55)*
+*Last Updated: April 5, 2026 (Day 76)*
