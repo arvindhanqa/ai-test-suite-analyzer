@@ -3,7 +3,7 @@ using OfficeOpenXml;
 using System;
 using System.IO;
 
-namespace AITestAnalyzer
+namespace AITestAnalyzer.Services
 {
     public class ExcelReader : IExcelReader
     {

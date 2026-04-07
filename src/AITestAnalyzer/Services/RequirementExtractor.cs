@@ -5,7 +5,7 @@ using OpenAI.Managers;
 using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;
 
-namespace AITestAnalyzer
+namespace AITestAnalyzer.Services
 {
     /// <summary>
     /// Extracts structured requirements from any document format using AI.

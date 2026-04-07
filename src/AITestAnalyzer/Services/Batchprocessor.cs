@@ -4,9 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using AITestAnalyzer.Models;
-using static AITestAnalyzer.BatchProcessor;
+using static AITestAnalyzer.Services.BatchProcessor;
 
-namespace AITestAnalyzer
+namespace AITestAnalyzer.Services
 {
     /// <summary>
     /// Handles batch processing of multiple Excel files

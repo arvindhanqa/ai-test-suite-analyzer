@@ -10,7 +10,7 @@ using OpenAI.Managers;
 using OpenAI.ObjectModels;
 using OpenAI.ObjectModels.RequestModels;
 
-namespace AITestAnalyzer
+namespace AITestAnalyzer.Services
 {
     // ============================================================
     // METHOD 3: Analyze Test Case with AI

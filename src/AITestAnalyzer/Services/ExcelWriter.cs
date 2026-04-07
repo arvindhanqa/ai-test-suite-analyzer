@@ -7,7 +7,7 @@ using AITestAnalyzer.Models;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;
 
-namespace AITestAnalyzer
+namespace AITestAnalyzer.Services
 {
     public class ExcelWriter : IExcelWriter
     {

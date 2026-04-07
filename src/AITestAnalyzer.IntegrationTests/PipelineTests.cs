@@ -4,6 +4,8 @@ using Moq;
 using OfficeOpenXml;
 using System.Text.Json;
 using AITestAnalyzer.Models;
+using AITestAnalyzer.Services;
+
 
 
 namespace AITestAnalyzer.IntegrationTests
