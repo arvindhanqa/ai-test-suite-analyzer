@@ -1,9 +1,9 @@
 using Xunit;
 using FluentAssertions;
 using Moq;
-using AITestAnalyzer;
 using OfficeOpenXml;
 using System.Text.Json;
+using AITestAnalyzer.Models;
 
 
 namespace AITestAnalyzer.IntegrationTests

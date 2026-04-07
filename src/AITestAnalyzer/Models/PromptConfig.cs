@@ -1,4 +1,4 @@
-namespace AITestAnalyzer
+namespace AITestAnalyzer.Models
 {
     public class PromptConfig
     {

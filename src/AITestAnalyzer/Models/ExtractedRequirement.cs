@@ -1,4 +1,4 @@
-namespace AITestAnalyzer
+namespace AITestAnalyzer.Models
 {
     /// <summary>
     /// Represents a requirement extracted from a requirement document.

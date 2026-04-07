@@ -1,3 +1,5 @@
+using AITestAnalyzer.Models;
+
 namespace AITestAnalyzer
 {
     public interface IExcelWriter

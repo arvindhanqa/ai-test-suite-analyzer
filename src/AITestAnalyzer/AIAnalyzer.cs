@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using AITestAnalyzer.Models;
 using OpenAI;
 using OpenAI.Managers;
 using OpenAI.ObjectModels;

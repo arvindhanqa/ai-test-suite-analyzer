@@ -5,6 +5,7 @@ using System.Linq;  // ADD THIS LINE
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using AITestAnalyzer.Models;
 
 namespace AITestAnalyzer
 {
