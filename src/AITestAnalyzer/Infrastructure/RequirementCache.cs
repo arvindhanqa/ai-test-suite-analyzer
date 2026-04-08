@@ -1,7 +1,7 @@
 using System.Text.Json;
 using AITestAnalyzer.Models;
 
-namespace AITestAnalyzer
+namespace AITestAnalyzer.Infrastructure
 {
     /// <summary>
     /// Caches extracted requirements to avoid redundant API calls.

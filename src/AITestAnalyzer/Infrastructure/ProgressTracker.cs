@@ -1,6 +1,6 @@
 using System;
 
-namespace AITestAnalyzer
+namespace AITestAnalyzer.Infrastructure
 {
     public class ProgressTracker
     {

@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace AITestAnalyzer
+namespace AITestAnalyzer.Infrastructure
 {
     /// <summary>
     /// Manages batch checkpoint file for resume capability.

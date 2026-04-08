@@ -1,3 +1,4 @@
+using AITestAnalyzer.Infrastructure;
 using AITestAnalyzer.Models;
 using AITestAnalyzer.Services;
 using Microsoft.Extensions.Configuration;

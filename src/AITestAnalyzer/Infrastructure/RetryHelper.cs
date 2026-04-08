@@ -1,4 +1,4 @@
-namespace AITestAnalyzer
+namespace AITestAnalyzer.Infrastructure
 {
     /// <summary>
     /// Reusable retry logic with exponential backoff for API calls.

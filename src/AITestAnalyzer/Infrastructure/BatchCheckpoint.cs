@@ -1,4 +1,4 @@
-namespace AITestAnalyzer
+namespace AITestAnalyzer.Infrastructure
 {
     /// <summary>
     /// Represents the saved state of an in-progress batch run.

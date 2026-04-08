@@ -1,3 +1,4 @@
+using AITestAnalyzer.Infrastructure;
 using AITestAnalyzer.Models;
 
 namespace AITestAnalyzer
