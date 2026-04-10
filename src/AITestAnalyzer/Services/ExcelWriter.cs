@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using AITestAnalyzer.Config;
 using AITestAnalyzer.Models;
 using OfficeOpenXml;
 using OfficeOpenXml.Style;

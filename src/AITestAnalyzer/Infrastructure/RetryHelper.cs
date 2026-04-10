@@ -1,3 +1,5 @@
+using AITestAnalyzer.Config;
+
 namespace AITestAnalyzer.Infrastructure
 {
     /// <summary>

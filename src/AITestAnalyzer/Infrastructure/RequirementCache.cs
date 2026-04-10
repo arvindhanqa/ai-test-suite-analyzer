@@ -1,4 +1,5 @@
 using System.Text.Json;
+using AITestAnalyzer.Config;
 using AITestAnalyzer.Models;
 
 namespace AITestAnalyzer.Infrastructure

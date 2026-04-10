@@ -1,4 +1,5 @@
 using System.Text.Json;
+using AITestAnalyzer.Config;
 using AITestAnalyzer.Infrastructure;
 using AITestAnalyzer.Models;
 using OpenAI;

@@ -1,4 +1,4 @@
-namespace AITestAnalyzer
+namespace AITestAnalyzer.Config
 {
     public static class Constants
     {

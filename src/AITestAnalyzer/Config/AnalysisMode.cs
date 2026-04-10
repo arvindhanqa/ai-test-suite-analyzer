@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace AITestAnalyzer
+namespace AITestAnalyzer.Config
 {
     public enum AnalysisMode
     {
