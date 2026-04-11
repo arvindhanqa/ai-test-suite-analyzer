@@ -2,7 +2,7 @@ using System.Text.Json;
 using AITestAnalyzer.Config;
 using AITestAnalyzer.Models;
 
-namespace AITestAnalyzer
+namespace AITestAnalyzer.Services
 {
     public static class JsonExporter
     {
