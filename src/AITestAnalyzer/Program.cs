@@ -2,10 +2,11 @@ using AITestAnalyzer.Config;
 using AITestAnalyzer.Infrastructure;
 using AITestAnalyzer.Models;
 using AITestAnalyzer.Services;
+using AITestAnalyzer.UI;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OfficeOpenXml;
-using static AITestAnalyzer.FileSelector;
+using static AITestAnalyzer.UI.FileSelector;
 
 namespace AITestAnalyzer
 {

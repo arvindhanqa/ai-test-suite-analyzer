@@ -5,7 +5,7 @@ using System.Linq;
 using AITestAnalyzer.Config;
 using AITestAnalyzer.Models;
 
-namespace AITestAnalyzer
+namespace AITestAnalyzer.UI
 {
     public class SummaryDisplay
     {

@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using AITestAnalyzer.Config;
 
-namespace AITestAnalyzer
+namespace AITestAnalyzer.UI
 {
     /// <summary>
     /// Handles all interactive file/folder selection for the analyzer.
