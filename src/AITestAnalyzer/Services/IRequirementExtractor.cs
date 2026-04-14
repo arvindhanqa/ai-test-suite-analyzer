@@ -2,7 +2,7 @@ using AITestAnalyzer.Config;
 using AITestAnalyzer.Infrastructure;
 using AITestAnalyzer.Models;
 
-namespace AITestAnalyzer
+namespace AITestAnalyzer.Services
 {
     public interface IRequirementExtractor
     {

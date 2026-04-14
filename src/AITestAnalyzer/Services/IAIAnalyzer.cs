@@ -1,6 +1,6 @@
 using AITestAnalyzer.Models;
 
-namespace AITestAnalyzer
+namespace AITestAnalyzer.Services
 {
     public interface IAIAnalyzer
     {
