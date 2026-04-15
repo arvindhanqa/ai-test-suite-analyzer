@@ -1,6 +1,9 @@
 using Xunit;
 using FluentAssertions;
 using AITestAnalyzer;
+using AITestAnalyzer.Infrastructure;
+using AITestAnalyzer.Models;
+using AITestAnalyzer.Config;
 
 namespace AITestAnalyzer.Tests
 {

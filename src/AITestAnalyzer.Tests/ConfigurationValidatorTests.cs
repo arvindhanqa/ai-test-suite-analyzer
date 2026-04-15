@@ -2,6 +2,7 @@ using Xunit;
 using FluentAssertions;
 using AITestAnalyzer;
 using OfficeOpenXml;
+using AITestAnalyzer.Models;
 
 namespace AITestAnalyzer.Tests
 {

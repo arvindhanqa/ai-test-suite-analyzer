@@ -23,3 +23,6 @@ jobs:
 
     - name: Build
       run: dotnet build src/AITestAnalyzer/AITestAnalyzer.csproj --no-restore --configuration Release
+      
+    - name: Test
+      run: dotnet test src/ --configuration Release --no-build

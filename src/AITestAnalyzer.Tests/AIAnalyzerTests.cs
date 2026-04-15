@@ -1,5 +1,7 @@
 using System.Buffers.Text;
 using AITestAnalyzer;
+using AITestAnalyzer.Models;
+using AITestAnalyzer.Services;
 using FluentAssertions;
 using Moq;
 using Xunit;
