@@ -270,33 +270,38 @@ DI Container (BuildServiceProvider) → Resolves IAIAnalyzer, ITestCaseCache,
 ### Code Structure
 ```
 AITestAnalyzer/
-├── Program.cs                  # Main orchestration + DI container + mode routing
-├── AnalysisMode.cs             # Top-level enum (QA / BA)
-├── Constants.cs                # All magic numbers and string constants
-├── Configuration.cs            # App configuration model
-├── PromptConfig.cs             # AI prompt configuration + cost per token
-├── TestCase.cs                 # Test case data model
-├── FileSelector.cs             # Interactive menu + mode selection
-├── IExcelReader.cs             # Interface for Excel reading
-├── ExcelReader.cs              # Excel reading + validation (single file open)
-├── IExcelWriter.cs             # Interface for Excel writing
-├── ExcelWriter.cs              # Mode-aware Excel writing + buffered flush
-├── JsonExporter.cs             # JSON export for CI/CD integration
-├── IAIAnalyzer.cs              # Interface for AI analysis
-├── AIAnalyzer.cs               # OpenAI integration (2 analysis methods)
-├── IRequirementExtractor.cs    # Interface for requirement extraction
-├── RequirementExtractor.cs     # AI requirement extraction
-├── ITestCaseCache.cs           # Interface for test case cache
-├── TestCaseCache.cs            # Dual-mode cache (QA + BA namespaces)
-├── RetryHelper.cs              # Generic retry with exponential backoff
-├── ProgressTracker.cs          # Real-time progress display
-├── SummaryDisplay.cs           # Console output formatting
-├── RequirementCache.cs         # Requirement document cache
-├── ExtractedRequirement.cs     # Requirement data model
-├── ConfigurationValidator.cs   # Startup validation (API key + PromptConfig)
-├── BatchProcessor.cs           # Multi-file batch (mode-aware + checkpoint)
-├── BatchCheckpoint.cs          # Checkpoint data model
-└── CheckpointManager.cs        # Save/load/delete checkpoint state
+├── Program.cs                      # Entry point + DI container + mode routing
+├── Config/
+│   ├── AnalysisMode.cs             # Top-level enum (QA / BA)
+│   └── Constants.cs                # All magic numbers and string constants
+├── Models/
+│   ├── Configuration.cs            # App configuration model
+│   ├── ExtractedRequirement.cs     # Requirement data model
+│   ├── PromptConfig.cs             # AI prompt configuration + cost per token
+│   └── TestCase.cs                 # Test case data model
+├── Services/
+│   ├── AIAnalyzer.cs               # OpenAI integration (2 analysis methods)
+│   ├── IAIAnalyzer.cs              # Interface for AI analysis
+│   ├── BatchProcessor.cs           # Multi-file batch (mode-aware + checkpoint)
+│   ├── ConfigurationValidator.cs   # Startup validation (API key + PromptConfig)
+│   ├── ExcelReader.cs              # Excel reading + validation (single file open)
+│   ├── IExcelReader.cs             # Interface for Excel reading
+│   ├── ExcelWriter.cs              # Mode-aware Excel writing + buffered flush
+│   ├── IExcelWriter.cs             # Interface for Excel writing
+│   ├── JsonExporter.cs             # JSON export for CI/CD integration
+│   ├── RequirementExtractor.cs     # AI requirement extraction
+│   └── IRequirementExtractor.cs    # Interface for requirement extraction
+├── Infrastructure/
+│   ├── BatchCheckpoint.cs          # Checkpoint data model
+│   ├── CheckpointManager.cs        # Save/load/delete checkpoint state
+│   ├── ITestCaseCache.cs           # Interface for test case cache
+│   ├── ProgressTracker.cs          # Real-time progress display
+│   ├── RequirementCache.cs         # Requirement document cache
+│   ├── RetryHelper.cs              # Generic retry with exponential backoff
+│   └── TestCaseCache.cs            # Dual-mode cache (QA + BA namespaces)
+└── UI/
+    ├── FileSelector.cs             # Interactive menu + mode selection
+    └── SummaryDisplay.cs           # Console output formatting
 ```
 
 **Key Design Principles:**
@@ -440,27 +445,33 @@ ai-test-suite-analyzer/
 ├── src/
 │   └── AITestAnalyzer/
 │       ├── Program.cs
-│       ├── FileSelector.cs
-│       ├── AIAnalyzer.cs + IAIAnalyzer.cs
-│       ├── ExcelReader.cs + IExcelReader.cs
-│       ├── ExcelWriter.cs + IExcelWriter.cs
-│       ├── JsonExporter.cs
-│       ├── RetryHelper.cs
-│       ├── Constants.cs
-│       ├── AnalysisMode.cs
-│       ├── TestCaseCache.cs + ITestCaseCache.cs
-│       ├── RequirementExtractor.cs + IRequirementExtractor.cs
-│       ├── RequirementCache.cs
-│       ├── BatchProcessor.cs
-│       ├── BatchCheckpoint.cs
-│       ├── CheckpointManager.cs
-│       ├── ProgressTracker.cs
-│       ├── SummaryDisplay.cs
-│       ├── ConfigurationValidator.cs
-│       ├── Configuration.cs
-│       ├── PromptConfig.cs
-│       ├── TestCase.cs
-│       ├── ExtractedRequirement.cs
+│       ├── Config/
+│       │   ├── AnalysisMode.cs
+│       │   └── Constants.cs
+│       ├── Models/
+│       │   ├── Configuration.cs
+│       │   ├── ExtractedRequirement.cs
+│       │   ├── PromptConfig.cs
+│       │   └── TestCase.cs
+│       ├── Services/
+│       │   ├── AIAnalyzer.cs + IAIAnalyzer.cs
+│       │   ├── BatchProcessor.cs
+│       │   ├── ConfigurationValidator.cs
+│       │   ├── ExcelReader.cs + IExcelReader.cs
+│       │   ├── ExcelWriter.cs + IExcelWriter.cs
+│       │   ├── JsonExporter.cs
+│       │   └── RequirementExtractor.cs + IRequirementExtractor.cs
+│       ├── Infrastructure/
+│       │   ├── BatchCheckpoint.cs
+│       │   ├── CheckpointManager.cs
+│       │   ├── ITestCaseCache.cs
+│       │   ├── ProgressTracker.cs
+│       │   ├── RequirementCache.cs
+│       │   ├── RetryHelper.cs
+│       │   └── TestCaseCache.cs
+│       ├── UI/
+│       │   ├── FileSelector.cs
+│       │   └── SummaryDisplay.cs
 │       ├── appsettings.json
 │       └── PromptConfig.json
 ├── tests/
@@ -568,7 +579,7 @@ ai-test-suite-analyzer/
 - [x] Improved error messages across all classes (TD-4)
 - [x] Mock-based unit tests with Moq — 21 unit tests passing
 - [x] Integration test project — 5 end-to-end tests passing (TD-5)
-- [ ] Folder structure reorganisation (Issue #33) — Week 12
+- [x] Folder structure reorganisation — Config/, Models/, Services/, Infrastructure/, UI/ (Issue #33)
 - [ ] v1.0.0 release tag — Week 13
 - [ ] Video demo — Week 13
 - [ ] LinkedIn launch post — Week 13
@@ -605,7 +616,7 @@ ai-test-suite-analyzer/
 
 This is a personal project built as part of a 90-day commitment (January 20 - April 19, 2026) to build practical AI-powered tooling and demonstrate the ability to ship complete software from concept to production.
 
-**Status (Day 76)**: Phase 4 in progress. All interfaces extracted. DI container wired. 26 tests passing (21 unit + 5 integration). 76 consecutive days of commits — streak unbroken.
+**Status (Day 80)**: Phase 4 in progress. Folder reorganisation complete. 26 tests passing (21 unit + 5 integration). 80 consecutive days of commits — streak unbroken.
 
 ### Development Progress
 - **Days 1-7**: Foundation — setup, data, Excel processing, OpenAI integration, cost optimization
@@ -614,6 +625,7 @@ This is a personal project built as part of a 90-day commitment (January 20 - Ap
 - **Days 21-26**: Polish — Coverage Gap Analysis sheet, BA Statistics Dashboard
 - **Days 27-55**: Quality — all bugs fixed, performance improvements, code standards, JSON export
 - **Days 56-76**: Architecture — 5 interfaces, DI container, async I/O, improved errors, 26 tests passing
+- **Days 77-80**: Structure — folder reorganisation (Config/, Models/, Services/, Infrastructure/, UI/)
 
 ---
 
@@ -636,4 +648,4 @@ Built with:
 
 ---
 
-*Last Updated: April 5, 2026 (Day 76)*
+*Last Updated: April 14, 2026 (Day 85)*
