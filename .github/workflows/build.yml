@@ -24,7 +24,7 @@ jobs:
     - name: Build
       run: dotnet build src/AITestAnalyzer/AITestAnalyzer.csproj --no-restore --configuration Release
       
-- name: Test
+    - name: Test
       run: |
         dotnet test src/AITestAnalyzer.Tests/AITestAnalyzer.Tests.csproj --configuration Release --no-build
         dotnet test src/AITestAnalyzer.IntegrationTests/AITestAnalyzer.IntegrationTests.csproj --configuration Release --no-build
