@@ -17,7 +17,7 @@ namespace AITestAnalyzer.Config
         // UI Configuration
         public const int PROGRESS_BAR_WIDTH = 20;
 
-        //Hash Lenght
+        //Hash Length
         public const int HASH_LENGTH = 16;
         public const int ESTIMATED_TOKENS_PER_CACHED_TEST = 150;
 

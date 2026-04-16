@@ -63,14 +63,14 @@ namespace AITestAnalyzer
         /// </remarks>
         public async Task<(bool IsValid, string ErrorMessage)> ValidateAllAsync(string excelPath, int worksheetIndex)
         {
-            // 2. Validate Promptconfig file
+            // 1. Validate Promptconfig file
             var promptconfigResult = ValidatePromptConfig();
             if (!promptconfigResult.IsValid)
             {
                 return (false, promptconfigResult.ErrorMessage);
             }
 
-            // 1. Validate API Key
+            // 2. Validate API Key
             var apiKeyResult = ValidateApiKey();
             if (!apiKeyResult.IsValid)
             {
