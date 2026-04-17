@@ -72,8 +72,9 @@ namespace AITestAnalyzer.Infrastructure
                         }
                     }
                 }
-                catch
+                catch (Exception ex)
                 {
+                    Console.WriteLine($"[Cache] Warning: Failed to load cache from '{_cacheFilePath}': {ex.GetType().Name} — {ex.Message}. Starting with empty cache.");
                     _cache = new Dictionary<string, CachedResult>();
                 }
             }
