@@ -83,7 +83,7 @@ namespace AITestAnalyzer
                   args.SkipWhile(a => a.ToLower() != "--format").Skip(1).FirstOrDefault()?.ToLower() == "json";
 
             WriteHeader("===============================================");
-            WriteHeader("AI Test Suite Analyzer - Week 1");
+            WriteHeader($"{AppName} v{Version}");
             WriteHeader("===============================================");
             Console.WriteLine();
 
