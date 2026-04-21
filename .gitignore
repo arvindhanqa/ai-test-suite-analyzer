@@ -66,3 +66,6 @@ analysis_results_*.xlsx
 cache/
 **/cache/
 test_analysis_cache.json
+
+# Demo video files
+*.mp4

@@ -2,6 +2,13 @@
 
 [![Build](https://github.com/arvindhanqa/ai-test-suite-analyzer/actions/workflows/build.yml/badge.svg)](https://github.com/arvindhanqa/ai-test-suite-analyzer/actions/workflows/build.yml)
 
+## 📺 Demo
+
+[![AI Test Suite Analyzer Demo](https://img.youtube.com/vi/RPSe74kPhn0/0.jpg)](https://youtu.be/RPSe74kPhn0)
+
+> Full walkthrough: QA Mode, BA Mode, JSON export, caching (6 min)
+
+---
 
 > AI-powered test case quality analysis and requirement coverage validation — analyze 56 test cases for $0.001, re-run for free
 
