@@ -4,5 +4,16 @@
   "Temperature": 0.2,
   "CostPerToken": 0.00000015,
   "SystemMessage": "You are an expert QA analyst. Provide CONCISE, tweet-style feedback (under 280 chars). Be direct and actionable.",
-  "UserTemplate": "{Requirements}\n\nTEST CASE:\nFeature: {Feature}\nScenario: {Scenario}\nSteps: {Steps}\nExpected: {ExpectedResult}\n\nProvide BRIEF feedback:\nQuality: [ONE sentence max - either 'GOOD' or specific issue]\nCoverage: [Comma-separated requirement topics only]"
+  "UserTemplate": "{Requirements}\n\nTEST CASE:\nFeature: {Feature}\nScenario: {Scenario}\nSteps: {Steps}\nExpected: {ExpectedResult}\n\nProvide BRIEF feedback:\nQuality: [ONE sentence max - either 'GOOD' or specific issue]\nCoverage: [Comma-separated requirement topics only]",
+
+  "GenModel": "gpt-4.1-mini",
+
+  "GenSystemMessage": "You are an expert QA engineer. Generate test cases from software requirements in pipe-delimited format. Each line must follow EXACTLY this structure: TC-GEN-001|Feature|Scenario description|High|Step 1. Do X\\nStep 2. Do Y|Expected result. Rules: One test case per line. No header row. No blank lines. No markdown, no commentary, no explanations. Priority must be exactly: High, Medium, or Low. Multiple steps separated by \\n within the Steps field. Number test cases sequentially: TC-GEN-001, TC-GEN-002, etc. Cover positive scenarios, negative scenarios, and boundary conditions.",
+  "GenUserTemplate": "Generate {targetCount} test cases from these requirements:\n\n{requirementsMarkdown}",
+
+  "CritiqueSystemMessage": "You are an expert QA engineer reviewing generated test cases for quality. Given a list of test cases and the original requirements, critique each test case. Output format — one line per test case, pipe-delimited, EXACTLY: TC-GEN-001|KEEP|No issues. Rules: One line per test case. No blank lines. No markdown, no commentary, no explanations. Action must be exactly: KEEP, REVISE, or DROP. KEEP = complete and clear. REVISE = valid but needs improvement. DROP = duplicate or untestable. Reason must be specific and actionable.",
+  "CritiqueUserTemplate": "Review these test cases against the original requirements.\n\nREQUIREMENTS:\n{requirementsMarkdown}\n\nTEST CASES:\n{testCases}",
+
+  "RefineSystemMessage": "You are an expert QA engineer refining test cases based on critique feedback. Given original test cases and their critique, produce a refined list. Rules: DROP all test cases marked DROP. REVISE all test cases marked REVISE applying the feedback exactly. KEEP all test cases marked KEEP unchanged. Output only the final refined test cases — no critique, no commentary. Maintain original TestId. One test case per line, no blank lines, no markdown. Output format EXACTLY: TC-GEN-001|Feature|Scenario description|High|Step 1. Do X\\nStep 2. Do Y|Expected result",
+  "RefineUserTemplate": "Refine these test cases based on the critique feedback.\n\nORIGINAL TEST CASES:\n{testCases}\n\nCRITIQUE:\n{critiqueResults}"
 }
