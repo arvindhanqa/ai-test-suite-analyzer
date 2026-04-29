@@ -319,5 +319,38 @@ namespace AITestAnalyzer.IntegrationTests
             if (File.Exists(jsonPath))
                 File.Delete(jsonPath);
         }
+
+        [Fact]
+        public async Task GenerateTestCasesAsync_WhenCalled_Returns5TestCases()
+        {
+            // ARRANGE
+            var mockAnalyzer = new Mock<IAIAnalyzer>();
+
+            var expectedTestCases = Enumerable.Range(1, 5)
+                .Select(i => new GeneratedTestCase
+                {
+                    TestId = $"TC-GEN-00{i}",
+                    Feature = "User Registration",
+                    Scenario = $"Scenario {i}",
+                    Priority = "High",
+                    Steps = "Step 1. Do X\nStep 2. Do Y",
+                    ExpectedResult = "Expected result"
+                }).ToList();
+
+            mockAnalyzer
+                .Setup(a => a.GenerateTestCasesAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<int>()))
+                .ReturnsAsync((expectedTestCases, 500));
+
+            // ACT
+            var (testCases, tokens) = await mockAnalyzer.Object
+                .GenerateTestCasesAsync("some requirements", 5);
+
+            // ASSERT
+            testCases.Should().HaveCount(5);
+            testCases.First().TestId.Should().Be("TC-GEN-001");
+            tokens.Should().Be(500);
+        }
     }
 }

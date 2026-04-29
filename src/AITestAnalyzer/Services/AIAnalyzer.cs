@@ -266,5 +266,85 @@ FEEDBACK:
 
             return formatted.ToString();
         }
+
+        /// <summary>
+        /// GEN MODE: Generates test cases from requirements markdown.
+        /// Calls OpenAI using GenModel and GenSystemMessage/GenUserTemplate from PromptConfig.
+        /// Parses pipe-delimited response into List of GeneratedTestCase.
+        /// </summary>
+        public async Task<(List<GeneratedTestCase> TestCases, int Tokens)> GenerateTestCasesAsync(
+            string requirementsMarkdown,
+            int targetCount)
+        {
+            string systemMessage = _promptConfig.GenSystemMessage;
+            string userPrompt = _promptConfig.GenUserTemplate
+                .Replace("{targetCount}", targetCount.ToString())
+                .Replace("{requirementsMarkdown}", requirementsMarkdown);
+
+            var result = await RetryHelper.ExecuteWithRetryAsync(
+                operation: () => _openAiService.ChatCompletion.CreateCompletion(
+                    new ChatCompletionCreateRequest
+                    {
+                        Messages = new List<ChatMessage>
+                        {
+                            ChatMessage.FromSystem(systemMessage),
+                            ChatMessage.FromUser(userPrompt)
+                        },
+                        Model = _promptConfig.GenModel,
+                        MaxTokens = Constants.TOKENS_GEN_MODE,
+                        Temperature = (float)_promptConfig.Temperature
+                    }),
+                isSuccess: r => r.Successful,
+                getErrorMessage: r => r.Error?.Message ?? "Unknown API error"
+            );
+
+            if (result == null)
+                return (new List<GeneratedTestCase>(), 0);
+
+            string response = result.Choices.First().Message.Content!.Trim();
+            int tokens = result.Usage!.TotalTokens;
+            var testCases = ParseGeneratedTestCases(response);
+
+            return (testCases, tokens);
+        }
+
+        /// <summary>
+        /// Parses pipe-delimited AI response into a list of GeneratedTestCase objects.
+        /// Format: TC-GEN-001|Feature|Scenario|Priority|Steps|ExpectedResult
+        /// Skips malformed rows silently — logs a warning per skipped line.
+        /// </summary>
+        private List<GeneratedTestCase> ParseGeneratedTestCases(string response)
+        {
+            var results = new List<GeneratedTestCase>();
+            var lines = response.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (var line in lines)
+            {
+                var trimmed = line.Trim();
+                if (string.IsNullOrWhiteSpace(trimmed))
+                    continue;
+
+                var parts = trimmed.Split('|');
+                if (parts.Length < 6)
+                {
+                    Console.WriteLine($"⚠️  ParseGeneratedTestCases: skipping malformed line — {trimmed}");
+                    continue;
+                }
+
+                results.Add(new GeneratedTestCase
+                {
+                    TestId = parts[0].Trim(),
+                    Feature = parts[1].Trim(),
+                    Scenario = parts[2].Trim(),
+                    Priority = parts[3].Trim(),
+                    Steps = parts[4].Trim().Replace("\\n", "\n"),
+                    ExpectedResult = parts[5].Trim(),
+                    PassNumber = 1,
+                    GeneratedAt = DateTime.UtcNow
+                });
+            }
+
+            return results;
+        }
     }
 }
