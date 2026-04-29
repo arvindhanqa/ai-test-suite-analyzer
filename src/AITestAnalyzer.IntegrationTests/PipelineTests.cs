@@ -352,5 +352,43 @@ namespace AITestAnalyzer.IntegrationTests
             testCases.First().TestId.Should().Be("TC-GEN-001");
             tokens.Should().Be(500);
         }
+
+        [Fact]
+        public async Task CritiqueTestCasesAsync_WhenCalled_ReturnsCorrectActions()
+        {
+            // ARRANGE
+            var mockAnalyzer = new Mock<IAIAnalyzer>();
+
+            var testCases = new List<GeneratedTestCase>
+            {
+                new GeneratedTestCase { TestId = "TC-GEN-001", Feature = "Login" },
+                new GeneratedTestCase { TestId = "TC-GEN-002", Feature = "Login" },
+                new GeneratedTestCase { TestId = "TC-GEN-003", Feature = "Login" }
+            };
+
+            var expectedCritiques = new List<CritiqueResult>
+            {
+                new CritiqueResult { TestId = "TC-GEN-001", Action = "KEEP",   Reason = "No issues" },
+                new CritiqueResult { TestId = "TC-GEN-002", Action = "REVISE", Reason = "Missing precondition" },
+                new CritiqueResult { TestId = "TC-GEN-003", Action = "DROP",   Reason = "Duplicate of TC-GEN-001" }
+            };
+
+            mockAnalyzer
+                .Setup(a => a.CritiqueTestCasesAsync(
+                    It.IsAny<List<GeneratedTestCase>>(),
+                    It.IsAny<string>()))
+                .ReturnsAsync((expectedCritiques, 300));
+
+            // ACT
+            var (critiques, tokens) = await mockAnalyzer.Object
+                .CritiqueTestCasesAsync(testCases, "some requirements");
+
+            // ASSERT
+            critiques.Should().HaveCount(3);
+            critiques[0].Action.Should().Be("KEEP");
+            critiques[1].Action.Should().Be("REVISE");
+            critiques[2].Action.Should().Be("DROP");
+            tokens.Should().Be(300);
+        }
     }
 }

@@ -346,5 +346,99 @@ FEEDBACK:
 
             return results;
         }
+
+        /// <summary>
+        /// GEN MODE: Critiques generated test cases against original requirements.
+        /// Calls OpenAI using GenModel and CritiqueSystemMessage/CritiqueUserTemplate.
+        /// Parses pipe-delimited response into List of CritiqueResult.
+        /// </summary>
+        public async Task<(List<CritiqueResult> Critiques, int Tokens)> CritiqueTestCasesAsync(
+            List<GeneratedTestCase> testCases,
+            string requirementsMarkdown)
+        {
+            string testCasesFormatted = FormatGeneratedTestCasesForPrompt(testCases);
+
+            string systemMessage = _promptConfig.CritiqueSystemMessage;
+            string userPrompt = _promptConfig.CritiqueUserTemplate
+                .Replace("{requirementsMarkdown}", requirementsMarkdown)
+                .Replace("{testCases}", testCasesFormatted);
+
+            var result = await RetryHelper.ExecuteWithRetryAsync(
+                operation: () => _openAiService.ChatCompletion.CreateCompletion(
+                    new ChatCompletionCreateRequest
+                    {
+                        Messages = new List<ChatMessage>
+                        {
+                            ChatMessage.FromSystem(systemMessage),
+                            ChatMessage.FromUser(userPrompt)
+                        },
+                        Model = _promptConfig.GenModel,
+                        MaxTokens = Constants.TOKENS_CRITIQUE_MODE,
+                        Temperature = (float)_promptConfig.Temperature
+                    }),
+                isSuccess: r => r.Successful,
+                getErrorMessage: r => r.Error?.Message ?? "Unknown API error"
+            );
+
+            if (result == null)
+                return (new List<CritiqueResult>(), 0);
+
+            string response = result.Choices.First().Message.Content!.Trim();
+            int tokens = result.Usage!.TotalTokens;
+            var critiques = ParseCritiqueResults(response);
+
+            return (critiques, tokens);
+        }
+
+        /// <summary>
+        /// Parses pipe-delimited AI critique response into a list of CritiqueResult objects.
+        /// Format: TC-GEN-001|KEEP|No issues
+        /// Unknown action values default to KEEP. Malformed lines are skipped with a warning.
+        /// </summary>
+        private List<CritiqueResult> ParseCritiqueResults(string response)
+        {
+            var results = new List<CritiqueResult>();
+            var lines = response.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (var line in lines)
+            {
+                var trimmed = line.Trim();
+                if (string.IsNullOrWhiteSpace(trimmed))
+                    continue;
+
+                var parts = trimmed.Split('|');
+                if (parts.Length < 3)
+                {
+                    Console.WriteLine($"⚠️  ParseCritiqueResults: skipping malformed line — {trimmed}");
+                    continue;
+                }
+
+                string action = parts[1].Trim().ToUpper();
+                if (action != "KEEP" && action != "REVISE" && action != "DROP")
+                {
+                    Console.WriteLine($"⚠️  ParseCritiqueResults: unknown action '{action}' — defaulting to KEEP");
+                    action = "KEEP";
+                }
+
+                results.Add(new CritiqueResult
+                {
+                    TestId = parts[0].Trim(),
+                    Action = action,
+                    Reason = parts[2].Trim()
+                });
+            }
+
+            return results;
+        }
+
+        /// <summary>
+        /// Formats a list of GeneratedTestCase objects into pipe-delimited string
+        /// for inclusion in Critique and Refine prompts.
+        /// </summary>
+        private static string FormatGeneratedTestCasesForPrompt(List<GeneratedTestCase> testCases)
+        {
+            return string.Join("\n", testCases.Select(tc =>
+                $"{tc.TestId}|{tc.Feature}|{tc.Scenario}|{tc.Priority}|{tc.Steps.Replace("\n", "\\n")}|{tc.ExpectedResult}"));
+        }
     }
 }
