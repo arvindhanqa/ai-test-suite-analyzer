@@ -390,5 +390,50 @@ namespace AITestAnalyzer.IntegrationTests
             critiques[2].Action.Should().Be("DROP");
             tokens.Should().Be(300);
         }
+
+        [Fact]
+        public async Task RefineTestCasesAsync_WhenCalled_RemovesDroppedTestCases()
+        {
+            // ARRANGE
+            var mockAnalyzer = new Mock<IAIAnalyzer>();
+
+            var testCases = new List<GeneratedTestCase>
+            {
+                new GeneratedTestCase { TestId = "TC-GEN-001", Feature = "Login" },
+                new GeneratedTestCase { TestId = "TC-GEN-002", Feature = "Login" },
+                new GeneratedTestCase { TestId = "TC-GEN-003", Feature = "Login" }
+            };
+
+            var critiques = new List<CritiqueResult>
+            {
+                new CritiqueResult { TestId = "TC-GEN-001", Action = "KEEP",   Reason = "No issues" },
+                new CritiqueResult { TestId = "TC-GEN-002", Action = "REVISE", Reason = "Missing precondition" },
+                new CritiqueResult { TestId = "TC-GEN-003", Action = "DROP",   Reason = "Duplicate of TC-GEN-001" }
+            };
+
+            // Refined output: TC-GEN-003 dropped, TC-GEN-002 revised
+            var refinedTestCases = new List<GeneratedTestCase>
+            {
+                new GeneratedTestCase { TestId = "TC-GEN-001", Feature = "Login" },
+                new GeneratedTestCase { TestId = "TC-GEN-002", Feature = "Login", PassNumber = 2 }
+            };
+
+            mockAnalyzer
+                .Setup(a => a.RefineTestCasesAsync(
+                    It.IsAny<List<GeneratedTestCase>>(),
+                    It.IsAny<List<CritiqueResult>>(),
+                    It.IsAny<string>()))
+                .ReturnsAsync((refinedTestCases, 400));
+
+            // ACT
+            var (refined, tokens) = await mockAnalyzer.Object
+                .RefineTestCasesAsync(testCases, critiques, "some requirements");
+
+            // ASSERT
+            refined.Should().HaveCount(2);
+            refined.Should().NotContain(t => t.TestId == "TC-GEN-003");
+            refined.Should().Contain(t => t.TestId == "TC-GEN-002" && t.PassNumber == 2);
+            tokens.Should().Be(400);
+        }
     }
 }

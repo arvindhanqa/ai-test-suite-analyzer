@@ -440,5 +440,84 @@ FEEDBACK:
             return string.Join("\n", testCases.Select(tc =>
                 $"{tc.TestId}|{tc.Feature}|{tc.Scenario}|{tc.Priority}|{tc.Steps.Replace("\n", "\\n")}|{tc.ExpectedResult}"));
         }
+
+        /// <summary>
+        /// GEN MODE: Refines generated test cases by applying critique feedback.
+        /// Calls OpenAI using GenModel and RefineSystemMessage/RefineUserTemplate.
+        /// KEEP items returned unchanged. REVISE items improved. DROP items removed.
+        /// </summary>
+        public async Task<(List<GeneratedTestCase> Refined, int Tokens)> RefineTestCasesAsync(
+            List<GeneratedTestCase> testCases,
+            List<CritiqueResult> critiques,
+            string requirementsMarkdown)
+        {
+            // Short-circuit: if nothing to revise or drop, return unchanged
+            bool hasChanges = critiques.Any(c => c.Action == "REVISE" || c.Action == "DROP");
+            if (!hasChanges)
+            {
+                Console.WriteLine("      ✅ All critiques are KEEP — skipping refinement pass.");
+                return (testCases, 0);
+            }
+
+            string testCasesFormatted = FormatGeneratedTestCasesForPrompt(testCases);
+            string critiqueFormatted = FormatCritiqueResultsForPrompt(critiques);
+
+            string systemMessage = _promptConfig.RefineSystemMessage;
+            string userPrompt = _promptConfig.RefineUserTemplate
+                .Replace("{testCases}", testCasesFormatted)
+                .Replace("{critiqueResults}", critiqueFormatted);
+
+            var result = await RetryHelper.ExecuteWithRetryAsync(
+                operation: () => _openAiService.ChatCompletion.CreateCompletion(
+                    new ChatCompletionCreateRequest
+                    {
+                        Messages = new List<ChatMessage>
+                        {
+                            ChatMessage.FromSystem(systemMessage),
+                            ChatMessage.FromUser(userPrompt)
+                        },
+                        Model = _promptConfig.GenModel,
+                        MaxTokens = Constants.TOKENS_REFINE_MODE,
+                        Temperature = (float)_promptConfig.Temperature
+                    }),
+                isSuccess: r => r.Successful,
+                getErrorMessage: r => r.Error?.Message ?? "Unknown API error"
+            );
+
+            if (result == null)
+            {
+                Console.WriteLine("⚠️  RefineTestCasesAsync: API call failed — returning original test cases.");
+                return (testCases, 0);
+            }
+
+            string response = result.Choices.First().Message.Content!.Trim();
+            int tokens = result.Usage!.TotalTokens;
+
+            // Parse refined output — increment PassNumber for revised items
+            var refined = ParseGeneratedTestCases(response);
+            var revisedIds = critiques
+                .Where(c => c.Action == "REVISE")
+                .Select(c => c.TestId)
+                .ToHashSet();
+
+            foreach (var tc in refined)
+            {
+                if (revisedIds.Contains(tc.TestId))
+                    tc.PassNumber = testCases
+                        .FirstOrDefault(t => t.TestId == tc.TestId)?.PassNumber + 1 ?? 2;
+            }
+
+            return (refined, tokens);
+        }
+
+        /// <summary>
+        /// Formats a list of CritiqueResult objects into pipe-delimited string
+        /// for inclusion in the Refine prompt.
+        /// </summary>
+        private static string FormatCritiqueResultsForPrompt(List<CritiqueResult> critiques)
+        {
+            return string.Join("\n", critiques.Select(c =>
+                $"{c.TestId}|{c.Action}|{c.Reason}"));
+        }
     }
 }

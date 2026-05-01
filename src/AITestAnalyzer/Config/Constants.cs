@@ -12,6 +12,7 @@ namespace AITestAnalyzer.Config
         public const int TOKENS_REQUIREMENT_EXTRACTION = 4000;
         public const int TOKENS_GEN_MODE = 2000;
         public const int TOKENS_CRITIQUE_MODE = 400;
+        public const int TOKENS_REFINE_MODE = 600;
 
 
         // Cache Configuration

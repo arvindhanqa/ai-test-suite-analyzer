@@ -25,5 +25,15 @@ namespace AITestAnalyzer.Services
         Task<(List<CritiqueResult> Critiques, int Tokens)> CritiqueTestCasesAsync(
             List<GeneratedTestCase> testCases,
             string requirementsMarkdown);
+
+        /// <summary>
+        /// GEN MODE: Refines generated test cases by applying critique feedback.
+        /// KEEP items returned unchanged. REVISE items improved. DROP items removed.
+        /// Uses gpt-4.1-mini and RefineSystemMessage/RefineUserTemplate from PromptConfig.
+        /// </summary>
+        Task<(List<GeneratedTestCase> Refined, int Tokens)> RefineTestCasesAsync(
+            List<GeneratedTestCase> testCases,
+            List<CritiqueResult> critiques,
+            string requirementsMarkdown);
     }
 }
