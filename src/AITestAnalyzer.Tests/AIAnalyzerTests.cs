@@ -1,5 +1,3 @@
-using System.Buffers.Text;
-using AITestAnalyzer;
 using AITestAnalyzer.Models;
 using AITestAnalyzer.Services;
 using FluentAssertions;
@@ -10,12 +8,15 @@ namespace AITestAnalyzer.Tests
 {
     public class AIAnalyzerTests
     {
+        // ============================================================
+        // MOCK-BASED TESTS — interface contract tests
+        // ============================================================
+
         [Fact]
         public async Task AnalyzeTestQualityAsync_WhenCalled_ReturnsQualityAndTokens()
         {
             // ARRANGE
             var mockAnalyzer = new Mock<IAIAnalyzer>();
-
             var testCase = new TestCase
             {
                 TestId = "TC-001",
@@ -24,7 +25,6 @@ namespace AITestAnalyzer.Tests
                 Steps = "1. Enter username\n2. Enter password\n3. Click login",
                 ExpectedResult = "User is logged in successfully"
             };
-
             mockAnalyzer
                 .Setup(a => a.AnalyzeTestQualityAsync(testCase))
                 .ReturnsAsync(("GOOD - Clear steps and expected result", 150));
@@ -43,7 +43,6 @@ namespace AITestAnalyzer.Tests
         {
             // ARRANGE
             var mockAnalyzer = new Mock<IAIAnalyzer>();
-
             var testCase = new TestCase
             {
                 TestId = "TC-001",
@@ -52,7 +51,6 @@ namespace AITestAnalyzer.Tests
                 Steps = "1. Enter username",
                 ExpectedResult = "User logged in"
             };
-
             mockAnalyzer
                 .Setup(a => a.AnalyzeTestQualityAsync(testCase))
                 .ReturnsAsync(("GOOD", 120));
@@ -72,7 +70,6 @@ namespace AITestAnalyzer.Tests
         {
             // ARRANGE
             var mockAnalyzer = new Mock<IAIAnalyzer>();
-
             var testCase = new TestCase
             {
                 TestId = "TC-001",
@@ -81,9 +78,7 @@ namespace AITestAnalyzer.Tests
                 Steps = "1. Fill form\n2. Submit",
                 ExpectedResult = "Account created"
             };
-
             var requirements = new List<ExtractedRequirement>();
-
             mockAnalyzer
                 .Setup(a => a.AnalyzeCoverageAndFeedbackAsync(testCase, requirements))
                 .ReturnsAsync(("", new List<string> { "FR-AUTH-001", "FR-AUTH-002" }, 800));
@@ -96,6 +91,197 @@ namespace AITestAnalyzer.Tests
             coverageIds.Should().HaveCount(2);
             coverageIds.Should().Contain("FR-AUTH-001");
             tokens.Should().Be(800);
+        }
+
+        [Fact]
+        public async Task GenerateTestCasesAsync_WhenCalled_Returns5TestCases()
+        {
+            // ARRANGE
+            var mockAnalyzer = new Mock<IAIAnalyzer>();
+            var expectedTestCases = Enumerable.Range(1, 5)
+                .Select(i => new GeneratedTestCase
+                {
+                    TestId = $"TC-GEN-00{i}",
+                    Feature = "User Registration",
+                    Scenario = $"Scenario {i}",
+                    Priority = "High",
+                    Steps = "Step 1. Do X\nStep 2. Do Y",
+                    ExpectedResult = "Expected result"
+                }).ToList();
+            mockAnalyzer
+                .Setup(a => a.GenerateTestCasesAsync(
+                    It.IsAny<string>(),
+                    It.IsAny<int>()))
+                .ReturnsAsync((expectedTestCases, 500));
+
+            // ACT
+            var (testCases, tokens) = await mockAnalyzer.Object
+                .GenerateTestCasesAsync("some requirements", 5);
+
+            // ASSERT
+            testCases.Should().HaveCount(5);
+            testCases.First().TestId.Should().Be("TC-GEN-001");
+            tokens.Should().Be(500);
+        }
+
+        [Fact]
+        public async Task CritiqueTestCasesAsync_WhenCalled_ReturnsCorrectActions()
+        {
+            // ARRANGE
+            var mockAnalyzer = new Mock<IAIAnalyzer>();
+            var testCases = new List<GeneratedTestCase>
+            {
+                new GeneratedTestCase { TestId = "TC-GEN-001", Feature = "Login" },
+                new GeneratedTestCase { TestId = "TC-GEN-002", Feature = "Login" },
+                new GeneratedTestCase { TestId = "TC-GEN-003", Feature = "Login" }
+            };
+            var expectedCritiques = new List<CritiqueResult>
+            {
+                new CritiqueResult { TestId = "TC-GEN-001", Action = "KEEP",   Reason = "No issues" },
+                new CritiqueResult { TestId = "TC-GEN-002", Action = "REVISE", Reason = "Missing precondition" },
+                new CritiqueResult { TestId = "TC-GEN-003", Action = "DROP",   Reason = "Duplicate of TC-GEN-001" }
+            };
+            mockAnalyzer
+                .Setup(a => a.CritiqueTestCasesAsync(
+                    It.IsAny<List<GeneratedTestCase>>(),
+                    It.IsAny<string>()))
+                .ReturnsAsync((expectedCritiques, 300));
+
+            // ACT
+            var (critiques, tokens) = await mockAnalyzer.Object
+                .CritiqueTestCasesAsync(testCases, "some requirements");
+
+            // ASSERT
+            critiques.Should().HaveCount(3);
+            critiques[0].Action.Should().Be("KEEP");
+            critiques[1].Action.Should().Be("REVISE");
+            critiques[2].Action.Should().Be("DROP");
+            tokens.Should().Be(300);
+        }
+
+        [Fact]
+        public async Task RefineTestCasesAsync_WhenCalled_RemovesDroppedTestCases()
+        {
+            // ARRANGE
+            var mockAnalyzer = new Mock<IAIAnalyzer>();
+            var testCases = new List<GeneratedTestCase>
+            {
+                new GeneratedTestCase { TestId = "TC-GEN-001", Feature = "Login" },
+                new GeneratedTestCase { TestId = "TC-GEN-002", Feature = "Login" },
+                new GeneratedTestCase { TestId = "TC-GEN-003", Feature = "Login" }
+            };
+            var critiques = new List<CritiqueResult>
+            {
+                new CritiqueResult { TestId = "TC-GEN-001", Action = "KEEP",   Reason = "No issues" },
+                new CritiqueResult { TestId = "TC-GEN-002", Action = "REVISE", Reason = "Missing precondition" },
+                new CritiqueResult { TestId = "TC-GEN-003", Action = "DROP",   Reason = "Duplicate of TC-GEN-001" }
+            };
+            var refinedTestCases = new List<GeneratedTestCase>
+            {
+                new GeneratedTestCase { TestId = "TC-GEN-001", Feature = "Login" },
+                new GeneratedTestCase { TestId = "TC-GEN-002", Feature = "Login", PassNumber = 2 }
+            };
+            mockAnalyzer
+                .Setup(a => a.RefineTestCasesAsync(
+                    It.IsAny<List<GeneratedTestCase>>(),
+                    It.IsAny<List<CritiqueResult>>(),
+                    It.IsAny<string>()))
+                .ReturnsAsync((refinedTestCases, 400));
+
+            // ACT
+            var (refined, tokens) = await mockAnalyzer.Object
+                .RefineTestCasesAsync(testCases, critiques, "some requirements");
+
+            // ASSERT
+            refined.Should().HaveCount(2);
+            refined.Should().NotContain(t => t.TestId == "TC-GEN-003");
+            refined.Should().Contain(t => t.TestId == "TC-GEN-002" && t.PassNumber == 2);
+            tokens.Should().Be(400);
+        }
+
+        // ============================================================
+        // REAL PARSING TESTS — test actual ParseGeneratedTestCases logic
+        // ============================================================
+
+        private AIAnalyzer CreateAnalyzer() => new AIAnalyzer(
+            new AITestAnalyzer.Models.Configuration { ApiKey = "sk-test-key-not-used" },
+            new AITestAnalyzer.Models.PromptConfig
+            {
+                Model = "gpt-4o-mini",
+                GenModel = "gpt-4.1-mini",
+                MaxTokens = 250,
+                Temperature = 0.2
+            });
+
+        [Fact]
+        public void Parse_ValidPipeResponse_Returns5TestCases()
+        {
+            // ARRANGE
+            var analyzer = CreateAnalyzer();
+            var response = @"TC-GEN-001|User Registration|Register with valid email|High|Step 1. Navigate\nStep 2. Submit|Account created
+TC-GEN-002|User Registration|Register with duplicate email|High|Step 1. Navigate\nStep 2. Submit|Error shown
+TC-GEN-003|User Registration|Register with invalid password|High|Step 1. Navigate\nStep 2. Submit|Error shown
+TC-GEN-004|User Registration|Register with empty email|High|Step 1. Navigate\nStep 2. Submit|Error shown
+TC-GEN-005|User Registration|Register with short password|High|Step 1. Navigate\nStep 2. Submit|Error shown";
+
+            // ACT
+            var result = analyzer.ParseGeneratedTestCases(response);
+
+            // ASSERT
+            result.Should().HaveCount(5);
+            result[0].TestId.Should().Be("TC-GEN-001");
+            result[0].Feature.Should().Be("User Registration");
+            result[0].Priority.Should().Be("High");
+            result[0].Steps.Should().Contain("\n");
+        }
+
+        [Fact]
+        public void Parse_MissingField_SkipsRow()
+        {
+            // ARRANGE
+            var analyzer = CreateAnalyzer();
+            var response = @"TC-GEN-001|User Registration|Valid scenario|High|Step 1. Do X|Expected result
+TC-GEN-002|User Registration|Missing fields only two pipes|High
+TC-GEN-003|User Registration|Another valid row|High|Step 1. Do X|Expected result";
+
+            // ACT
+            var result = analyzer.ParseGeneratedTestCases(response);
+
+            // ASSERT
+            result.Should().HaveCount(2);
+            result.Should().NotContain(t => t.TestId == "TC-GEN-002");
+        }
+
+        [Fact]
+        public void Parse_EmptyResponse_ReturnsEmptyList()
+        {
+            // ARRANGE
+            var analyzer = CreateAnalyzer();
+
+            // ACT
+            var result = analyzer.ParseGeneratedTestCases(string.Empty);
+
+            // ASSERT
+            result.Should().BeEmpty();
+        }
+
+        [Fact]
+        public void Parse_MalformedRow_DoesNotThrow()
+        {
+            // ARRANGE
+            var analyzer = CreateAnalyzer();
+            var response = @"this is not pipe delimited at all
+only|two|pipes
+TC-GEN-001|User Registration|Valid row|High|Step 1. Do X|Expected result";
+
+            // ACT
+            Action act = () => analyzer.ParseGeneratedTestCases(response);
+
+            // ASSERT
+            act.Should().NotThrow();
+            var result = analyzer.ParseGeneratedTestCases(response);
+            result.Should().HaveCount(1);
+            result[0].TestId.Should().Be("TC-GEN-001");
         }
     }
 }

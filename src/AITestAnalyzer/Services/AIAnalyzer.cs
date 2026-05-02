@@ -313,7 +313,7 @@ FEEDBACK:
         /// Format: TC-GEN-001|Feature|Scenario|Priority|Steps|ExpectedResult
         /// Skips malformed rows silently — logs a warning per skipped line.
         /// </summary>
-        private List<GeneratedTestCase> ParseGeneratedTestCases(string response)
+        internal List<GeneratedTestCase> ParseGeneratedTestCases(string response)
         {
             var results = new List<GeneratedTestCase>();
             var lines = response.Split('\n', StringSplitOptions.RemoveEmptyEntries);
