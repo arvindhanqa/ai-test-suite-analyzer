@@ -395,7 +395,7 @@ FEEDBACK:
         /// Format: TC-GEN-001|KEEP|No issues
         /// Unknown action values default to KEEP. Malformed lines are skipped with a warning.
         /// </summary>
-        private List<CritiqueResult> ParseCritiqueResults(string response)
+        internal List<CritiqueResult> ParseCritiqueResults(string response)
         {
             var results = new List<CritiqueResult>();
             var lines = response.Split('\n', StringSplitOptions.RemoveEmptyEntries);

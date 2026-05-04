@@ -283,5 +283,64 @@ TC-GEN-001|User Registration|Valid row|High|Step 1. Do X|Expected result";
             result.Should().HaveCount(1);
             result[0].TestId.Should().Be("TC-GEN-001");
         }
+
+        // ============================================================
+        // REAL PARSING TESTS — test actual ParseCritiqueResults logic
+        // ============================================================
+
+        [Fact]
+        public void Parse_ValidCritique_ReturnsCorrectActions()
+        {
+            // ARRANGE
+            var analyzer = CreateAnalyzer();
+            var response = @"TC-GEN-001|KEEP|No issues
+TC-GEN-002|REVISE|Missing precondition — add login step
+TC-GEN-003|DROP|Duplicate of TC-GEN-001";
+
+            // ACT
+            var result = analyzer.ParseCritiqueResults(response);
+
+            // ASSERT
+            result.Should().HaveCount(3);
+            result[0].TestId.Should().Be("TC-GEN-001");
+            result[0].Action.Should().Be("KEEP");
+            result[0].Reason.Should().Be("No issues");
+            result[1].Action.Should().Be("REVISE");
+            result[1].Reason.Should().Be("Missing precondition — add login step");
+            result[2].Action.Should().Be("DROP");
+            result[2].TestId.Should().Be("TC-GEN-003");
+        }
+
+        [Fact]
+        public void Parse_UnknownAction_DefaultsToKeep()
+        {
+            // ARRANGE
+            var analyzer = CreateAnalyzer();
+            var response = @"TC-GEN-001|KEEP|No issues
+TC-GEN-002|UNKNOWN|Some reason
+TC-GEN-003|MAYBE|Not sure about this one";
+
+            // ACT
+            var result = analyzer.ParseCritiqueResults(response);
+
+            // ASSERT
+            result.Should().HaveCount(3);
+            result[1].Action.Should().Be("KEEP");
+            result[1].Reason.Should().Be("Some reason");
+            result[2].Action.Should().Be("KEEP");
+        }
+
+        [Fact]
+        public void Parse_EmptyCritique_ReturnsEmptyList()
+        {
+            // ARRANGE
+            var analyzer = CreateAnalyzer();
+
+            // ACT
+            var result = analyzer.ParseCritiqueResults(string.Empty);
+
+            // ASSERT
+            result.Should().BeEmpty();
+        }
     }
 }

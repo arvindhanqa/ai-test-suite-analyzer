@@ -4,33 +4,98 @@ namespace AITestAnalyzer.Services
 {
     public interface IAIAnalyzer
     {
+        /// <summary>
+        /// QA MODE: Analyzes a single test case for quality without requirements.
+        /// Evaluates clarity, completeness, and testability.
+        /// Uses gpt-4o-mini and inline system prompt in AIAnalyzer.
+        /// </summary>
+        /// <param name="testCase">Test case to analyze. Uses Feature, Scenario, Steps, ExpectedResult fields.</param>
+        /// <returns>
+        /// Tuple containing:
+        /// - quality: "GOOD" or a specific, actionable issue description
+        /// - tokens: total tokens consumed by this API call (0 if cached)
+        /// </returns>
         Task<(string quality, int tokens)> AnalyzeTestQualityAsync(TestCase testCase);
+
+        /// <summary>
+        /// BA MODE: Analyzes test coverage against a list of extracted requirements.
+        /// Identifies which requirements are covered, partially covered, or missing.
+        /// Uses gpt-4o-mini and inline system prompt in AIAnalyzer.
+        /// </summary>
+        /// <param name="testCase">Test case to analyze against requirements.</param>
+        /// <param name="requirements">Full list of extracted requirements to validate against.</param>
+        /// <returns>
+        /// Tuple containing:
+        /// - reqFeedback: structured feedback listing missing/incomplete coverage per requirement
+        /// - coverageIds: list of requirement IDs this test case touches
+        /// - tokens: total tokens consumed by this API call (0 if cached)
+        /// </returns>
         Task<(string reqFeedback, List<string> coverageIds, int tokens)> AnalyzeCoverageAndFeedbackAsync(
             TestCase testCase,
             List<ExtractedRequirement> requirements);
 
         /// <summary>
-        /// GEN MODE: Generates test cases from requirements markdown.
+        /// GEN MODE — GENERATE PASS: Generates test cases from a requirements markdown document.
         /// Uses gpt-4.1-mini and GenSystemMessage/GenUserTemplate from PromptConfig.
+        /// Output is parsed from pipe-delimited format:
+        /// TC-GEN-001|Feature|Scenario|Priority|Steps|ExpectedResult
         /// </summary>
+        /// <param name="requirementsMarkdown">Full requirements document in markdown or plain text format.</param>
+        /// <param name="targetCount">Number of test cases to generate. Passed into GenUserTemplate as {targetCount}.</param>
+        /// <returns>
+        /// Tuple containing:
+        /// - TestCases: list of generated test cases with PassNumber=1
+        /// - Tokens: total tokens consumed by this API call
+        /// Returns empty list if API call fails after retries.
+        /// </returns>
         Task<(List<GeneratedTestCase> TestCases, int Tokens)> GenerateTestCasesAsync(
             string requirementsMarkdown,
             int targetCount);
 
         /// <summary>
-        /// GEN MODE: Critiques generated test cases against original requirements.
-        /// Returns one CritiqueResult per test case with action: KEEP, REVISE, or DROP.
+        /// GEN MODE — CRITIQUE PASS: Reviews generated test cases against original requirements.
+        /// Returns one CritiqueResult per test case with action KEEP, REVISE, or DROP.
         /// Uses gpt-4.1-mini and CritiqueSystemMessage/CritiqueUserTemplate from PromptConfig.
+        /// Output is parsed from pipe-delimited format:
+        /// TC-GEN-001|KEEP|No issues
         /// </summary>
+        /// <param name="testCases">Generated test cases from the previous GENERATE or REFINE pass.</param>
+        /// <param name="requirementsMarkdown">Original requirements used to generate the test cases.</param>
+        /// <returns>
+        /// Tuple containing:
+        /// - Critiques: one CritiqueResult per input test case
+        /// - Tokens: total tokens consumed by this API call
+        /// Returns empty list if API call fails after retries.
+        /// </returns>
+        /// <remarks>
+        /// Action values:
+        /// KEEP = complete and clear, no changes needed.
+        /// REVISE = valid but needs improvement — apply Reason as feedback in REFINE pass.
+        /// DROP = duplicate, irrelevant, or untestable — remove in REFINE pass.
+        /// </remarks>
         Task<(List<CritiqueResult> Critiques, int Tokens)> CritiqueTestCasesAsync(
             List<GeneratedTestCase> testCases,
             string requirementsMarkdown);
 
         /// <summary>
-        /// GEN MODE: Refines generated test cases by applying critique feedback.
-        /// KEEP items returned unchanged. REVISE items improved. DROP items removed.
+        /// GEN MODE — REFINE PASS: Applies critique feedback to produce an improved test case list.
+        /// KEEP items returned unchanged. REVISE items improved per critique Reason.
+        /// DROP items removed from output entirely.
         /// Uses gpt-4.1-mini and RefineSystemMessage/RefineUserTemplate from PromptConfig.
         /// </summary>
+        /// <param name="testCases">Test cases from the previous GENERATE or REFINE pass.</param>
+        /// <param name="critiques">Critique results from the most recent CRITIQUE pass.</param>
+        /// <param name="requirementsMarkdown">Original requirements — included for context in the refine prompt.</param>
+        /// <returns>
+        /// Tuple containing:
+        /// - Refined: final list of test cases after applying critique feedback
+        /// - Tokens: total tokens consumed by this API call (0 if all critiques are KEEP)
+        /// Returns original test cases unchanged if API call fails after retries.
+        /// </returns>
+        /// <remarks>
+        /// Short-circuits immediately if all critiques are KEEP — no API call is made.
+        /// REVISE items have their PassNumber incremented to reflect the refinement pass number.
+        /// </remarks>
         Task<(List<GeneratedTestCase> Refined, int Tokens)> RefineTestCasesAsync(
             List<GeneratedTestCase> testCases,
             List<CritiqueResult> critiques,
