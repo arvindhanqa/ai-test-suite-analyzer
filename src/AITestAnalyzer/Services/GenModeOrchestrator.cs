@@ -51,16 +51,40 @@ namespace AITestAnalyzer.Services
         /// <param name="targetCount">Number of test cases to generate. Defaults to TargetTestCount.</param>
         /// <param name="maxPasses">Maximum refinement passes. Defaults to MaxPasses.</param>
         /// <returns>GenModeResult containing final test cases, pass statistics, and token usage.</returns>
-        public Task<GenModeResult> RunAsync(
-            string requirementsMarkdown,
-            int targetCount = 0,
-            int maxPasses = 0)
+        public async Task<GenModeResult> RunAsync(
+                    string requirementsMarkdown,
+                    int targetCount = 0,
+                    int maxPasses = 0)
         {
-            // TODO Day 106: implement generation pass
+            int resolvedTargetCount = targetCount > 0 ? targetCount : TargetTestCount;
+            int resolvedMaxPasses = maxPasses > 0 ? maxPasses : MaxPasses;
+
+            var result = new GenModeResult
+            {
+                RequirementsSource = "provided",
+                GeneratedAt = DateTime.UtcNow
+            };
+
+            // ── PASS 1: Generate initial test cases ──────────────────
+            Console.WriteLine();
+            Console.WriteLine($"   🔄 Pass 1 — Generating {resolvedTargetCount} test cases...");
+
+            var (initialTestCases, generateTokens) = await _aiAnalyzer.GenerateTestCasesAsync(
+                requirementsMarkdown,
+                resolvedTargetCount);
+
+            result.TestCases = initialTestCases;
+            result.TotalPasses = 1;
+            result.TotalTokens += generateTokens;
+
+            Console.WriteLine($"   ✅ Pass 1 complete — {initialTestCases.Count} test cases generated " +
+                              $"({generateTokens} tokens)");
+
             // TODO Day 107: implement critique loop
             // TODO Day 108: implement refinement loop
             // TODO Day 110: implement auto QA Mode scoring
-            throw new NotImplementedException("GenModeOrchestrator.RunAsync — implementation starts Day 106.");
+
+            return result;
         }
     }
 }
