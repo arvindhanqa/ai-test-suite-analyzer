@@ -80,7 +80,34 @@ namespace AITestAnalyzer.Services
             Console.WriteLine($"   ✅ Pass 1 complete — {initialTestCases.Count} test cases generated " +
                               $"({generateTokens} tokens)");
 
-            // TODO Day 107: implement critique loop
+            Console.WriteLine($"   ✅ Pass 1 complete — {initialTestCases.Count} test cases generated " +
+                              $"({generateTokens} tokens)");
+
+            // ── CRITIQUE after Pass 1 ────────────────────────────────
+            Console.WriteLine($"   🔍 Critiquing Pass 1 output...");
+
+            var (critiques, critiqueTokens) = await _aiAnalyzer.CritiqueTestCasesAsync(
+                result.TestCases,
+                requirementsMarkdown);
+
+            result.TotalTokens += critiqueTokens;
+
+            int keepCount = critiques.Count(c => c.Action == "KEEP");
+            int reviseCount = critiques.Count(c => c.Action == "REVISE");
+            int dropCount = critiques.Count(c => c.Action == "DROP");
+
+            Console.WriteLine($"   📊 Critique summary — " +
+                              $"KEEP: {keepCount}  REVISE: {reviseCount}  DROP: {dropCount} " +
+                              $"({critiqueTokens} tokens)");
+
+            // Early exit — nothing to refine
+            bool needsRefinement = critiques.Any(c => c.Action == "REVISE" || c.Action == "DROP");
+            if (!needsRefinement)
+            {
+                Console.WriteLine($"   ✅ All critiques are KEEP — no refinement needed.");
+                // TODO Day 110: implement auto QA Mode scoring
+                return result;
+            }
             // TODO Day 108: implement refinement loop
             // TODO Day 110: implement auto QA Mode scoring
 
