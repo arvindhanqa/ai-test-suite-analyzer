@@ -108,7 +108,61 @@ namespace AITestAnalyzer.Services
                 // TODO Day 110: implement auto QA Mode scoring
                 return result;
             }
-            // TODO Day 108: implement refinement loop
+
+            // ── REFINEMENT LOOP — up to (MaxPasses - 1) refinement passes ──
+            var currentCritiques = critiques;
+
+            for (int pass = 2; pass <= resolvedMaxPasses; pass++)
+            {
+                Console.WriteLine($"   🔄 Pass {pass} — Refining test cases...");
+
+                var (refined, refineTokens) = await _aiAnalyzer.RefineTestCasesAsync(
+                    result.TestCases,
+                    currentCritiques,
+                    requirementsMarkdown);
+
+                result.TestCases = refined;
+                result.TotalPasses = pass;
+                result.TotalTokens += refineTokens;
+
+                Console.WriteLine($"   ✅ Pass {pass} refinement complete — " +
+                                  $"{refined.Count} test cases ({refineTokens} tokens)");
+
+                // No more passes needed if we've hit the limit
+                if (pass == resolvedMaxPasses)
+                {
+                    Console.WriteLine($"   ℹ️  Maximum passes ({resolvedMaxPasses}) reached.");
+                    break;
+                }
+
+                // Critique the refined output
+                Console.WriteLine($"   🔍 Critiquing Pass {pass} output...");
+
+                var (newCritiques, newCritiqueTokens) = await _aiAnalyzer.CritiqueTestCasesAsync(
+                    result.TestCases,
+                    requirementsMarkdown);
+
+                result.TotalTokens += newCritiqueTokens;
+
+                int newKeep = newCritiques.Count(c => c.Action == "KEEP");
+                int newRevise = newCritiques.Count(c => c.Action == "REVISE");
+                int newDrop = newCritiques.Count(c => c.Action == "DROP");
+
+                Console.WriteLine($"   📊 Critique summary — " +
+                                  $"KEEP: {newKeep}  REVISE: {newRevise}  DROP: {newDrop} " +
+                                  $"({newCritiqueTokens} tokens)");
+
+                // Early exit — refinement converged
+                bool stillNeedsWork = newCritiques.Any(c => c.Action == "REVISE" || c.Action == "DROP");
+                if (!stillNeedsWork)
+                {
+                    Console.WriteLine($"   ✅ All critiques are KEEP — refinement converged at pass {pass}.");
+                    break;
+                }
+
+                currentCritiques = newCritiques;
+            }
+
             // TODO Day 110: implement auto QA Mode scoring
 
             return result;
