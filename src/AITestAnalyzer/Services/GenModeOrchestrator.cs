@@ -111,7 +111,7 @@ namespace AITestAnalyzer.Services
             if (!needsRefinement)
             {
                 Console.WriteLine($"   ✅ All critiques are KEEP — no refinement needed.");
-                // TODO Day 110: implement auto QA Mode scoring
+                await ScoreGeneratedTestCasesAsync(result.TestCases);
                 return result;
             }
 
@@ -169,9 +169,47 @@ namespace AITestAnalyzer.Services
                 currentCritiques = newCritiques;
             }
 
-            // TODO Day 110: implement auto QA Mode scoring
+            await ScoreGeneratedTestCasesAsync(result.TestCases);
 
             return result;
+        }
+
+        /// <summary>
+        /// Auto-scores generated test cases using QA Mode analysis.
+        /// Converts each GeneratedTestCase to a TestCase, runs AnalyzeTestQualityAsync,
+        /// and stores the result in GeneratedTestCase.QAScore.
+        /// </summary>
+        private async Task ScoreGeneratedTestCasesAsync(List<GeneratedTestCase> testCases)
+        {
+            Console.WriteLine();
+            Console.WriteLine($"   🎯 Auto-scoring {testCases.Count} generated test cases via QA Mode...");
+
+            for (int i = 0; i < testCases.Count; i++)
+            {
+                var generated = testCases[i];
+
+                // Convert GeneratedTestCase → TestCase for QA Mode
+                var testCase = new TestCase
+                {
+                    TestId = generated.TestId,
+                    Feature = generated.Feature,
+                    Scenario = generated.Scenario,
+                    Priority = generated.Priority,
+                    Steps = generated.Steps,
+                    ExpectedResult = generated.ExpectedResult
+                };
+
+                var (quality, _) = await _aiAnalyzer.AnalyzeTestQualityAsync(testCase);
+                generated.QAScore = quality;
+
+                Console.WriteLine($"   [{i + 1}/{testCases.Count}] {generated.TestId} — {quality}");
+
+                // Respect API rate limits between calls
+                if (i < testCases.Count - 1)
+                    await Task.Delay(1000);
+            }
+
+            Console.WriteLine($"   ✅ QA scoring complete.");
         }
     }
 }
