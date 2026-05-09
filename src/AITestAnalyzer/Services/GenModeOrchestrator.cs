@@ -59,6 +59,12 @@ namespace AITestAnalyzer.Services
             int resolvedTargetCount = targetCount > 0 ? targetCount : TargetTestCount;
             int resolvedMaxPasses = maxPasses > 0 ? maxPasses : MaxPasses;
 
+            // ── GUARD: requirements must be provided ─────────────────
+            if (string.IsNullOrWhiteSpace(requirementsMarkdown))
+                throw new ArgumentException(
+                    "GEN Mode requires a requirements document. " +
+                    "Please provide a .md or .txt requirements file.");
+
             var result = new GenModeResult
             {
                 RequirementsSource = "provided",
