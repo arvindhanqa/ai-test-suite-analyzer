@@ -48,6 +48,13 @@ namespace AITestAnalyzer
                     return;
                 }
 
+                // For GEN Mode orchestrator testing
+                if (firstArg == "--test-gen")
+                {
+                    await TestGenModeOrchestratorAsync();
+                    return;
+                }
+
                 if (firstArg == "--help" || firstArg == "-h")
                 {
                     DisplayHelp();
@@ -449,6 +456,138 @@ namespace AITestAnalyzer
             WriteInfo("Press any key to exit...");
             Console.ReadKey();
         }
+
+        // ============================================================
+        // TEST GEN MODE ORCHESTRATOR (Day 111)
+        // ============================================================
+        private static async Task TestGenModeOrchestratorAsync()
+        {
+            Console.Clear();
+            WriteHeader("═══════════════════════════════════════════════════════════════════════");
+            WriteHeader("   🧪 GEN MODE ORCHESTRATOR TEST");
+            WriteHeader("═══════════════════════════════════════════════════════════════════════");
+            Console.WriteLine();
+
+            // Load configuration
+            WriteInfo("Loading configuration...");
+            var (appConfig, promptConfig) = LoadConfiguration();
+            if (appConfig == null || promptConfig == null)
+                return;
+
+            // Validate API connection
+            WriteInfo("Validating API connection...");
+            var validator = new ConfigurationValidator(appConfig, promptConfig);
+            var connectionResult = await validator.ValidateOpenAIConnectionAsync();
+            if (!connectionResult.IsValid)
+            {
+                WriteError($"OpenAI Connection Error: {connectionResult.ErrorMessage}");
+                WriteInfo("Press any key to exit...");
+                Console.ReadKey();
+                return;
+            }
+            WriteSuccess("API connection validated");
+            Console.WriteLine();
+
+            // Prompt for requirements file
+            Console.Write("📁 Enter path to requirements file: ");
+            string? reqPath = Console.ReadLine()?.Trim().Trim('"').Trim('\'');
+
+            if (string.IsNullOrWhiteSpace(reqPath) || !File.Exists(reqPath))
+            {
+                WriteError($"Requirements file not found: {reqPath}");
+                WriteInfo("Press any key to exit...");
+                Console.ReadKey();
+                return;
+            }
+
+            string requirementsMarkdown = await File.ReadAllTextAsync(reqPath);
+            WriteSuccess($"Loaded: {Path.GetFileName(reqPath)} ({requirementsMarkdown.Length:N0} chars)");
+            Console.WriteLine();
+
+            // Prompt for options
+            Console.Write("   How many test cases to generate? [default: 5]: ");
+            string? countInput = Console.ReadLine()?.Trim();
+            int targetCount = int.TryParse(countInput, out int parsed) ? parsed : 5;
+
+            Console.Write("   Maximum refinement passes? [1-3, default: 2]: ");
+            string? passInput = Console.ReadLine()?.Trim();
+            int maxPasses = int.TryParse(passInput, out int parsedPasses) ? parsedPasses : 2;
+
+            Console.WriteLine();
+            WriteHeader("════════════════════════════════════════════════════");
+            WriteHeader($"   Generating {targetCount} test cases, up to {maxPasses} passes");
+            WriteHeader("════════════════════════════════════════════════════");
+
+            var startTime = DateTime.Now;
+
+            try
+            {
+                var aiAnalyzer = new AIAnalyzer(appConfig, promptConfig);
+                var cache = new TestCaseCache();
+                var orchestrator = new GenModeOrchestrator(aiAnalyzer, cache, promptConfig)
+                {
+                    MaxPasses = maxPasses,
+                    TargetTestCount = targetCount
+                };
+
+                var result = await orchestrator.RunAsync(
+                    requirementsMarkdown,
+                    targetCount,
+                    maxPasses);
+
+                var elapsed = DateTime.Now - startTime;
+
+                // Display results
+                Console.WriteLine();
+                WriteHeader("═══════════════════════════════════════════════════════════════════════");
+                WriteHeader("   GENERATED TEST CASES");
+                WriteHeader("═══════════════════════════════════════════════════════════════════════");
+                Console.WriteLine();
+
+                foreach (var tc in result.TestCases)
+                {
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    Console.Write($"   {tc.TestId} ");
+                    Console.ForegroundColor = ConsoleColor.White;
+                    Console.Write($"[Pass {tc.PassNumber}] ");
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine(tc.Scenario);
+                    Console.ResetColor();
+
+                    if (!string.IsNullOrEmpty(tc.QAScore))
+                    {
+                        Console.ForegroundColor = tc.QAScore.StartsWith("GOOD",
+                            StringComparison.OrdinalIgnoreCase)
+                            ? ConsoleColor.Green : ConsoleColor.Yellow;
+                        Console.WriteLine($"      QA: {tc.QAScore}");
+                        Console.ResetColor();
+                    }
+                }
+
+                Console.WriteLine();
+                WriteHeader("═══════════════════════════════════════════════════════════════════════");
+                WriteSuccess($"Test cases generated: {result.TestCases.Count}");
+                WriteSuccess($"Total passes:         {result.TotalPasses}");
+                WriteSuccess($"Total tokens:         {result.TotalTokens:N0}");
+                WriteSuccess($"Elapsed time:         {elapsed.TotalSeconds:F1}s");
+
+                double cost = result.TotalTokens * promptConfig.CostPerToken;
+                WriteSuccess($"Estimated cost:       ${cost:F6}");
+            }
+            catch (ArgumentException ex)
+            {
+                WriteError(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                WriteError($"GEN Mode test failed: {ex.Message}");
+            }
+
+            Console.WriteLine();
+            WriteInfo("Press any key to exit...");
+            Console.ReadKey();
+        }
+
         // ============================================================
         // SINGLE FILE MODE — orchestrator only, delegates to helpers
         // ============================================================
@@ -951,7 +1090,16 @@ namespace AITestAnalyzer
                 Temperature = double.Parse(configBuilder["Temperature"] ?? "0.2"),
                 SystemMessage = configBuilder["SystemMessage"] ?? "You are an expert QA analyzer.",
                 UserTemplate = configBuilder["UserTemplate"] ?? "Analyze: {Scenario}",
-                CostPerToken = double.Parse(configBuilder["CostPerToken"] ?? "0.00000015")
+                CostPerToken = double.Parse(configBuilder["CostPerToken"] ?? "0.00000015"),
+
+                // GEN Mode fields
+                GenModel = configBuilder["GenModel"] ?? "gpt-4.1-mini",
+                GenSystemMessage = configBuilder["GenSystemMessage"] ?? "",
+                GenUserTemplate = configBuilder["GenUserTemplate"] ?? "",
+                CritiqueSystemMessage = configBuilder["CritiqueSystemMessage"] ?? "",
+                CritiqueUserTemplate = configBuilder["CritiqueUserTemplate"] ?? "",
+                RefineSystemMessage = configBuilder["RefineSystemMessage"] ?? "",
+                RefineUserTemplate = configBuilder["RefineUserTemplate"] ?? ""
             };
 
             WriteSuccess($"Model: {promptConfig.Model}");
@@ -1015,6 +1163,7 @@ namespace AITestAnalyzer
             Console.WriteLine("  dotnet run -- --clear-cache       # Clear all cached results");
             Console.WriteLine("  dotnet run -- --no-cache          # Disable cache for this run");
             Console.WriteLine("  dotnet run -- --test-requirements # 🆕 Test requirement extraction");
+            Console.WriteLine("  dotnet run -- --test-gen          # 🆕 Test GEN Mode orchestrator");
             Console.WriteLine("  dotnet run -- --resume            # Resume interrupted batch run");
             Console.WriteLine("  dotnet run -- --format json               # Export results as JSON");
             Console.WriteLine();
