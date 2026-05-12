@@ -13,5 +13,12 @@ namespace AITestAnalyzer.Services
         void CreateStatisticsDashboard(List<(string TestId, string Result, int Tokens, string Coverage)> results, DateTime startTime, DateTime endTime);
         void CreateCoverageGapSheet(List<(string TestId, string Result, int Tokens, string Coverage)> results, List<ExtractedRequirement> requirements);
         void CreateBAStatisticsDashboard(List<(string TestId, string Result, int Tokens, string Coverage)> results, List<ExtractedRequirement> requirements, int totalTokens, int cacheHits, TimeSpan elapsed);
+
+        /// <summary>
+        /// GEN MODE: Creates the "Generated Tests" sheet containing all AI-generated test cases.
+        /// Columns: Test ID | Feature | Scenario | Priority | Steps | Expected Result | Pass | QA Score
+        /// Header row: dark green (distinct from QA blue and BA coral).
+        /// </summary>
+        void CreateGeneratedTestsSheet(List<GeneratedTestCase> testCases);
     }
 }

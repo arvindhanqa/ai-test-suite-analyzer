@@ -987,6 +987,63 @@ namespace AITestAnalyzer.Services
             }
         }
 
+        // ============================================================
+        // METHOD: Create Generated Tests Sheet (GEN Mode only)
+        // ============================================================
+        public void CreateGeneratedTestsSheet(List<GeneratedTestCase> testCases)
+        {
+            try
+            {
+                using (var package = new ExcelPackage(new FileInfo(_outputPath)))
+                {
+                    // Delete existing sheet if present
+                    var existingSheet = package.Workbook.Worksheets["Generated Tests"];
+                    if (existingSheet != null)
+                        package.Workbook.Worksheets.Delete(existingSheet);
 
+                    var sheet = package.Workbook.Worksheets.Add("Generated Tests");
+
+                    // ── HEADERS ────────────────────────────────────────
+                    string[] headers = {
+                        "Test ID", "Feature", "Scenario", "Priority",
+                        "Steps", "Expected Result", "Pass", "QA Score"
+                    };
+
+                    for (int col = 1; col <= headers.Length; col++)
+                    {
+                        sheet.Cells[1, col].Value = headers[col - 1];
+                    }
+
+                    // Header formatting — dark green (distinct from QA blue / BA coral)
+                    using (var headerRange = sheet.Cells[1, 1, 1, headers.Length])
+                    {
+                        headerRange.Style.Font.Bold = true;
+                        headerRange.Style.Font.Size = 12;
+                        headerRange.Style.Font.Color.SetColor(System.Drawing.Color.White);
+                        headerRange.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                        headerRange.Style.Fill.BackgroundColor.SetColor(
+                            System.Drawing.ColorTranslator.FromHtml("#1A6B3C")); // dark green
+                        headerRange.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+                        headerRange.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Medium);
+                    }
+
+                    // Freeze header row
+                    sheet.View.FreezePanes(2, 1);
+
+                    // Auto-filter
+                    sheet.Cells[1, 1, 1, headers.Length].AutoFilter = true;
+
+                    // TODO Day 113: implement data rows, color coding, column widths
+
+                    package.Save();
+                    Console.WriteLine("   ✅ Created 'Generated Tests' sheet (skeleton)");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"   ⚠️  Warning: Could not create 'Generated Tests' sheet " +
+                                  $"in '{Path.GetFileName(_outputPath)}': {ex.Message}");
+            }
+        }
     }
 }
