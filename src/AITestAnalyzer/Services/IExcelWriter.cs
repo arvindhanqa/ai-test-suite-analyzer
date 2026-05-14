@@ -20,5 +20,11 @@ namespace AITestAnalyzer.Services
         /// Header row: dark green (distinct from QA blue and BA coral).
         /// </summary>
         void CreateGeneratedTestsSheet(List<GeneratedTestCase> testCases);
+
+        /// <summary>
+        /// GEN MODE: Creates the "Gen Statistics Dashboard" sheet with generation metrics.
+        /// Sections: Generation Summary, QA Score Summary, Cost and Performance, Requirements Source.
+        /// </summary>
+        void CreateGenStatisticsDashboard(GenModeResult result, TimeSpan elapsed);
     }
 }

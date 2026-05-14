@@ -1131,5 +1131,54 @@ namespace AITestAnalyzer.Services
                                   $"in '{Path.GetFileName(_outputPath)}': {ex.Message}");
             }
         }
+
+        // ============================================================
+        // METHOD: Create Gen Statistics Dashboard (GEN Mode only)
+        // ============================================================
+        public void CreateGenStatisticsDashboard(GenModeResult result, TimeSpan elapsed)
+        {
+            try
+            {
+                using (var package = new ExcelPackage(new FileInfo(_outputPath)))
+                {
+                    // Delete existing sheet if present
+                    var existingSheet = package.Workbook.Worksheets["Gen Statistics Dashboard"];
+                    if (existingSheet != null)
+                        package.Workbook.Worksheets.Delete(existingSheet);
+
+                    var sheet = package.Workbook.Worksheets.Add("Gen Statistics Dashboard");
+
+                    // ── TITLE ──────────────────────────────────────────
+                    sheet.Cells[1, 1, 1, 4].Merge = true;
+                    sheet.Cells[1, 1].Value = "GEN MODE — STATISTICS DASHBOARD";
+                    sheet.Cells[1, 1].Style.Font.Bold = true;
+                    sheet.Cells[1, 1].Style.Font.Size = 14;
+                    sheet.Cells[1, 1].Style.Font.Color.SetColor(System.Drawing.Color.White);
+                    sheet.Cells[1, 1].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                    sheet.Cells[1, 1].Style.Fill.BackgroundColor.SetColor(
+                        System.Drawing.ColorTranslator.FromHtml("#1A6B3C")); // dark green
+                    sheet.Cells[1, 1].Style.HorizontalAlignment =
+                        OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+
+                    // Freeze title row
+                    sheet.View.FreezePanes(2, 1);
+
+                    // TODO Day 115: implement all four sections
+
+                    // Column widths
+                    sheet.Column(1).Width = 35;
+                    sheet.Column(2).Width = 20;
+                    sheet.Column(3).Width = 15;
+
+                    package.Save();
+                    Console.WriteLine("   ✅ Created 'Gen Statistics Dashboard' sheet (skeleton)");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"   ⚠️  Warning: Could not create 'Gen Statistics Dashboard' sheet " +
+                                  $"in '{Path.GetFileName(_outputPath)}': {ex.Message}");
+            }
+        }
     }
 }
