@@ -1163,7 +1163,153 @@ namespace AITestAnalyzer.Services
                     // Freeze title row
                     sheet.View.FreezePanes(2, 1);
 
-                    // TODO Day 115: implement all four sections
+                    int row = 3;
+
+                    // ── SECTION 1: GENERATION SUMMARY ─────────────────
+                    sheet.Cells[row, 1, row, 4].Merge = true;
+                    sheet.Cells[row, 1].Value = "GENERATION SUMMARY";
+                    sheet.Cells[row, 1].Style.Font.Bold = true;
+                    sheet.Cells[row, 1].Style.Font.Size = 11;
+                    sheet.Cells[row, 1].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                    sheet.Cells[row, 1].Style.Fill.BackgroundColor.SetColor(
+                        System.Drawing.ColorTranslator.FromHtml("#D9E1F2"));
+                    row++;
+
+                    int droppedCount = 0; // tests lost between generation and final output
+                    var genData = new[]
+                    {
+                        ("Passes Used",            result.TotalPasses.ToString()),
+                        ("Tests Generated (final)", result.TestCases.Count.ToString()),
+                        ("Tests Dropped",           droppedCount.ToString()),
+                        ("Requirements Source",     result.RequirementsSource),
+                        ("Generated At",            result.GeneratedAt.ToString("yyyy-MM-dd HH:mm:ss"))
+                    };
+
+                    foreach (var (label, value) in genData)
+                    {
+                        sheet.Cells[row, 1].Value = label;
+                        sheet.Cells[row, 2].Value = value;
+                        sheet.Cells[row, 1].Style.Font.Bold = true;
+                        row++;
+                    }
+
+                    row++; // empty row
+
+                    // ── SECTION 2: QA SCORE SUMMARY ───────────────────
+                    sheet.Cells[row, 1, row, 4].Merge = true;
+                    sheet.Cells[row, 1].Value = "QA SCORE SUMMARY";
+                    sheet.Cells[row, 1].Style.Font.Bold = true;
+                    sheet.Cells[row, 1].Style.Font.Size = 11;
+                    sheet.Cells[row, 1].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                    sheet.Cells[row, 1].Style.Fill.BackgroundColor.SetColor(
+                        System.Drawing.ColorTranslator.FromHtml("#D9E1F2"));
+                    row++;
+
+                    // Table headers
+                    sheet.Cells[row, 1].Value = "Category";
+                    sheet.Cells[row, 2].Value = "Count";
+                    sheet.Cells[row, 3].Value = "Percentage";
+                    sheet.Cells[row, 1, row, 3].Style.Font.Bold = true;
+                    sheet.Cells[row, 1, row, 3].Style.Fill.PatternType =
+                        OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                    sheet.Cells[row, 1, row, 3].Style.Fill.BackgroundColor.SetColor(
+                        System.Drawing.ColorTranslator.FromHtml("#1A6B3C"));
+                    sheet.Cells[row, 1, row, 3].Style.Font.Color.SetColor(
+                        System.Drawing.Color.White);
+                    row++;
+
+                    int total = result.TestCases.Count;
+                    int goodCount = result.TestCases.Count(t =>
+                        t.QAScore.StartsWith("GOOD", StringComparison.OrdinalIgnoreCase));
+                    int errorCount = result.TestCases.Count(t =>
+                        t.QAScore.StartsWith("ERROR:", StringComparison.OrdinalIgnoreCase));
+                    int issueCount = total - goodCount - errorCount;
+
+                    var qaRows = new[]
+                    {
+                        ("✅ GOOD",           goodCount,  "#C6EFCE"),
+                        ("⚠️ Issues",         issueCount, "#FFEB9C"),
+                        ("❌ Errors",         errorCount, "#FFC7CE")
+                    };
+
+                    foreach (var (label, count, hex) in qaRows)
+                    {
+                        string pct = total > 0
+                            ? $"{count * 100.0 / total:F1}%"
+                            : "0%";
+                        sheet.Cells[row, 1].Value = label;
+                        sheet.Cells[row, 2].Value = count;
+                        sheet.Cells[row, 3].Value = pct;
+                        sheet.Cells[row, 1, row, 3].Style.Fill.PatternType =
+                            OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                        sheet.Cells[row, 1, row, 3].Style.Fill.BackgroundColor.SetColor(
+                            System.Drawing.ColorTranslator.FromHtml(hex));
+                        row++;
+                    }
+
+                    // Total row
+                    sheet.Cells[row, 1].Value = "TOTAL";
+                    sheet.Cells[row, 2].Value = total;
+                    sheet.Cells[row, 3].Value = "100%";
+                    sheet.Cells[row, 1].Style.Font.Bold = true;
+                    sheet.Cells[row, 2].Style.Font.Bold = true;
+                    row += 2;
+
+                    // ── SECTION 3: COST & PERFORMANCE ─────────────────
+                    sheet.Cells[row, 1, row, 4].Merge = true;
+                    sheet.Cells[row, 1].Value = "COST & PERFORMANCE";
+                    sheet.Cells[row, 1].Style.Font.Bold = true;
+                    sheet.Cells[row, 1].Style.Font.Size = 11;
+                    sheet.Cells[row, 1].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                    sheet.Cells[row, 1].Style.Fill.BackgroundColor.SetColor(
+                        System.Drawing.ColorTranslator.FromHtml("#D9E1F2"));
+                    row++;
+
+                    double totalCost = result.TotalTokens * _promptConfig.CostPerToken;
+
+                    var perfData = new[]
+                    {
+                        ("Total Tokens Used",    $"{result.TotalTokens:N0}"),
+                        ("Estimated Cost",        $"${totalCost:F6} USD"),
+                        ("Time Elapsed",          elapsed.ToString(@"mm\:ss")),
+                        ("Avg Tokens per Pass",   result.TotalPasses > 0
+                                                    ? $"{result.TotalTokens / result.TotalPasses:N0}"
+                                                    : "0"),
+                        ("Cost per Test Case",    total > 0
+                                                    ? $"${totalCost / total:F6} USD"
+                                                    : "$0.000000 USD")
+                    };
+
+                    foreach (var (label, value) in perfData)
+                    {
+                        sheet.Cells[row, 1].Value = label;
+                        sheet.Cells[row, 2].Value = value;
+                        sheet.Cells[row, 1].Style.Font.Bold = true;
+                        row++;
+                    }
+
+                    row++; // empty row
+
+                    // ── SECTION 4: REQUIREMENTS SOURCE ────────────────
+                    sheet.Cells[row, 1, row, 4].Merge = true;
+                    sheet.Cells[row, 1].Value = "REQUIREMENTS SOURCE";
+                    sheet.Cells[row, 1].Style.Font.Bold = true;
+                    sheet.Cells[row, 1].Style.Font.Size = 11;
+                    sheet.Cells[row, 1].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                    sheet.Cells[row, 1].Style.Fill.BackgroundColor.SetColor(
+                        System.Drawing.ColorTranslator.FromHtml("#D9E1F2"));
+                    row++;
+
+                    bool isProvided = result.RequirementsSource
+                        .Equals("provided", StringComparison.OrdinalIgnoreCase);
+
+                    sheet.Cells[row, 1].Value = "Source Type";
+                    sheet.Cells[row, 2].Value = isProvided
+                        ? "✅ User-provided file"
+                        : "⚠️ AI-generated";
+                    sheet.Cells[row, 2].Style.Font.Color.SetColor(
+                        isProvided ? System.Drawing.Color.Green : System.Drawing.Color.OrangeRed);
+                    sheet.Cells[row, 1].Style.Font.Bold = true;
 
                     // Column widths
                     sheet.Column(1).Width = 35;
