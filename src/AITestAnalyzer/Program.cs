@@ -573,6 +573,21 @@ namespace AITestAnalyzer
 
                 double cost = result.TotalTokens * promptConfig.CostPerToken;
                 WriteSuccess($"Estimated cost:       ${cost:F6}");
+
+                // ── EXCEL OUTPUT ──────────────────────────────────────
+                Console.WriteLine();
+                WriteInfo("Creating Excel output...");
+                var genExcelWriter = new GenModeExcelWriter(promptConfig);
+                string outputPath = genExcelWriter.WriteOutput(result, elapsed);
+
+                // ── JSON OUTPUT ───────────────────────────────────────
+                WriteInfo("Creating JSON export...");
+                string jsonPath = JsonExporter.Export(result, promptConfig, elapsed, outputPath);
+                WriteSuccess($"JSON export: {Path.GetFileName(jsonPath)}");
+
+                Console.WriteLine();
+                WriteHeader("═══════════════════════════════════════════════════════════════════════");
+                WriteSuccess($"Output folder: {Path.GetDirectoryName(outputPath)}");
             }
             catch (ArgumentException ex)
             {
