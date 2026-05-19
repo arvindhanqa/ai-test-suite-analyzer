@@ -18,13 +18,18 @@ namespace AITestAnalyzer.UI
         // ============================================================
         public class SelectionResult
         {
-            public enum Mode { Single, Batch, Exit }
+            public enum Mode { Single, Batch, Gen, Exit }
             public Mode SelectedMode { get; set; }
-            public AnalysisMode SelectedAnalysisMode { get; set; }  
-            public string FilePath { get; set; } = "";      // Single mode: path to .xlsx            
-            public string FolderPath { get; set; } = "";    // Batch mode: path to folder
-            public int TestLimit { get; set; } = 0;    // 0 = all tests
-            public int SheetIndex { get; set; } = 1;   // Default sheet index
+            public AnalysisMode SelectedAnalysisMode { get; set; }
+            public string FilePath { get; set; } = "";
+            public string FolderPath { get; set; } = "";
+            public int TestLimit { get; set; } = 0;
+            public int SheetIndex { get; set; } = 1;
+
+            // GEN Mode specific properties
+            public string? RequirementsPath { get; set; }
+            public int TargetTestCount { get; set; } = 10;
+            public int MaxPasses { get; set; } = 3;
         }
 
 
@@ -65,19 +70,25 @@ namespace AITestAnalyzer.UI
                 Console.WriteLine();
                 Console.WriteLine("  What would you like to do?");
                 Console.WriteLine();
-                WriteMenuItem("1", "Analyze a single Excel file");
-                WriteMenuItem("2", "Batch analyze all Excel files in a folder");
-                WriteMenuItem("3", "Exit");
+                WriteMenuItem("1", "Analyze a single Excel file — QA Mode");
+                WriteMenuItem("2", "Analyze a single Excel file — BA Mode");
+                WriteMenuItem("3", "Generate test cases — GEN Mode  🆕");
+                WriteMenuItem("4", "Batch analyze all Excel files in a folder");
+                WriteMenuItem("5", "Exit");
                 Console.WriteLine();
-                string? choice = ReadIntegerInput($"Enter your choice (1-3): ", 1, 3);
+                string? choice = ReadIntegerInput($"Enter your choice (1-5): ", 1, 5);
 
                 switch (choice)
                 {
                     case "1":
-                        return SelectSingleFile();
+                        return SelectSingleFileWithMode(AnalysisMode.QA);
                     case "2":
-                        return SelectBatchFolder();
+                        return SelectSingleFileWithMode(AnalysisMode.BA);
                     case "3":
+                        return SelectGenMode();
+                    case "4":
+                        return SelectBatchFolder();
+                    case "5":
                         return new SelectionResult { SelectedMode = SelectionResult.Mode.Exit };
                 }
             }
@@ -129,6 +140,96 @@ namespace AITestAnalyzer.UI
             }
         }
 
+        // ============================================================
+        // SINGLE FILE SELECTION WITH PRE-SELECTED MODE
+        // Called from main menu — mode already known
+        // ============================================================
+        private static SelectionResult SelectSingleFileWithMode(AnalysisMode mode)
+        {
+            var result = SelectSingleFile();
+            if (result.SelectedMode != SelectionResult.Mode.Exit)
+                result.SelectedAnalysisMode = mode;
+            return result;
+        }
+
+        // ============================================================
+        // GEN MODE SELECTION
+        // Prompts for requirements file, test count, max passes
+        // ============================================================
+        private static SelectionResult SelectGenMode()
+        {
+            while (true)
+            {
+                Console.Clear();
+                WriteHeader("GEN MODE — GENERATE TEST CASES");
+                Console.WriteLine();
+                Console.WriteLine("  GEN Mode generates test cases from a requirements");
+                Console.WriteLine("  document using a Generate → Critique → Refine loop.");
+                Console.WriteLine();
+
+                // Requirements file
+                WritePrompt("  📁 Enter path to requirements file (.md or .txt): ");
+                string? reqPath = Console.ReadLine()?.Trim().Trim('"').Trim('\'');
+
+                if (string.IsNullOrWhiteSpace(reqPath))
+                {
+                    WriteWarning("  No path entered.");
+                    PauseForUser();
+                    return ShowMainMenu();
+                }
+
+                if (!File.Exists(reqPath))
+                {
+                    WriteWarning($"  File not found: {reqPath}");
+                    PauseForUser();
+                    continue;
+                }
+
+                string ext = Path.GetExtension(reqPath).ToLower();
+                if (ext != ".md" && ext != ".txt")
+                {
+                    WriteWarning("  Unsupported file type. Please provide a .md or .txt file.");
+                    PauseForUser();
+                    continue;
+                }
+
+                // Target test count
+                Console.WriteLine();
+                WritePrompt("  How many test cases to generate in total? [default: 10]: ");
+                string? countInput = Console.ReadLine()?.Trim();
+                int targetCount = int.TryParse(countInput, out int parsedCount) && parsedCount > 0
+                    ? parsedCount : 10;
+
+                // Max passes
+                WritePrompt("  Maximum refinement passes? [1-3, default: 3]: ");
+                string? passInput = Console.ReadLine()?.Trim();
+                int maxPasses = int.TryParse(passInput, out int parsedPasses)
+                    && parsedPasses >= 1 && parsedPasses <= 3
+                    ? parsedPasses : 3;
+
+                // Summary before running
+                Console.WriteLine();
+                Console.WriteLine("  ─── Ready to run ───────────────────────────────────");
+                Console.WriteLine($"  Requirements: {Path.GetFileName(reqPath)}");
+                Console.WriteLine($"  Target tests: {targetCount}");
+                Console.WriteLine($"  Max passes:   {maxPasses}");
+                Console.WriteLine("  ────────────────────────────────────────────────────");
+                Console.WriteLine();
+                WritePrompt("  Press Enter to start, or B to go back: ");
+
+                string? confirm = Console.ReadLine()?.Trim().ToUpper();
+                if (confirm == "B")
+                    return ShowMainMenu();
+
+                return new SelectionResult
+                {
+                    SelectedMode = SelectionResult.Mode.Gen,
+                    RequirementsPath = reqPath,
+                    TargetTestCount = targetCount,
+                    MaxPasses = maxPasses
+                };
+            }
+        }
 
         // ============================================================
         // SINGLE FILE SELECTION
