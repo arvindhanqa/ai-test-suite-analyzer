@@ -167,18 +167,59 @@ namespace AITestAnalyzer.UI
                 Console.WriteLine("  document using a Generate → Critique → Refine loop.");
                 Console.WriteLine();
 
-                // Requirements file
-                WritePrompt("  📁 Enter path to requirements file (.md or .txt): ");
-                string? reqPath = Console.ReadLine()?.Trim().Trim('"').Trim('\'');
+                // Requirements file — auto-detect from known locations
+                var reqFiles = FindRequirementsFiles();
+                string? reqPath = null;
 
-                if (string.IsNullOrWhiteSpace(reqPath))
+                if (reqFiles.Count > 0)
                 {
-                    WriteWarning("  No path entered.");
-                    PauseForUser();
-                    return ShowMainMenu();
+                    Console.WriteLine("  Available requirements files:");
+                    Console.WriteLine();
+                    for (int i = 0; i < reqFiles.Count; i++)
+                    {
+                        string fileName = Path.GetFileName(reqFiles[i]);
+                        string? folder = GetShortPath(Path.GetDirectoryName(reqFiles[i]));
+                        Console.WriteLine($"    [{i + 1}] {fileName}");
+                        Console.WriteLine($"        {folder}");
+                        Console.WriteLine();
+                    }
+                    WriteMenuItem("T", "Type a file path manually");
+                    WriteMenuItem("B", "Back to main menu");
+                    Console.WriteLine();
+                    WritePrompt($"  Select file (1-{reqFiles.Count}, T, or B): ");
+
+                    string? fileChoice = Console.ReadLine()?.Trim();
+
+                    if (fileChoice?.ToUpper() == "B")
+                        return ShowMainMenu();
+
+                    if (fileChoice?.ToUpper() == "T")
+                    {
+                        WritePrompt("  📁 Enter path to requirements file (.md or .txt): ");
+                        reqPath = Console.ReadLine()?.Trim().Trim('"').Trim('\'');
+                    }
+                    else if (int.TryParse(fileChoice, out int fileIndex)
+                             && fileIndex >= 1 && fileIndex <= reqFiles.Count)
+                    {
+                        reqPath = reqFiles[fileIndex - 1];
+                    }
+                    else
+                    {
+                        WriteWarning("  Invalid selection.");
+                        PauseForUser();
+                        continue;
+                    }
+                }
+                else
+                {
+                    // No files found — fall back to manual entry
+                    Console.WriteLine("  No requirements files found in common locations.");
+                    Console.WriteLine();
+                    WritePrompt("  📁 Enter path to requirements file (.md or .txt): ");
+                    reqPath = Console.ReadLine()?.Trim().Trim('"').Trim('\'');
                 }
 
-                if (!File.Exists(reqPath))
+                if (string.IsNullOrWhiteSpace(reqPath) || !File.Exists(reqPath))
                 {
                     WriteWarning($"  File not found: {reqPath}");
                     PauseForUser();
@@ -642,6 +683,27 @@ namespace AITestAnalyzer.UI
                 }
             }
             return folders;
+        }
+
+        // ============================================================
+        // HELPER: Find .md and .txt requirements files in known locations
+        // ============================================================
+        private static List<string> FindRequirementsFiles()
+        {
+            var files = new List<string>();
+            foreach (var location in GetSearchLocations())
+            {
+                if (Directory.Exists(location))
+                {
+                    files.AddRange(
+                        Directory.GetFiles(location, "requirements_*.md",
+                            SearchOption.TopDirectoryOnly));
+                    files.AddRange(
+                        Directory.GetFiles(location, "requirements_*.txt",
+                            SearchOption.TopDirectoryOnly));
+                }
+            }
+            return files.Distinct().OrderBy(f => Path.GetFileName(f)).ToList();
         }
 
         // ============================================================
