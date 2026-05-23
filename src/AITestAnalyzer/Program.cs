@@ -118,11 +118,15 @@ namespace AITestAnalyzer
             await HandleDryRunOptionAsync(selection, useCache, promptConfig);  // if they chose D, this exits after preview
 
             // ============================================================
-            // STEP 3: Route to batch or single based on selection
+            // STEP 3: Route to batch, GEN, or single based on selection
             // ============================================================
             if (selection.SelectedMode == FileSelector.SelectionResult.Mode.Batch)
             {
                 await RunBatchModeAsync(appConfig, promptConfig, selection, resumeBatch, serviceProvider);
+            }
+            else if (selection.SelectedMode == FileSelector.SelectionResult.Mode.Gen)
+            {
+                await RunGenModeAsync(appConfig, promptConfig, selection, exportJson, serviceProvider);
             }
             else
             {
@@ -603,6 +607,144 @@ namespace AITestAnalyzer
             WriteInfo("Press any key to exit...");
             Console.ReadKey();
         }
+
+        // ============================================================
+        // GEN MODE — generates test cases from requirements document
+        // ============================================================
+        private static async Task RunGenModeAsync(
+            Configuration appConfig,
+            PromptConfig promptConfig,
+            SelectionResult selection,
+            bool exportJson = false,
+            IServiceProvider? serviceProvider = null)
+        {
+            Console.WriteLine();
+            WriteHeader("═══════════════════════════════════════════════════════════════════════");
+            WriteHeader("   🤖 GEN MODE — GENERATING TEST CASES");
+            WriteHeader("═══════════════════════════════════════════════════════════════════════");
+            Console.WriteLine();
+
+            // Validate requirements file
+            if (string.IsNullOrWhiteSpace(selection.RequirementsPath) ||
+                !File.Exists(selection.RequirementsPath))
+            {
+                WriteError($"Requirements file not found: {selection.RequirementsPath}");
+                WriteInfo("Press any key to exit...");
+                Console.ReadKey();
+                return;
+            }
+
+            // Validate API connection
+            WriteInfo("Validating API connection...");
+            var validator = new ConfigurationValidator(appConfig, promptConfig);
+            var connectionResult = await validator.ValidateOpenAIConnectionAsync();
+            if (!connectionResult.IsValid)
+            {
+                WriteError($"OpenAI Connection Error: {connectionResult.ErrorMessage}");
+                WriteInfo("Press any key to exit...");
+                Console.ReadKey();
+                return;
+            }
+            WriteSuccess("API connection validated");
+            Console.WriteLine();
+
+            // Load requirements
+            string requirementsMarkdown = await File.ReadAllTextAsync(selection.RequirementsPath);
+            WriteSuccess($"Requirements: {Path.GetFileName(selection.RequirementsPath)} " +
+                         $"({requirementsMarkdown.Length:N0} chars)");
+            WriteInfo($"Target tests:  {selection.TargetTestCount}");
+            WriteInfo($"Max passes:    {selection.MaxPasses}");
+            Console.WriteLine();
+
+            var startTime = DateTime.Now;
+
+            try
+            {
+                // Build orchestrator from DI or direct
+                var aiAnalyzer = serviceProvider?.GetRequiredService<IAIAnalyzer>()
+                    ?? new AIAnalyzer(appConfig, promptConfig);
+                var cache = new TestCaseCache();
+                _activeCache = cache;
+
+                var orchestrator = new GenModeOrchestrator(aiAnalyzer, cache, promptConfig)
+                {
+                    MaxPasses = selection.MaxPasses,
+                    TargetTestCount = selection.TargetTestCount
+                };
+
+                // Run the Generate → Critique → Refine pipeline
+                var result = await orchestrator.RunAsync(
+                    requirementsMarkdown,
+                    selection.TargetTestCount,
+                    selection.MaxPasses);
+
+                var elapsed = DateTime.Now - startTime;
+
+                // Display console summary
+                Console.WriteLine();
+                WriteHeader("═══════════════════════════════════════════════════════════════════════");
+                WriteHeader("   GENERATED TEST CASES");
+                WriteHeader("═══════════════════════════════════════════════════════════════════════");
+                Console.WriteLine();
+
+                foreach (var tc in result.TestCases)
+                {
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    Console.Write($"   {tc.TestId} ");
+                    Console.ForegroundColor = ConsoleColor.White;
+                    Console.Write($"[Pass {tc.PassNumber}] ");
+                    Console.ForegroundColor = ConsoleColor.Yellow;
+                    Console.WriteLine(tc.Scenario);
+                    Console.ResetColor();
+
+                    if (!string.IsNullOrEmpty(tc.QAScore))
+                    {
+                        Console.ForegroundColor = tc.QAScore.StartsWith("GOOD",
+                            StringComparison.OrdinalIgnoreCase)
+                            ? ConsoleColor.Green : ConsoleColor.Yellow;
+                        Console.WriteLine($"      QA: {tc.QAScore}");
+                        Console.ResetColor();
+                    }
+                }
+
+                Console.WriteLine();
+                WriteSuccess($"Test cases generated: {result.TestCases.Count}");
+                WriteSuccess($"Total passes:         {result.TotalPasses}");
+                WriteSuccess($"Total tokens:         {result.TotalTokens:N0}");
+                WriteSuccess($"Elapsed time:         {elapsed.TotalSeconds:F1}s");
+                WriteSuccess($"Estimated cost:       ${result.TotalTokens * promptConfig.CostPerToken:F6}");
+
+                // Excel output
+                Console.WriteLine();
+                WriteInfo("Creating Excel output...");
+                var genExcelWriter = new GenModeExcelWriter(promptConfig);
+                string outputPath = genExcelWriter.WriteOutput(result, elapsed);
+
+                // JSON output
+                if (exportJson)
+                {
+                    WriteInfo("Creating JSON export...");
+                    string jsonPath = JsonExporter.Export(result, promptConfig, elapsed, outputPath);
+                    WriteSuccess($"JSON export: {Path.GetFileName(jsonPath)}");
+                }
+
+                Console.WriteLine();
+                WriteSuccess($"Output folder: {Path.GetDirectoryName(outputPath)}");
+            }
+            catch (ArgumentException ex)
+            {
+                WriteError(ex.Message);
+            }
+            catch (Exception ex)
+            {
+                WriteError($"GEN Mode failed: {ex.Message}");
+            }
+
+            Console.WriteLine();
+            WriteInfo("Press any key to exit...");
+            Console.ReadKey();
+        }
+
 
         // ============================================================
         // SINGLE FILE MODE — orchestrator only, delegates to helpers
