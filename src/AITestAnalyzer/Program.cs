@@ -1422,6 +1422,11 @@ namespace AITestAnalyzer
                 _ => new BatchProcessor(appConfig, promptConfig));
             services.AddSingleton<ConfigurationValidator>(
                 _ => new ConfigurationValidator(appConfig, new PromptConfig()));
+            services.AddSingleton<GenModeOrchestrator>(sp =>
+                new GenModeOrchestrator(
+                    sp.GetRequiredService<IAIAnalyzer>(),
+                    sp.GetRequiredService<ITestCaseCache>(),
+                    promptConfig));
 
             return services.BuildServiceProvider();
         }
