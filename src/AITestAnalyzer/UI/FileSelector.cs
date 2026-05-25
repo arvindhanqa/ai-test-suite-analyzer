@@ -95,6 +95,18 @@ namespace AITestAnalyzer.UI
         }
 
         /// <summary>
+        /// Called via --gen-mode CLI flag — skips the main menu entirely.
+        /// Shows only the GEN Mode selection screen.
+        /// </summary>
+        public static SelectionResult? SelectGenModeDirect()
+        {
+            var result = SelectGenMode();
+            if (result.SelectedMode == SelectionResult.Mode.Exit)
+                return null;
+            return result;
+        }
+
+        /// <summary>
         /// Prompts user to select QA Mode or BA Mode for analysis
         /// </summary>
         public static AnalysisMode SelectAnalysisMode()

@@ -55,6 +55,19 @@ namespace AITestAnalyzer
                     return;
                 }
 
+                // GEN Mode direct launch — skips main menu
+                if (firstArg == "--gen-mode")
+                {
+                    var (genAppConfig, genPromptConfig) = LoadConfiguration();
+                    if (genAppConfig == null || genPromptConfig == null)
+                        return;
+
+                    var genSelection = FileSelector.SelectGenModeDirect();
+                    if (genSelection != null)
+                        await RunGenModeAsync(genAppConfig, genPromptConfig, genSelection);
+                    return;
+                }
+
                 if (firstArg == "--help" || firstArg == "-h")
                 {
                     DisplayHelp();
@@ -1321,7 +1334,8 @@ namespace AITestAnalyzer
             Console.WriteLine("  dotnet run -- --clear-cache       # Clear all cached results");
             Console.WriteLine("  dotnet run -- --no-cache          # Disable cache for this run");
             Console.WriteLine("  dotnet run -- --test-requirements # 🆕 Test requirement extraction");
-            Console.WriteLine("  dotnet run -- --test-gen          # 🆕 Test GEN Mode orchestrator");
+            Console.WriteLine("  dotnet run -- --test-gen          # Test GEN Mode orchestrator");
+            Console.WriteLine("  dotnet run -- --gen-mode          # 🆕 Launch GEN Mode directly");
             Console.WriteLine("  dotnet run -- --resume            # Resume interrupted batch run");
             Console.WriteLine("  dotnet run -- --format json               # Export results as JSON");
             Console.WriteLine();
