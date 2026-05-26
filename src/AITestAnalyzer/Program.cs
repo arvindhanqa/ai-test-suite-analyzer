@@ -12,7 +12,7 @@ namespace AITestAnalyzer
 {
     internal class Program
     {
-        private const string Version = "1.0.0";
+        private const string Version = "2.0.0-beta";
         private const string AppName = "AI Test Suite Analyzer";
         private const int CACHE_MAX_AGE_DAYS = Constants.CACHE_MAX_AGE_DAYS;
 
