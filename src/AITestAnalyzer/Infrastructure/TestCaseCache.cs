@@ -24,7 +24,9 @@ namespace AITestAnalyzer.Infrastructure
     public class TestCaseCache : ITestCaseCache
     {
         private readonly string _cacheFilePath;
+        private readonly string _genCacheFilePath;
         private Dictionary<string, CachedResult> _cache;
+        private Dictionary<string, string> _genCache; // hash → serialized GenModeResult JSON
         private const int DEFAULT_MAX_AGE_DAYS = Constants.CACHE_MAX_AGE_DAYS;
         private const int MAX_CACHE_ENTRIES = 1000;
 
@@ -37,7 +39,9 @@ namespace AITestAnalyzer.Infrastructure
             }
 
             _cacheFilePath = Path.Combine(cacheDirectory, "test_analysis_cache.json");
-            _cache = new Dictionary<string, CachedResult>(); // Initialize before LoadCache
+            _genCacheFilePath = Path.Combine(cacheDirectory, "gen_mode_cache.json");
+            _cache = new Dictionary<string, CachedResult>();
+            _genCache = LoadGenCache();
             LoadCache();
             // Check if migration is needed
             MigrateCacheIfNeeded();
@@ -293,6 +297,116 @@ namespace AITestAnalyzer.Infrastructure
             }
 
             return toRemove.Count;
+        }
+
+        // ============================================================
+        // GEN MODE CACHE — separate file: cache/gen_mode_cache.json
+        // Key: SHA256 hash of requirementsMarkdown + targetCount + maxPasses
+        // Value: serialized GenModeResult JSON with a CachedAt timestamp wrapper
+        // ============================================================
+
+        private Dictionary<string, string> LoadGenCache()
+        {
+            if (!File.Exists(_genCacheFilePath))
+                return new Dictionary<string, string>();
+
+            try
+            {
+                string json = File.ReadAllText(_genCacheFilePath);
+                return JsonSerializer.Deserialize<Dictionary<string, string>>(json)
+                       ?? new Dictionary<string, string>();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Cache] Warning: Failed to load GEN cache: " +
+                                  $"{ex.GetType().Name} — {ex.Message}. Starting fresh.");
+                return new Dictionary<string, string>();
+            }
+        }
+
+        private string GenerateGenHash(string requirementsMarkdown, int targetCount, int maxPasses)
+        {
+            string content = $"{requirementsMarkdown}|{targetCount}|{maxPasses}";
+            using var sha256 = SHA256.Create();
+            byte[] bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(content));
+            var builder = new StringBuilder();
+            foreach (byte b in bytes)
+                builder.Append(b.ToString("x2"));
+            return "gen_" + builder.ToString()[..Constants.HASH_LENGTH];
+        }
+
+        /// <summary>
+        /// GEN MODE: Attempts to retrieve a cached GenModeResult.
+        /// Returns false if not found or expired.
+        /// </summary>
+        public bool TryGetCachedGenResult(string requirementsMarkdown, int targetCount, int maxPasses,
+            out GenModeResult? result, int maxAgeDays = DEFAULT_MAX_AGE_DAYS)
+        {
+            result = null;
+            string hash = GenerateGenHash(requirementsMarkdown, targetCount, maxPasses);
+
+            if (!_genCache.TryGetValue(hash, out string? json) || string.IsNullOrEmpty(json))
+                return false;
+
+            try
+            {
+                // Wrapper contains CachedAt + ResultJson
+                var wrapper = JsonSerializer.Deserialize<GenCacheWrapper>(json);
+                if (wrapper == null)
+                    return false;
+
+                var age = DateTime.UtcNow - wrapper.CachedAt;
+                if (age.TotalDays > maxAgeDays)
+                {
+                    _genCache.Remove(hash);
+                    return false;
+                }
+
+                result = JsonSerializer.Deserialize<GenModeResult>(wrapper.ResultJson);
+                return result != null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Cache] Warning: Failed to deserialize GEN cache entry: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// GEN MODE: Stores a GenModeResult in cache serialized as JSON.
+        /// </summary>
+        public void AddGenResultToCache(string requirementsMarkdown, int targetCount, int maxPasses,
+            GenModeResult result)
+        {
+            string hash = GenerateGenHash(requirementsMarkdown, targetCount, maxPasses);
+
+            var wrapper = new GenCacheWrapper
+            {
+                CachedAt = DateTime.UtcNow,
+                ResultJson = JsonSerializer.Serialize(result)
+            };
+
+            _genCache[hash] = JsonSerializer.Serialize(wrapper);
+
+            try
+            {
+                string json = JsonSerializer.Serialize(_genCache, new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+                File.WriteAllText(_genCacheFilePath, json);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Cache] Warning: Failed to save GEN cache: {ex.Message}");
+            }
+        }
+
+        /// <summary>Wrapper stored in GEN cache — includes expiry metadata.</summary>
+        private class GenCacheWrapper
+        {
+            public DateTime CachedAt { get; set; }
+            public string ResultJson { get; set; } = "";
         }
     }
 }
