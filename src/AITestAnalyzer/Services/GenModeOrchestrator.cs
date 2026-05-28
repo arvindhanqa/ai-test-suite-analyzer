@@ -65,6 +65,22 @@ namespace AITestAnalyzer.Services
                     "GEN Mode requires a requirements document. " +
                     "Please provide a .md or .txt requirements file.");
 
+            // ── CACHE CHECK ───────────────────────────────────────────
+            if (_cache.TryGetCachedGenResult(requirementsMarkdown, resolvedTargetCount,
+                    resolvedMaxPasses, out GenModeResult? cachedResult))
+            {
+                Console.WriteLine();
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("   ⚡ Cache hit — returning cached GEN Mode result.");
+                Console.WriteLine($"      {cachedResult!.TestCases.Count} test cases, " +
+                                  $"{cachedResult.TotalPasses} passes, " +
+                                  $"{cachedResult.TotalTokens:N0} tokens (saved)");
+                Console.ResetColor();
+                return cachedResult;
+            }
+
+            Console.WriteLine("   📭 Cache miss — running full GEN Mode pipeline...");
+
             var result = new GenModeResult
             {
                 RequirementsSource = "provided",
@@ -82,9 +98,6 @@ namespace AITestAnalyzer.Services
             result.TestCases = initialTestCases;
             result.TotalPasses = 1;
             result.TotalTokens += generateTokens;
-
-            Console.WriteLine($"   ✅ Pass 1 complete — {initialTestCases.Count} test cases generated " +
-                              $"({generateTokens} tokens)");
 
             Console.WriteLine($"   ✅ Pass 1 complete — {initialTestCases.Count} test cases generated " +
                               $"({generateTokens} tokens)");
@@ -169,7 +182,13 @@ namespace AITestAnalyzer.Services
                 currentCritiques = newCritiques;
             }
 
+            // ── AUTO QA MODE SCORING ─────────────────────────────────
             await ScoreGeneratedTestCasesAsync(result.TestCases);
+
+            // ── STORE IN CACHE ────────────────────────────────────────
+            _cache.AddGenResultToCache(requirementsMarkdown, resolvedTargetCount,
+                resolvedMaxPasses, result);
+            Console.WriteLine("   💾 GEN Mode result cached.");
 
             return result;
         }
