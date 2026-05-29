@@ -435,5 +435,118 @@ namespace AITestAnalyzer.IntegrationTests
             refined.Should().Contain(t => t.TestId == "TC-GEN-002" && t.PassNumber == 2);
             tokens.Should().Be(400);
         }
+
+        [Fact]
+        public async Task GenMode_FullPipeline_ProducesExcelAndJsonOutput()
+        {
+            // ARRANGE
+            string outputDir = Path.Combine(
+                Directory.GetCurrentDirectory(), "TestOutput");
+            Directory.CreateDirectory(outputDir);
+
+            string cacheDir = Path.Combine(
+                Directory.GetCurrentDirectory(), "TestCache_Gen");
+            if (Directory.Exists(cacheDir))
+                Directory.Delete(cacheDir, recursive: true);
+
+            var promptConfig = new PromptConfig
+            {
+                Model = "gpt-4o-mini",
+                GenModel = "gpt-4.1-mini",
+                MaxTokens = 150,
+                Temperature = 0.2,
+                CostPerToken = 0.00000015,
+                SystemMessage = "Test",
+                UserTemplate = "Test",
+                GenSystemMessage = "Test",
+                GenUserTemplate = "Test"
+            };
+
+            // Deterministic test cases returned by mock
+            var fakeTestCases = Enumerable.Range(1, 3).Select(i => new GeneratedTestCase
+            {
+                TestId = $"TC-GEN-00{i}",
+                Feature = "User Registration",
+                Scenario = $"Scenario {i}",
+                Priority = "High",
+                Steps = "Step 1. Do X\nStep 2. Do Y",
+                ExpectedResult = "Expected result",
+                PassNumber = 1,
+                QAScore = "GOOD"
+            }).ToList();
+
+            var fakeCritiques = fakeTestCases.Select(tc =>
+                new CritiqueResult { TestId = tc.TestId, Action = "KEEP", Reason = "No issues" }
+            ).ToList();
+
+            var mockAnalyzer = new Mock<IAIAnalyzer>();
+
+            mockAnalyzer
+                .Setup(a => a.GenerateTestCasesAsync(It.IsAny<string>(), It.IsAny<int>()))
+                .ReturnsAsync((fakeTestCases, 500));
+
+            mockAnalyzer
+                .Setup(a => a.CritiqueTestCasesAsync(
+                    It.IsAny<List<GeneratedTestCase>>(), It.IsAny<string>()))
+                .ReturnsAsync((fakeCritiques, 300));
+
+            mockAnalyzer
+                .Setup(a => a.AnalyzeTestQualityAsync(It.IsAny<TestCase>()))
+                .ReturnsAsync(("GOOD - Test passes standards", 150));
+
+            var cache = new TestCaseCache(cacheDir);
+            var orchestrator = new GenModeOrchestrator(mockAnalyzer.Object, cache, promptConfig);
+
+            // ACT
+            var startTime = DateTime.Now;
+            var result = await orchestrator.RunAsync("# Requirements\n- FR-001: Login", 3, 1);
+            var elapsed = DateTime.Now - startTime;
+
+            // Write Excel + JSON output
+            var genExcelWriter = new GenModeExcelWriter(promptConfig);
+            string outputPath = genExcelWriter.WriteOutput(result, elapsed);
+            string jsonPath = JsonExporter.Export(result, promptConfig, elapsed, outputPath);
+
+            // ASSERT — result
+            result.Should().NotBeNull();
+            result.TestCases.Should().HaveCount(3);
+            result.TotalPasses.Should().Be(1);
+            result.TotalTokens.Should().BeGreaterThan(0);
+
+            // ASSERT — Excel file created with correct sheets
+            File.Exists(outputPath).Should().BeTrue("Excel output file should be created");
+
+            using (var package = new ExcelPackage(new FileInfo(outputPath)))
+            {
+                var sheetNames = package.Workbook.Worksheets
+                    .Select(ws => ws.Name).ToList();
+
+                sheetNames.Should().Contain("Generated Tests",
+                    "because generated tests sheet should exist");
+                sheetNames.Should().Contain("Gen Statistics Dashboard",
+                    "because gen statistics dashboard should exist");
+            }
+
+            // ASSERT — JSON file created with correct structure
+            File.Exists(jsonPath).Should().BeTrue("JSON output file should be created");
+
+            string jsonContent = File.ReadAllText(jsonPath);
+            using var doc = JsonDocument.Parse(jsonContent);
+            var root = doc.RootElement;
+
+            root.TryGetProperty("metadata", out _).Should().BeTrue(
+                "JSON should contain metadata section");
+            root.TryGetProperty("summary", out var summary).Should().BeTrue(
+                "JSON should contain summary section");
+            root.TryGetProperty("testCases", out var testCasesArray).Should().BeTrue(
+                "JSON should contain testCases array");
+
+            summary.GetProperty("testsGenerated").GetInt32().Should().Be(3);
+            testCasesArray.GetArrayLength().Should().Be(3);
+
+            // Cleanup
+            if (Directory.Exists(cacheDir))
+                Directory.Delete(cacheDir, recursive: true);
+        }
     }
 }
