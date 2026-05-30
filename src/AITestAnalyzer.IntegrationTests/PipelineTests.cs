@@ -548,5 +548,151 @@ namespace AITestAnalyzer.IntegrationTests
             if (Directory.Exists(cacheDir))
                 Directory.Delete(cacheDir, recursive: true);
         }
+
+        [Fact]
+        public async Task GenMode_CritiqueLoop_DropsAndRevisesTests()
+        {
+            // ARRANGE
+            string cacheDir = Path.Combine(
+                Directory.GetCurrentDirectory(), "TestCache_CritiqueLoop");
+            if (Directory.Exists(cacheDir))
+                Directory.Delete(cacheDir, recursive: true);
+
+            var promptConfig = new PromptConfig
+            {
+                Model = "gpt-4o-mini",
+                GenModel = "gpt-4.1-mini",
+                MaxTokens = 150,
+                Temperature = 0.2,
+                CostPerToken = 0.00000015,
+                SystemMessage = "Test",
+                UserTemplate = "Test",
+                GenSystemMessage = "Test",
+                GenUserTemplate = "Test"
+            };
+
+            // Initial generated test cases — 3 tests
+            var initialTestCases = new List<GeneratedTestCase>
+            {
+                new GeneratedTestCase
+                {
+                    TestId = "TC-GEN-001", Feature = "Login",
+                    Scenario = "Valid login", Priority = "High",
+                    Steps = "Step 1. Enter credentials", ExpectedResult = "Logged in",
+                    PassNumber = 1
+                },
+                new GeneratedTestCase
+                {
+                    TestId = "TC-GEN-002", Feature = "Login",
+                    Scenario = "Invalid password", Priority = "High",
+                    Steps = "Step 1. Enter wrong password", ExpectedResult = "Error shown",
+                    PassNumber = 1
+                },
+                new GeneratedTestCase
+                {
+                    TestId = "TC-GEN-003", Feature = "Login",
+                    Scenario = "Duplicate of TC-GEN-001", Priority = "High",
+                    Steps = "Step 1. Enter credentials", ExpectedResult = "Logged in",
+                    PassNumber = 1
+                }
+            };
+
+            // First critique: TC-GEN-002 REVISE, TC-GEN-003 DROP, TC-GEN-001 KEEP
+            var firstCritiques = new List<CritiqueResult>
+            {
+                new CritiqueResult { TestId = "TC-GEN-001", Action = "KEEP",   Reason = "No issues" },
+                new CritiqueResult { TestId = "TC-GEN-002", Action = "REVISE", Reason = "Missing precondition — add login page navigation step" },
+                new CritiqueResult { TestId = "TC-GEN-003", Action = "DROP",   Reason = "Duplicate of TC-GEN-001" }
+            };
+
+            // Refined output after Pass 2 — TC-GEN-003 dropped, TC-GEN-002 revised
+            var refinedTestCases = new List<GeneratedTestCase>
+            {
+                new GeneratedTestCase
+                {
+                    TestId = "TC-GEN-001", Feature = "Login",
+                    Scenario = "Valid login", Priority = "High",
+                    Steps = "Step 1. Enter credentials", ExpectedResult = "Logged in",
+                    PassNumber = 1
+                },
+                new GeneratedTestCase
+                {
+                    TestId = "TC-GEN-002", Feature = "Login",
+                    Scenario = "Invalid password", Priority = "High",
+                    Steps = "Step 1. Navigate to login page\nStep 2. Enter wrong password",
+                    ExpectedResult = "Error message displayed",
+                    PassNumber = 2  // revised — PassNumber incremented
+                }
+            };
+
+            var mockAnalyzer = new Mock<IAIAnalyzer>();
+
+            // Generate returns 3 initial test cases
+            mockAnalyzer
+                .Setup(a => a.GenerateTestCasesAsync(It.IsAny<string>(), It.IsAny<int>()))
+                .ReturnsAsync((initialTestCases, 500));
+
+            // First critique returns 1 KEEP + 1 REVISE + 1 DROP
+            mockAnalyzer
+                .Setup(a => a.CritiqueTestCasesAsync(
+                    It.IsAny<List<GeneratedTestCase>>(), It.IsAny<string>()))
+                .ReturnsAsync((firstCritiques, 300));
+
+            // Refine returns 2 test cases (TC-GEN-003 dropped, TC-GEN-002 revised)
+            mockAnalyzer
+                .Setup(a => a.RefineTestCasesAsync(
+                    It.IsAny<List<GeneratedTestCase>>(),
+                    It.IsAny<List<CritiqueResult>>(),
+                    It.IsAny<string>()))
+                .ReturnsAsync((refinedTestCases, 400));
+
+            // QA scoring
+            mockAnalyzer
+                .Setup(a => a.AnalyzeTestQualityAsync(It.IsAny<TestCase>()))
+                .ReturnsAsync(("GOOD", 150));
+
+            var cache = new TestCaseCache(cacheDir);
+            var orchestrator = new GenModeOrchestrator(mockAnalyzer.Object, cache, promptConfig)
+            {
+                MaxPasses = 2,
+                TargetTestCount = 3
+            };
+
+            // ACT
+            var result = await orchestrator.RunAsync(
+                "# Requirements\n- FR-001: Login",
+                targetCount: 3,
+                maxPasses: 2);
+
+            // ASSERT — correct number of final test cases
+            result.TestCases.Should().HaveCount(2,
+                "because TC-GEN-003 was dropped by the critique");
+
+            // ASSERT — dropped test not in final output
+            result.TestCases.Should().NotContain(
+                t => t.TestId == "TC-GEN-003",
+                "because TC-GEN-003 was marked DROP and should be removed");
+
+            // ASSERT — revised test appears with PassNumber = 2
+            result.TestCases.Should().Contain(
+                t => t.TestId == "TC-GEN-002" && t.PassNumber == 2,
+                "because TC-GEN-002 was revised and PassNumber should be incremented");
+
+            // ASSERT — kept test unchanged
+            result.TestCases.Should().Contain(
+                t => t.TestId == "TC-GEN-001" && t.PassNumber == 1,
+                "because TC-GEN-001 was kept and PassNumber should remain 1");
+
+            // ASSERT — passes used
+            result.TotalPasses.Should().Be(2,
+                "because refinement ran for 2 passes");
+
+            // ASSERT — tokens accumulated across all passes
+            result.TotalTokens.Should().BeGreaterThan(0);
+
+            // Cleanup
+            if (Directory.Exists(cacheDir))
+                Directory.Delete(cacheDir, recursive: true);
+        }
     }
 }
