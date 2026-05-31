@@ -326,7 +326,8 @@ namespace AITestAnalyzer.Infrastructure
 
         private string GenerateGenHash(string requirementsMarkdown, int targetCount, int maxPasses)
         {
-            string content = $"{requirementsMarkdown}|{targetCount}|{maxPasses}";
+            string normalized = requirementsMarkdown.Trim().ReplaceLineEndings("\n");
+            string content = $"{normalized}|{targetCount}|{maxPasses}";
             using var sha256 = SHA256.Create();
             byte[] bytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(content));
             var builder = new StringBuilder();

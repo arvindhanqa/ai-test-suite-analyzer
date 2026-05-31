@@ -694,5 +694,135 @@ namespace AITestAnalyzer.IntegrationTests
             if (Directory.Exists(cacheDir))
                 Directory.Delete(cacheDir, recursive: true);
         }
+
+        [Fact]
+        public async Task GenMode_CacheHit_MakesZeroAICalls()
+        {
+            // ARRANGE
+            string cacheDir = Path.Combine(
+                Directory.GetCurrentDirectory(), "TestCache_CacheHit");
+            if (Directory.Exists(cacheDir))
+                Directory.Delete(cacheDir, recursive: true);
+
+            var promptConfig = new PromptConfig
+            {
+                Model = "gpt-4o-mini",
+                GenModel = "gpt-4.1-mini",
+                MaxTokens = 150,
+                Temperature = 0.2,
+                CostPerToken = 0.00000015,
+                SystemMessage = "Test",
+                UserTemplate = "Test",
+                GenSystemMessage = "Test",
+                GenUserTemplate = "Test"
+            };
+
+            var fakeTestCases = new List<GeneratedTestCase>
+            {
+                new GeneratedTestCase
+                {
+                    TestId = "TC-GEN-001", Feature = "Login",
+                    Scenario = "Valid login", Priority = "High",
+                    Steps = "Step 1. Enter credentials",
+                    ExpectedResult = "Logged in", PassNumber = 1,
+                    QAScore = "GOOD"
+                }
+            };
+
+            var fakeCritiques = new List<CritiqueResult>
+            {
+                new CritiqueResult
+                {
+                    TestId = "TC-GEN-001", Action = "KEEP", Reason = "No issues"
+                }
+            };
+
+            var mockAnalyzer = new Mock<IAIAnalyzer>();
+
+            mockAnalyzer
+                .Setup(a => a.GenerateTestCasesAsync(It.IsAny<string>(), It.IsAny<int>()))
+                .ReturnsAsync((fakeTestCases, 500));
+
+            mockAnalyzer
+                .Setup(a => a.CritiqueTestCasesAsync(
+                    It.IsAny<List<GeneratedTestCase>>(), It.IsAny<string>()))
+                .ReturnsAsync((fakeCritiques, 300));
+
+            mockAnalyzer
+                .Setup(a => a.AnalyzeTestQualityAsync(It.IsAny<TestCase>()))
+                .ReturnsAsync(("GOOD", 150));
+
+            const string requirements = "# Requirements\n- FR-001: Login feature";
+            const int targetCount = 1;
+            const int maxPasses = 1;
+
+            var cache = new TestCaseCache(cacheDir);
+
+            var orchestrator = new GenModeOrchestrator(mockAnalyzer.Object, cache, promptConfig)
+            {
+                MaxPasses = maxPasses,
+                TargetTestCount = targetCount
+            };
+
+            // ACT — First run: cache miss, AI calls made
+            var firstResult = await orchestrator.RunAsync(requirements, targetCount, maxPasses);
+
+            // Verify first run made AI calls
+            mockAnalyzer.Verify(
+                a => a.GenerateTestCasesAsync(It.IsAny<string>(), It.IsAny<int>()),
+                Times.Once(),
+                "first run should call GenerateTestCasesAsync exactly once");
+
+            // ACT — Second run: same inputs, should hit cache
+            // Reset invocation tracking by creating a new mock with same setups
+            var mockAnalyzer2 = new Mock<IAIAnalyzer>();
+            mockAnalyzer2
+                .Setup(a => a.GenerateTestCasesAsync(It.IsAny<string>(), It.IsAny<int>()))
+                .ReturnsAsync((fakeTestCases, 500));
+            mockAnalyzer2
+                .Setup(a => a.CritiqueTestCasesAsync(
+                    It.IsAny<List<GeneratedTestCase>>(), It.IsAny<string>()))
+                .ReturnsAsync((fakeCritiques, 300));
+            mockAnalyzer2
+                .Setup(a => a.AnalyzeTestQualityAsync(It.IsAny<TestCase>()))
+                .ReturnsAsync(("GOOD", 150));
+
+            var orchestrator2 = new GenModeOrchestrator(mockAnalyzer2.Object, cache, promptConfig)
+            {
+                MaxPasses = maxPasses,
+                TargetTestCount = targetCount
+            };
+
+            var secondResult = await orchestrator2.RunAsync(requirements, targetCount, maxPasses);
+
+            // ASSERT — second run returned same result
+            secondResult.Should().NotBeNull();
+            secondResult.TestCases.Should().HaveCount(firstResult.TestCases.Count,
+                "cached result should have same test case count as first run");
+            secondResult.TestCases[0].TestId.Should().Be(
+                firstResult.TestCases[0].TestId,
+                "cached result should have same test IDs");
+
+            // ASSERT — second run made zero AI calls
+            mockAnalyzer2.Verify(
+                a => a.GenerateTestCasesAsync(It.IsAny<string>(), It.IsAny<int>()),
+                Times.Never(),
+                "second run should make zero GenerateTestCasesAsync calls — cache hit");
+
+            mockAnalyzer2.Verify(
+                a => a.CritiqueTestCasesAsync(
+                    It.IsAny<List<GeneratedTestCase>>(), It.IsAny<string>()),
+                Times.Never(),
+                "second run should make zero CritiqueTestCasesAsync calls — cache hit");
+
+            mockAnalyzer2.Verify(
+                a => a.AnalyzeTestQualityAsync(It.IsAny<TestCase>()),
+                Times.Never(),
+                "second run should make zero AnalyzeTestQualityAsync calls — cache hit");
+
+            // Cleanup
+            if (Directory.Exists(cacheDir))
+                Directory.Delete(cacheDir, recursive: true);
+        }
     }
 }

@@ -125,6 +125,9 @@ namespace AITestAnalyzer.Services
             {
                 Console.WriteLine($"   ✅ All critiques are KEEP — no refinement needed.");
                 await ScoreGeneratedTestCasesAsync(result.TestCases);
+                _cache.AddGenResultToCache(requirementsMarkdown, resolvedTargetCount,
+                    resolvedMaxPasses, result);
+                Console.WriteLine("   💾 GEN Mode result cached.");
                 return result;
             }
 
