@@ -824,5 +824,60 @@ namespace AITestAnalyzer.IntegrationTests
             if (Directory.Exists(cacheDir))
                 Directory.Delete(cacheDir, recursive: true);
         }
+
+        [Fact]
+        public async Task GenMode_MissingRequirements_ThrowsArgumentException()
+        {
+            // ARRANGE
+            string cacheDir = Path.Combine(
+                Directory.GetCurrentDirectory(), "TestCache_MissingReqs");
+            if (Directory.Exists(cacheDir))
+                Directory.Delete(cacheDir, recursive: true);
+
+            var promptConfig = new PromptConfig
+            {
+                Model = "gpt-4o-mini",
+                GenModel = "gpt-4.1-mini",
+                MaxTokens = 150,
+                Temperature = 0.2,
+                CostPerToken = 0.00000015,
+                SystemMessage = "Test",
+                UserTemplate = "Test",
+                GenSystemMessage = "Test",
+                GenUserTemplate = "Test"
+            };
+
+            var mockAnalyzer = new Mock<IAIAnalyzer>();
+            var cache = new TestCaseCache(cacheDir);
+            var orchestrator = new GenModeOrchestrator(mockAnalyzer.Object, cache, promptConfig);
+
+            // ACT + ASSERT — null requirements
+            await FluentActions
+                .Invoking(() => orchestrator.RunAsync(null!, 5, 2))
+                .Should().ThrowAsync<ArgumentException>()
+                .WithMessage("*GEN Mode requires a requirements document*");
+
+            // ACT + ASSERT — empty requirements
+            await FluentActions
+                .Invoking(() => orchestrator.RunAsync("", 5, 2))
+                .Should().ThrowAsync<ArgumentException>()
+                .WithMessage("*GEN Mode requires a requirements document*");
+
+            // ACT + ASSERT — whitespace only
+            await FluentActions
+                .Invoking(() => orchestrator.RunAsync("   ", 5, 2))
+                .Should().ThrowAsync<ArgumentException>()
+                .WithMessage("*GEN Mode requires a requirements document*");
+
+            // ASSERT — no AI calls were made
+            mockAnalyzer.Verify(
+                a => a.GenerateTestCasesAsync(It.IsAny<string>(), It.IsAny<int>()),
+                Times.Never(),
+                "no AI calls should be made when requirements are missing");
+
+            // Cleanup
+            if (Directory.Exists(cacheDir))
+                Directory.Delete(cacheDir, recursive: true);
+        }
     }
 }
