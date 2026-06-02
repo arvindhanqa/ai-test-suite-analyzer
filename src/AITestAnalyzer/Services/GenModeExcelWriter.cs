@@ -56,6 +56,8 @@ namespace AITestAnalyzer.Services
         /// Creates an empty Excel file in the output directory with a timestamped filename.
         /// Format: generated_tests_{yyyyMMdd_HHmmss}.xlsx
         /// </summary>
+        /// <param name="outputDir">Directory where the output file will be created.</param>
+        /// <returns>Full path to the created Excel file.</returns>
         private static string CreateOutputFile(string outputDir)
         {
             string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
