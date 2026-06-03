@@ -1,3 +1,4 @@
+using AITestAnalyzer.Config;
 using AITestAnalyzer.Models;
 
 namespace AITestAnalyzer.Services
@@ -111,16 +112,17 @@ namespace AITestAnalyzer.Services
 
             result.TotalTokens += critiqueTokens;
 
-            int keepCount = critiques.Count(c => c.Action == "KEEP");
-            int reviseCount = critiques.Count(c => c.Action == "REVISE");
-            int dropCount = critiques.Count(c => c.Action == "DROP");
+            int keepCount = critiques.Count(c => c.Action == Constants.CRITIQUE_KEEP);
+            int reviseCount = critiques.Count(c => c.Action == Constants.CRITIQUE_REVISE);
+            int dropCount = critiques.Count(c => c.Action == Constants.CRITIQUE_DROP);
 
             Console.WriteLine($"   📊 Critique summary — " +
                               $"KEEP: {keepCount}  REVISE: {reviseCount}  DROP: {dropCount} " +
                               $"({critiqueTokens} tokens)");
 
             // Early exit — nothing to refine
-            bool needsRefinement = critiques.Any(c => c.Action == "REVISE" || c.Action == "DROP");
+            bool needsRefinement = critiques.Any(c =>
+                            c.Action == Constants.CRITIQUE_REVISE || c.Action == Constants.CRITIQUE_DROP);
             if (!needsRefinement)
             {
                 Console.WriteLine($"   ✅ All critiques are KEEP — no refinement needed.");
@@ -166,16 +168,17 @@ namespace AITestAnalyzer.Services
 
                 result.TotalTokens += newCritiqueTokens;
 
-                int newKeep = newCritiques.Count(c => c.Action == "KEEP");
-                int newRevise = newCritiques.Count(c => c.Action == "REVISE");
-                int newDrop = newCritiques.Count(c => c.Action == "DROP");
+                int newKeep = newCritiques.Count(c => c.Action == Constants.CRITIQUE_KEEP);
+                int newRevise = newCritiques.Count(c => c.Action == Constants.CRITIQUE_REVISE);
+                int newDrop = newCritiques.Count(c => c.Action == Constants.CRITIQUE_DROP);
 
                 Console.WriteLine($"   📊 Critique summary — " +
                                   $"KEEP: {newKeep}  REVISE: {newRevise}  DROP: {newDrop} " +
                                   $"({newCritiqueTokens} tokens)");
 
                 // Early exit — refinement converged
-                bool stillNeedsWork = newCritiques.Any(c => c.Action == "REVISE" || c.Action == "DROP");
+                bool stillNeedsWork = newCritiques.Any(c =>
+                                    c.Action == Constants.CRITIQUE_REVISE || c.Action == Constants.CRITIQUE_DROP);
                 if (!stillNeedsWork)
                 {
                     Console.WriteLine($"   ✅ All critiques are KEEP — refinement converged at pass {pass}.");
@@ -228,7 +231,7 @@ namespace AITestAnalyzer.Services
 
                 // Respect API rate limits between calls
                 if (i < testCases.Count - 1)
-                    await Task.Delay(1000);
+                    await Task.Delay(Constants.RETRY_DELAY_MS);
             }
 
             Console.WriteLine($"   ✅ QA scoring complete.");

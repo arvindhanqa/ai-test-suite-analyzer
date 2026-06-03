@@ -36,5 +36,10 @@ namespace AITestAnalyzer.Config
         public const string RESULT_GOOD = "GOOD";
         public const string RESULT_ERROR_PREFIX = "ERROR:";
         public const string NO_COVERAGE = "None";
+
+        // GEN Mode critique actions
+        public const string CRITIQUE_KEEP = "KEEP";
+        public const string CRITIQUE_REVISE = "REVISE";
+        public const string CRITIQUE_DROP = "DROP";
     }
 }
