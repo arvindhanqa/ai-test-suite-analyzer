@@ -1,4 +1,6 @@
 using AITestAnalyzer.Models;
+using OfficeOpenXml;
+
 
 namespace AITestAnalyzer.Services
 {
@@ -65,7 +67,7 @@ namespace AITestAnalyzer.Services
             string outputPath = Path.Combine(outputDir, fileName);
 
             // Create a minimal valid xlsx file using EPPlus
-            using var package = new OfficeOpenXml.ExcelPackage();
+            using var package = new ExcelPackage();
             package.Workbook.Worksheets.Add("Sheet1");
             package.SaveAs(new FileInfo(outputPath));
 
