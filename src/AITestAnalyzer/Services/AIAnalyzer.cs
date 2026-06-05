@@ -14,11 +14,6 @@ using OpenAI.ObjectModels.RequestModels;
 
 namespace AITestAnalyzer.Services
 {
-    // ============================================================
-    // METHOD 3: Analyze Test Case with AI
-    // Now uses promptConfig.Model instead of hardcoded
-    // OPTIMIZED: Only sends Feature, Scenario, Steps, Expected Result
-    // ============================================================
     public class AIAnalyzer : IAIAnalyzer
     {
         private readonly Configuration _config;
