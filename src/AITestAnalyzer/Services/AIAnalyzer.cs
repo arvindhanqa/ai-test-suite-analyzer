@@ -409,10 +409,12 @@ FEEDBACK:
                 }
 
                 string action = parts[1].Trim().ToUpper();
-                if (action != "KEEP" && action != "REVISE" && action != "DROP")
+                if (action != Constants.CRITIQUE_KEEP &&
+                    action != Constants.CRITIQUE_REVISE &&
+                    action != Constants.CRITIQUE_DROP)
                 {
                     Console.WriteLine($"⚠️  ParseCritiqueResults: unknown action '{action}' — defaulting to KEEP");
-                    action = "KEEP";
+                    action = Constants.CRITIQUE_KEEP;
                 }
 
                 results.Add(new CritiqueResult
