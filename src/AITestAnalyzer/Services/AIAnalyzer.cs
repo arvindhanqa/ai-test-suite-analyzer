@@ -449,7 +449,8 @@ FEEDBACK:
             string requirementsMarkdown)
         {
             // Short-circuit: if nothing to revise or drop, return unchanged
-            bool hasChanges = critiques.Any(c => c.Action == "REVISE" || c.Action == "DROP");
+            bool hasChanges = critiques.Any(c =>
+                            c.Action == Constants.CRITIQUE_REVISE || c.Action == Constants.CRITIQUE_DROP);
             if (!hasChanges)
             {
                 Console.WriteLine("      ✅ All critiques are KEEP — skipping refinement pass.");
