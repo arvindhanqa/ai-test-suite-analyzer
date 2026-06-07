@@ -494,7 +494,7 @@ FEEDBACK:
             // Parse refined output — increment PassNumber for revised items
             var refined = ParseGeneratedTestCases(response);
             var revisedIds = critiques
-                .Where(c => c.Action == "REVISE")
+                .Where(c => c.Action == Constants.CRITIQUE_REVISE)
                 .Select(c => c.TestId)
                 .ToHashSet();
 
