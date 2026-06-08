@@ -248,6 +248,10 @@ FEEDBACK:
         /// <summary>Strips markdown formatting characters so they don't break pattern matching.</summary>
         private static string StripMarkdown(string line) => Regex.Replace(line, @"[\*_`#>~]", string.Empty);
 
+        /// <summary>
+        /// Formats a list of ExtractedRequirement objects into a plain-text string
+        /// for inclusion in BA Mode prompts.
+        /// </summary>
         private string FormatRequirements(List<ExtractedRequirement> requirements)
         {
             var formatted = new StringBuilder();
