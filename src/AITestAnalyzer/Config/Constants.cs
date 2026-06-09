@@ -41,5 +41,10 @@ namespace AITestAnalyzer.Config
         public const string CRITIQUE_KEEP = "KEEP";
         public const string CRITIQUE_REVISE = "REVISE";
         public const string CRITIQUE_DROP = "DROP";
+
+        // GEN Mode configuration
+        public const int GEN_DEFAULT_TEST_COUNT = 10;
+        public const int GEN_MAX_PASSES = 3;
+        public const string GEN_CACHE_PREFIX = "gen_";
     }
 }
