@@ -19,14 +19,14 @@ namespace AITestAnalyzer.Services
         /// Loop stops early if all critiques are KEEP before reaching MaxPasses.
         /// Default: 3.
         /// </summary>
-        public int MaxPasses { get; set; } = 3;
+        public int MaxPasses { get; set; } = Constants.GEN_MAX_PASSES;
 
         /// <summary>
         /// Default number of test cases to request from the GENERATE pass.
         /// Can be overridden by the caller via RunAsync() targetCount parameter.
         /// Default: 10.
         /// </summary>
-        public int TargetTestCount { get; set; } = 10;
+        public int TargetTestCount { get; set; } = Constants.GEN_DEFAULT_TEST_COUNT;
 
         /// <summary>
         /// Initializes a new instance of GenModeOrchestrator.
