@@ -251,14 +251,14 @@ namespace AITestAnalyzer.UI
                 WritePrompt("  How many test cases to generate in total? [default: 10]: ");
                 string? countInput = Console.ReadLine()?.Trim();
                 int targetCount = int.TryParse(countInput, out int parsedCount) && parsedCount > 0
-                    ? parsedCount : 10;
+                    ? parsedCount : Constants.GEN_DEFAULT_TEST_COUNT;
 
                 // Max passes
-                WritePrompt("  Maximum refinement passes? [1-3, default: 3]: ");
+                WritePrompt($"  Maximum refinement passes? [1-{Constants.GEN_MAX_PASSES}, default: {Constants.GEN_MAX_PASSES}]: ");
                 string? passInput = Console.ReadLine()?.Trim();
                 int maxPasses = int.TryParse(passInput, out int parsedPasses)
-                    && parsedPasses >= 1 && parsedPasses <= 3
-                    ? parsedPasses : 3;
+                    && parsedPasses >= 1 && parsedPasses <= Constants.GEN_MAX_PASSES
+                    ? parsedPasses : Constants.GEN_MAX_PASSES;
 
                 // Summary before running
                 Console.WriteLine();
