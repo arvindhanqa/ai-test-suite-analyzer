@@ -333,7 +333,7 @@ namespace AITestAnalyzer.Infrastructure
             var builder = new StringBuilder();
             foreach (byte b in bytes)
                 builder.Append(b.ToString("x2"));
-            return "gen_" + builder.ToString()[..Constants.HASH_LENGTH];
+            return Constants.GEN_CACHE_PREFIX + builder.ToString()[..Constants.HASH_LENGTH];
         }
 
         /// <summary>
