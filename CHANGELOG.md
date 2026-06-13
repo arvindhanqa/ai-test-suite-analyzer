@@ -5,6 +5,37 @@ All notable changes to AI Test Suite Analyzer will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-06-19
+
+### Added
+- **GEN Mode**: AI-powered test case generation from requirements documents
+- **Generate → Critique → Refine loop**: Up to 3 refinement passes with early exit when all critiques are KEEP
+- **Auto QA Mode scoring**: Generated test cases automatically scored after generation
+- **GEN Mode Excel output**: Generated Tests sheet with color-coded QA scores and pass number tracking
+- **Gen Statistics Dashboard**: Generation summary, QA score breakdown, cost and performance metrics
+- **JSON export for GEN Mode**: Full export of generated test cases with metadata and summary
+- **GEN Mode caching**: SHA256 hash of requirements + targetCount + maxPasses — repeat runs are instant and free
+- **`--gen-mode` CLI flag**: Launch GEN Mode directly without navigating the menu
+- **FileSelector GEN Mode flow**: Auto-detects requirements files from known locations, same UX pattern as QA/BA modes
+- **17 new tests**: 7 unit tests (parsing, interface contract) + 5 integration tests (full pipeline, critique loop, cache hit, missing requirements guard) — total: 43 tests passing
+
+### Changed
+- Main menu restructured: QA Mode and BA Mode are now separate menu options [1] and [2], GEN Mode is [3], Batch is [4]
+- Version bumped to 2.0.0-beta during development, finalised to 2.0.0 on release
+
+### Removed
+- Markdown auto-generation from app name hint — replaced with clear error handling for missing requirements files (better UX than silent fallback to low-quality generated requirements)
+
+### Technical
+- `GenModeOrchestrator` — orchestrates the full Generate → Critique → Refine → QA Score pipeline
+- `GenModeExcelWriter` — creates timestamped output files with two GEN Mode sheets
+- `CritiqueResult` model — KEEP / REVISE / DROP actions with actionable reasons
+- `GeneratedTestCase` model — includes PassNumber and QAScore fields
+- `GenModeResult` model — full pipeline result with token tracking and requirements source
+- GEN Mode uses `gpt-4.1-mini` (1M token context, better instruction following than gpt-4o-mini)
+- GEN Mode constants added: `GEN_DEFAULT_TEST_COUNT`, `GEN_MAX_PASSES`, `GEN_CACHE_PREFIX`, `CRITIQUE_KEEP`, `CRITIQUE_REVISE`, `CRITIQUE_DROP`
+- Separate `gen_mode_cache.json` cache file alongside existing `test_analysis_cache.json`
+
 ## [1.0.0] - 2026-04-19
 
 ### Added
