@@ -10,7 +10,7 @@
 
 ---
 
-> AI-powered test case quality analysis and requirement coverage validation — analyze 56 test cases for $0.001, re-run for free
+> AI-powered test case quality analysis, requirement coverage validation, and AI test case generation — analyze 56 test cases for $0.001, generate new tests from requirements, re-run for free
 
 An intelligent test analysis tool that reads Excel test cases, evaluates quality using AI, and validates requirement coverage. Supports two analysis modes for QA Engineers and Business Analysts.
 
@@ -78,6 +78,64 @@ FR-AUTH-001  new users create account...    TC-001, TC-002       5      ✅ COVE
 BR-AUTH-001  each email linked to one...                         0      ❌ NOT COVERED
 VR-AUTH-001  email must be valid format...                       0      ❌ NOT COVERED
 ```
+
+#### GEN Mode — AI Test Case Generation 🆕
+For QA Engineers and Test Architects who need a first draft of test cases from a requirements document.
+
+GEN Mode reads a requirements markdown file and runs a **Generate → Critique → Refine** loop (up to 3 passes) to produce test cases, then automatically scores each one using QA Mode.
+
+- Generates test cases (positive, negative, and boundary scenarios) from any `.md` or `.txt` requirements file
+- Self-critiques its own output — flags each test case as KEEP, REVISE, or DROP
+- Refines flagged test cases up to 2 additional passes, converging early when all critiques are KEEP
+- Auto-scores every generated test case via QA Mode (color-coded GOOD / Issues / Errors)
+- Outputs to Excel ("Generated Tests" sheet + "Gen Statistics Dashboard") and optional JSON
+- Hash-based caching — re-run with same requirements + settings = instant, $0.00
+- Uses `gpt-4.1-mini` (1M token context) for better instruction following on complex generation prompts
+
+**How to run:**
+
+Via the interactive menu:
+```
+[3] Generate test cases — GEN Mode
+```
+
+Or skip the menu entirely:
+```bash
+dotnet run -- --gen-mode
+```
+
+**The Generate → Critique → Refine loop:**
+```
+┌─────────────┐     ┌──────────────┐     ┌─────────────┐
+│   GENERATE  │────▶│   CRITIQUE   │────▶│   REFINE    │
+│  (Pass 1)   │     │ KEEP/REVISE/ │     │ (Pass 2-3)  │
+│             │     │     DROP     │     │             │
+└─────────────┘     └──────┬───────┘     └──────┬──────┘
+                            │                     │
+                     All KEEP? ──Yes──▶ Done ◀────┘
+                            │
+                            No
+                            ▼
+                  Loop until MaxPasses
+                  or all critiques KEEP
+                            │
+                            ▼
+                  ┌────────────────────┐
+                  │  AUTO QA SCORING   │
+                  │ (every test case)  │
+                  └─────────┬──────────┘
+                             │
+                             ▼
+                   Excel + JSON Output
+```
+
+**Sample Generated Tests output:**
+
+| Test ID | Feature | Scenario | Priority | Pass | QA Score |
+|---|---|---|---|---|---|
+| TC-GEN-001 | User Registration | Register with valid email and password | High | 1 | GOOD |
+| TC-GEN-002 | User Registration | Attempt registration with duplicate email | High | 1 | GOOD |
+| TC-GEN-003 | User Registration | Password below minimum length boundary | High | 2 | GOOD - Specify exact error message |
 
 ---
 
