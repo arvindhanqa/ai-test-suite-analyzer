@@ -152,6 +152,8 @@ dotnet run -- --gen-mode
 - 🎯 **Professional Output**: Freeze panes, auto-filters, optimized column widths
 - 💾 **Batch Checkpoint/Resume**: Resume interrupted batch runs with `--resume`
 - 🔍 **Dry-Run Preview**: Estimate cost before running with the `D` key at the prompt
+- 🤖 **GEN Mode**: AI test case generation via Generate → Critique → Refine loop (`--gen-mode`)
+- 📑 **Gen Statistics Dashboard**: Generation summary, QA score breakdown, cost and performance metrics
 
 ---
 
