@@ -166,18 +166,14 @@ No command-line arguments needed. An interactive menu guides you through everyth
 
   What would you like to do?
 
-    [1] Analyze a single Excel file
-    [2] Batch analyze all Excel files in a folder
-    [3] Exit
+	[1] Analyze a single Excel file — QA Mode
+	[2] Analyze a single Excel file — BA Mode
+	[3] Generate test cases — GEN Mode 🆕
+	[4] Batch analyze all Excel files in a folder
+	[5] Exit
 ```
-
-After selecting a file, you choose your analysis mode:
-
 ```
-  SELECT ANALYSIS MODE
-
-    [1] QA Mode  — Test quality analysis (no requirements needed)
-    [2] BA Mode  — Requirement coverage validation
+Analysis mode is selected upfront — no separate mode screen needed for single-file QA/BA runs.
 ```
 
 **Ready-to-run confirmation prompt:**
