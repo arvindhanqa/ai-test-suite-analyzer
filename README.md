@@ -309,17 +309,21 @@ Use in CI/CD to fail a build if `qualityScorePct` drops below a threshold.
 ```
 FileSelector (Interactive Menu + Mode Selection)
        ↓
-  [QA Mode]                    [BA Mode]
-      ↓                            ↓
-ExcelReader              RequirementExtractor → RequirementCache
-      ↓                            ↓
-AIAnalyzer.AnalyzeTestQuality   AIAnalyzer.AnalyzeCoverageAndFeedback
-      ↓                            ↓
-  TestCaseCache              TestCaseCache (ba_ prefix)
-      ↓                            ↓
-ExcelWriter (1 column)     ExcelWriter (2 columns + Gap Sheet)
-      ↓                            ↓
-[AI Analysis Sheet]        [Requirement Feedback + Coverage + Gap Analysis]
+  [QA Mode]        [BA Mode]              [GEN Mode]
+      ↓                ↓                       ↓
+ExcelReader   RequirementExtractor    GenModeOrchestrator
+      ↓         → RequirementCache         ↓
+AIAnalyzer.   AIAnalyzer.Analyze     Generate → Critique → Refine
+AnalyzeTest   CoverageAndFeedback    (TestCaseCache gen_ prefix)
+Quality            ↓                       ↓
+      ↓      TestCaseCache (ba_)     Auto QA Scoring
+TestCaseCache       ↓                       ↓
+      ↓      ExcelWriter (2 cols    GenModeExcelWriter
+ExcelWriter    + Gap Sheet)          (Generated Tests +
+(1 column)          ↓                Gen Stats Dashboard)
+      ↓      [Requirement Feedback         ↓
+[AI Analysis  + Coverage + Gap]      JsonExporter (GEN)
+ Sheet]
       ↓
 JsonExporter (optional --format json)
 
@@ -327,7 +331,8 @@ BatchProcessor → Applies selected mode across all files → Aggregate Summary
 CheckpointManager → Saves progress after each file → Resume with --resume
 
 DI Container (BuildServiceProvider) → Resolves IAIAnalyzer, ITestCaseCache,
-                                       IRequirementExtractor, BatchProcessor
+                                       IRequirementExtractor, BatchProcessor,
+                                       GenModeOrchestrator
 ```
 
 ### Code Structure
