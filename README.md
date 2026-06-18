@@ -346,9 +346,12 @@ AITestAnalyzer/
 │   ├── Configuration.cs            # App configuration model
 │   ├── ExtractedRequirement.cs     # Requirement data model
 │   ├── PromptConfig.cs             # AI prompt configuration + cost per token
-│   └── TestCase.cs                 # Test case data model
+│   ├── TestCase.cs                 # Test case data model
+│   ├── GeneratedTestCase.cs        # GEN Mode: generated test case + pass number + QA score
+│   ├── CritiqueResult.cs           # GEN Mode: KEEP/REVISE/DROP critique result
+│   └── GenModeResult.cs            # GEN Mode: full pipeline result + token tracking
 ├── Services/
-│   ├── AIAnalyzer.cs               # OpenAI integration (2 analysis methods)
+│   ├── AIAnalyzer.cs               # OpenAI integration (QA, BA, GEN Mode methods)
 │   ├── IAIAnalyzer.cs              # Interface for AI analysis
 │   ├── BatchProcessor.cs           # Multi-file batch (mode-aware + checkpoint)
 │   ├── ConfigurationValidator.cs   # Startup validation (API key + PromptConfig)
@@ -356,7 +359,9 @@ AITestAnalyzer/
 │   ├── IExcelReader.cs             # Interface for Excel reading
 │   ├── ExcelWriter.cs              # Mode-aware Excel writing + buffered flush
 │   ├── IExcelWriter.cs             # Interface for Excel writing
-│   ├── JsonExporter.cs             # JSON export for CI/CD integration
+│   ├── GenModeOrchestrator.cs      # GEN Mode: Generate → Critique → Refine → QA Score loop
+│   ├── GenModeExcelWriter.cs       # GEN Mode: output file orchestration
+│   ├── JsonExporter.cs             # JSON export for CI/CD integration (QA/BA + GEN)
 │   ├── RequirementExtractor.cs     # AI requirement extraction
 │   └── IRequirementExtractor.cs    # Interface for requirement extraction
 ├── Infrastructure/
