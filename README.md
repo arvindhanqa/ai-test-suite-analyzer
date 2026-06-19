@@ -458,6 +458,12 @@ dotnet run -- --clear-cache    # Clear all cached results
 dotnet run -- --resume         # Resume interrupted batch run
 ```
 
+### GEN Mode
+```bash
+dotnet run -- --gen-mode       # Launch GEN Mode directly, skipping the main menu
+```
+
+
 ### Help and Version
 ```bash
 dotnet run -- --help
