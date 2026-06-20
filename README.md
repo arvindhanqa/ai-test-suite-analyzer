@@ -508,7 +508,8 @@ dotnet run -- --version
 - **Language**: C# (.NET 10.0)
 - **Excel Processing**: EPPlus 7.x
 - **AI Integration**: Betalgo.OpenAI 8.7.2
-- **AI Model**: OpenAI GPT-4o-mini (temperature: 0.2)
+- **AI Models**: GPT-4o-mini (QA/BA Mode), GPT-4.1-mini (GEN Mode — 1M token context)
+- **Temperature**: 0.2 across all modes
 - **JSON Export**: System.Text.Json
 - **Configuration**: Microsoft.Extensions.Configuration
 - **Dependency Injection**: Microsoft.Extensions.DependencyInjection
