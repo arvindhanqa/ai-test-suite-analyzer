@@ -532,13 +532,18 @@ ai-test-suite-analyzer/
 │       │   ├── Configuration.cs
 │       │   ├── ExtractedRequirement.cs
 │       │   ├── PromptConfig.cs
-│       │   └── TestCase.cs
+│       │   ├── TestCase.cs
+│       │   ├── GeneratedTestCase.cs
+│       │   ├── CritiqueResult.cs
+│       │   └── GenModeResult.cs
 │       ├── Services/
 │       │   ├── AIAnalyzer.cs + IAIAnalyzer.cs
 │       │   ├── BatchProcessor.cs
 │       │   ├── ConfigurationValidator.cs
 │       │   ├── ExcelReader.cs + IExcelReader.cs
 │       │   ├── ExcelWriter.cs + IExcelWriter.cs
+│       │   ├── GenModeOrchestrator.cs
+│       │   ├── GenModeExcelWriter.cs
 │       │   ├── JsonExporter.cs
 │       │   └── RequirementExtractor.cs + IRequirementExtractor.cs
 │       ├── Infrastructure/
