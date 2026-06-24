@@ -560,13 +560,13 @@ ai-test-suite-analyzer/
 │       ├── appsettings.json
 │       └── PromptConfig.json
 ├── tests/
-│   ├── AITestAnalyzer.Tests/            # Unit tests (21 tests)
-│   │   ├── AIAnalyzerTests.cs
+│   ├── AITestAnalyzer.Tests/            # Unit tests (31 tests)
+│   │   ├── AIAnalyzerTests.cs           # incl. GEN Mode parsing + interface tests
 │   │   ├── ExcelReaderTests.cs
 │   │   ├── ConfigurationValidatorTests.cs
 │   │   └── TestCaseCacheTests.cs
-│   └── AITestAnalyzer.IntegrationTests/ # Integration tests (5 tests)
-│       ├── PipelineTests.cs
+│   └── AITestAnalyzer.IntegrationTests/ # Integration tests (12 tests)
+│       ├── PipelineTests.cs             # incl. GEN Mode full pipeline, critique loop, cache hit
 │       └── TestData/
 │           └── test_cases_shopease.xlsx
 ├── data/
@@ -575,6 +575,7 @@ ai-test-suite-analyzer/
 │   ├── requirements_taskflow.md
 │   └── test_cases_taskflow.xlsx
 ├── cache/                          # Cache storage (gitignored)
+│                                    # includes test_analysis_cache.json + gen_mode_cache.json
 ├── output/                         # Generated analysis reports
 ├── .editorconfig                   # Code formatting standards
 ├── CHANGELOG.md                    # Version history
