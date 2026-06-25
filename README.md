@@ -670,11 +670,24 @@ ai-test-suite-analyzer/
 - [ ] Video demo — Week 13
 - [ ] LinkedIn launch post — Week 13
 
-### Future (Post April 19)
+### Phase 5 ✅ COMPLETE — v2.0.0 GEN Mode (Days 91-150)
+- [x] GEN Mode data models — GeneratedTestCase, CritiqueResult, GenModeResult
+- [x] Generate → Critique → Refine prompts designed and validated in Playground
+- [x] GenerateTestCasesAsync, CritiqueTestCasesAsync, RefineTestCasesAsync (gpt-4.1-mini)
+- [x] GenModeOrchestrator — full pipeline with early-exit convergence
+- [x] Auto QA Mode scoring of generated test cases
+- [x] Generated Tests sheet + Gen Statistics Dashboard (color-coded, pass tracking)
+- [x] JSON export for GEN Mode output
+- [x] GEN Mode menu integration + `--gen-mode` CLI flag
+- [x] Hash-based GEN Mode caching (`gen_mode_cache.json`)
+- [x] 17 new tests — 43 total passing (31 unit + 12 integration)
+- [x] Requirements file validation — clear errors over silent AI-generated fallback
+
+### Future (Post v2.0)
+- [ ] Smart pre-analysis: AI recommends per-feature test counts with positive/negative split (v3.0 vision)
 - [ ] Web interface (Blazor)
 - [ ] JIRA/TestRail integration
 - [ ] Local LLM support (Ollama)
-- [ ] Test case generation from requirements (v2.0)
 
 ---
 
