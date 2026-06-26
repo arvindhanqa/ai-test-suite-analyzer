@@ -713,9 +713,9 @@ ai-test-suite-analyzer/
 
 ## 🤝 About This Project
 
-This is a personal project built as part of a 90-day commitment (January 20 - April 19, 2026) to build practical AI-powered tooling and demonstrate the ability to ship complete software from concept to production.
+This is a personal project built as part of a 90-day commitment (January 20 - April 19, 2026) — extended to 150 days for v2.0 — to build practical AI-powered tooling and demonstrate the ability to ship complete software from concept to production.
 
-**Status (Day 80)**: Phase 4 in progress. Folder reorganisation complete. 26 tests passing (21 unit + 5 integration). 80 consecutive days of commits — streak unbroken.
+**Status (Day 137)**: v2.0.0 in progress — Phase C (polish + ship). GEN Mode complete: Generate → Critique → Refine loop, auto QA scoring, Excel + JSON output, hash-based caching. 43 tests passing (31 unit + 12 integration). 137 consecutive days of commits — streak unbroken.
 
 ### Development Progress
 - **Days 1-7**: Foundation — setup, data, Excel processing, OpenAI integration, cost optimization
@@ -724,7 +724,10 @@ This is a personal project built as part of a 90-day commitment (January 20 - Ap
 - **Days 21-26**: Polish — Coverage Gap Analysis sheet, BA Statistics Dashboard
 - **Days 27-55**: Quality — all bugs fixed, performance improvements, code standards, JSON export
 - **Days 56-76**: Architecture — 5 interfaces, DI container, async I/O, improved errors, 26 tests passing
-- **Days 77-80**: Structure — folder reorganisation (Config/, Models/, Services/, Infrastructure/, UI/)
+- **Days 77-90**: Structure + Release — folder reorganisation, v1.0.0 tagged and shipped
+- **Days 91-111**: v2.0 Core Engine — GEN Mode prompts, AI methods, orchestrator loop
+- **Days 112-133**: v2.0 Output + Integration — Excel/JSON output, menu integration, caching, 43 tests passing
+- **Days 134-150**: v2.0 Polish + Ship — code review, docs, v2.0.0 tag, video, LinkedIn launch
 
 ---
 
