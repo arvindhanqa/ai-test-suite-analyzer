@@ -610,6 +610,16 @@ ai-test-suite-analyzer/
 |----------------------|------------------------|
 | ![Coverage Gap](docs/screenshots/05-coverage-gap-analysis.png) | ![BA Dashboard](docs/screenshots/06-ba-statistics-dashboard.png) |
 
+### 🤖 GEN Mode — Console Output
+![GEN Console Pipeline](docs/screenshots/10-gen-console-output.png)
+![GEN Console Summary](docs/screenshots/10b-gen-console-summary.png)
+
+### 📋 GEN Mode — Excel Output
+| Generated Tests Sheet | Gen Statistics Dashboard |
+|----------------------|--------------------------|
+| ![Generated Tests](docs/screenshots/11-gen-tests-sheet.png) | ![Gen Dashboard](docs/screenshots/12-gen-statistics-dashboard.png) |
+
+
 ---
 
 ## 🎯 Roadmap
