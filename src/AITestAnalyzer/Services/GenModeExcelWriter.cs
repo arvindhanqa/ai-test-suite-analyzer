@@ -46,6 +46,15 @@ namespace AITestAnalyzer.Services
             Console.WriteLine("   📊 Creating Gen Statistics Dashboard...");
             excelWriter.CreateGenStatisticsDashboard(result, elapsed);
 
+            // Remove the blank placeholder sheet created during file initialisation
+            using (var package = new ExcelPackage(new FileInfo(outputPath)))
+            {
+                var sheet1 = package.Workbook.Worksheets["Sheet1"];
+                if (sheet1 != null)
+                    package.Workbook.Worksheets.Delete(sheet1);
+                package.Save();
+            }
+
             Console.WriteLine();
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine($"   ✅ GEN Mode output saved: {Path.GetFileName(outputPath)}");
