@@ -58,13 +58,17 @@ namespace AITestAnalyzer
                 // GEN Mode direct launch — skips main menu
                 if (firstArg == "--gen-mode")
                 {
+                    bool genExportJson = args.Any(a => a.ToLower() == "--format") &&
+                          args.SkipWhile(a => a.ToLower() != "--format").Skip(1)
+                              .FirstOrDefault()?.ToLower() == "json";
+
                     var (genAppConfig, genPromptConfig) = LoadConfiguration();
                     if (genAppConfig == null || genPromptConfig == null)
                         return;
 
                     var genSelection = FileSelector.SelectGenModeDirect();
                     if (genSelection != null)
-                        await RunGenModeAsync(genAppConfig, genPromptConfig, genSelection);
+                        await RunGenModeAsync(genAppConfig, genPromptConfig, genSelection, genExportJson);
                     return;
                 }
 
