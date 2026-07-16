@@ -452,13 +452,9 @@ namespace AITestAnalyzer.UI
                         continue; // Back to config screen to confirm before running
 
                     case "R":
-                        // Ask for analysis mode before returning
-                        var analysisMode = SelectAnalysisMode();
-
                         return new SelectionResult
                         {
                             SelectedMode = SelectionResult.Mode.Single,
-                            SelectedAnalysisMode = analysisMode, 
                             FilePath = filePath,
                             TestLimit = testLimit,
                             SheetIndex = sheetIndex
