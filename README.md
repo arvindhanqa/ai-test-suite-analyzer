@@ -4,7 +4,13 @@
 
 ## 📺 Demo
 
-[![AI Test Suite Analyzer Demo](https://img.youtube.com/vi/RPSe74kPhn0/0.jpg)](https://youtu.be/RPSe74kPhn0)
+### v2.0.0 — GEN Mode Demo
+[![AI Test Suite Analyzer v2.0 Demo](https://img.youtube.com/vi/872Z1WDs4gA/0.jpg)](https://youtu.be/872Z1WDs4gA)
+
+> Full walkthrough: QA Mode, BA Mode, GEN Mode (Generate → Critique → Refine), JSON export, cache hit demo (~6 min)
+
+### v1.0.0 — Original Demo
+[![AI Test Suite Analyzer v1.0 Demo](https://img.youtube.com/vi/RPSe74kPhn0/0.jpg)](https://youtu.be/RPSe74kPhn0)
 
 > Full walkthrough: QA Mode, BA Mode, JSON export, caching (6 min)
 
