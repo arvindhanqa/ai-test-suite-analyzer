@@ -33,3 +33,15 @@ I can start something and finish it.
 That's it. That's the whole thing.
 
 — Aravindhan Rajasekaran, April 2026
+
+---
+
+## v2.0.0 — July 16, 2026
+
+GEN Mode shipped. The tool now generates test cases from requirements,
+critiques them, refines them up to 3 passes, and auto-scores them via QA Mode.
+
+150 consecutive daily commits.
+Pattern cemented. Not a fluke.
+
+— Aravindhan Rajasekaran, July 2026
