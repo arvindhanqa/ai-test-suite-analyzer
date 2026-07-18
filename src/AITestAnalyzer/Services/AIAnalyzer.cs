@@ -64,10 +64,10 @@ Be direct and actionable. Focus on: clarity, completeness, testability.";
                 getErrorMessage: r => r.Error?.Message ?? "Unknown API error"
             );
 
-            if (result == null)
+            if (result == null || result.Choices.Count == 0 || result.Choices[0].Message.Content == null)
                 return ($"ERROR: OpenAI API call failed after {Constants.MAX_RETRIES} retries " +
                             $"for test '{testCase.TestId}'. Check your API key and network connection.", 0);
-            string analysis = result.Choices.First().Message.Content!.Trim();
+            string analysis = (result.Choices[0].Message.Content ?? string.Empty).Trim();
             int tokens = result.Usage!.TotalTokens;
 
             string quality = analysis;
@@ -135,11 +135,11 @@ FEEDBACK:
                 getErrorMessage: r => r.Error?.Message ?? "Unknown API error"
             );
 
-            if (result == null)
-                return ($"ERROR: OpenAI API call failed after {Constants.MAX_RETRIES} retries " +
-                        $"for test '{testCase.TestId}'. Check your API key and network connection.",
-                        new List<string>(), 0);
-            string response = result.Choices.First().Message.Content!.Trim();
+                if (result == null || result.Choices.Count == 0 || result.Choices[0].Message.Content == null)
+                    return ($"ERROR: OpenAI API call failed after {Constants.MAX_RETRIES} retries " +
+                            $"for test '{testCase.TestId}'. Check your API key and network connection.",
+                            new List<string>(), 0);
+            string response = (result.Choices[0].Message.Content ?? string.Empty).Trim();
             int tokens = result.Usage!.TotalTokens;
 
             var (coverageIds, reqFeedback) = ParseCoverageResponse(response);
@@ -297,10 +297,10 @@ FEEDBACK:
                 getErrorMessage: r => r.Error?.Message ?? "Unknown API error"
             );
 
-            if (result == null)
+            if (result == null || result.Choices.Count == 0 || result.Choices[0].Message.Content == null)
                 return (new List<GeneratedTestCase>(), 0);
 
-            string response = result.Choices.First().Message.Content!.Trim();
+            string response = (result.Choices[0].Message.Content ?? string.Empty).Trim();
             int tokens = result.Usage!.TotalTokens;
             var testCases = ParseGeneratedTestCases(response);
 
@@ -379,10 +379,10 @@ FEEDBACK:
                 getErrorMessage: r => r.Error?.Message ?? "Unknown API error"
             );
 
-            if (result == null)
+            if (result == null || result.Choices.Count == 0 || result.Choices[0].Message.Content == null)
                 return (new List<CritiqueResult>(), 0);
 
-            string response = result.Choices.First().Message.Content!.Trim();
+            string response = (result.Choices[0].Message.Content ?? string.Empty).Trim();
             int tokens = result.Usage!.TotalTokens;
             var critiques = ParseCritiqueResults(response);
 
@@ -486,13 +486,13 @@ FEEDBACK:
                 getErrorMessage: r => r.Error?.Message ?? "Unknown API error"
             );
 
-            if (result == null)
+            if (result == null || result.Choices.Count == 0 || result.Choices[0].Message.Content == null)
             {
                 Console.WriteLine("⚠️  RefineTestCasesAsync: API call failed — returning original test cases.");
                 return (testCases, 0);
             }
 
-            string response = result.Choices.First().Message.Content!.Trim();
+            string response = (result.Choices[0].Message.Content ?? string.Empty).Trim();
             int tokens = result.Usage!.TotalTokens;
 
             // Parse refined output — increment PassNumber for revised items
