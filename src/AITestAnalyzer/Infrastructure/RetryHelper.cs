@@ -36,6 +36,16 @@ namespace AITestAnalyzer.Infrastructure
                 }
                 catch (Exception ex)
                 {
+                    // Non-transient exceptions should not be retried — rethrow immediately
+                    if (ex is ArgumentException ||
+                        ex is OperationCanceledException ||
+                        ex is NotSupportedException ||
+                        ex is InvalidOperationException)
+                    {
+                        Console.WriteLine($"      ❌ Non-transient exception — not retrying: {ex.GetType().Name}: {ex.Message}");
+                        throw;
+                    }
+
                     if (attempt < maxRetries)
                     {
                         Console.WriteLine($"      ⚠️  Exception (attempt {attempt}/{maxRetries}): {ex.Message}");
