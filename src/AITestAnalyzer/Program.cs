@@ -1237,6 +1237,21 @@ namespace AITestAnalyzer
         {
             WriteInfo("Loading configuration...");
 
+            // Check config files exist before loading — gives clear error instead of crash
+            if (!File.Exists("appsettings.json"))
+            {
+                WriteError("appsettings.json not found.");
+                WriteError("Please copy appsettings.json.sample to appsettings.json and add your API key.");
+                return (null, null);
+            }
+
+            if (!File.Exists("PromptConfig.json"))
+            {
+                WriteError("PromptConfig.json not found.");
+                WriteError("Please ensure PromptConfig.json exists in the application directory.");
+                return (null, null);
+            }
+
             var configBuilder = new ConfigurationBuilder()
                 .SetBasePath(Directory.GetCurrentDirectory())
                 .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
