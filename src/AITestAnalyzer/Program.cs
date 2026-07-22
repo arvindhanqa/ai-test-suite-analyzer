@@ -18,6 +18,8 @@ namespace AITestAnalyzer
 
         private static ITestCaseCache? _activeCache;
         private static RequirementCache? _activeReqCache;
+        private static readonly CancellationTokenSource _cts = new();
+
         private static async Task Main(string[] args)
         {
             ExcelPackage.License.SetNonCommercialPersonal("Aravindhan Rajasekaran");
