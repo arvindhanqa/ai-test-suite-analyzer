@@ -26,15 +26,10 @@ namespace AITestAnalyzer
 
             Console.CancelKeyPress += (sender, e) =>
             {
-                e.Cancel = true; // Prevent immediate kill
+                e.Cancel = true;
                 Console.WriteLine();
-                WriteWarning("Shutdown requested. Saving cache...");
-
-                _activeCache?.SaveCache();
-                _activeReqCache?.SaveCache();
-
-                WriteSuccess("Cache saved. Exiting cleanly.");
-                Environment.Exit(0);
+                WriteWarning("Shutdown requested. Finishing current operation...");
+                _cts.Cancel();
             };
             // ============================================================
             // EARLY EXIT FLAGS — these don't need FileSelector at all
@@ -1008,6 +1003,12 @@ namespace AITestAnalyzer
 
                 results.Add((testCase.TestId, quality, tokens, coverage));
                 excelWriter.WriteAnalysis(row, quality, coverage, analysisMode);
+
+                if (_cts.IsCancellationRequested)
+                {
+                    WriteWarning($"Shutdown requested — stopping after {processedCount} tests.");
+                    break;
+                }
             }
 
             progressTracker.Complete();
@@ -1040,7 +1041,8 @@ namespace AITestAnalyzer
                     (quality, tokens) = await aiAnalyzer.AnalyzeTestQualityAsync(testCase);
                     cache.AddToCache(testCase.TestId, hash, quality, "", tokens);
                     apiCalls++;
-                    await Task.Delay(1000);
+                    await Task.Delay(Constants.RETRY_DELAY_MS, _cts.Token)
+                        .ContinueWith(_ => { }, TaskContinuationOptions.None);
                 }
             }
             else
@@ -1109,7 +1111,10 @@ namespace AITestAnalyzer
                 return;
 
             Console.WriteLine();
-            WriteInfo("Saving cache...");
+            if (_cts.IsCancellationRequested)
+                WriteWarning("Shutdown detected — saving cache before exit...");
+            else
+                WriteInfo("Saving cache...");
             int cleaned = cache.CleanExpiredEntries(CACHE_MAX_AGE_DAYS);
             if (cleaned > 0)
                 WriteInfo($"Cleaned {cleaned} expired cache entries");
