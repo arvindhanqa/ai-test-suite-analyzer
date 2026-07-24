@@ -103,6 +103,13 @@ namespace AITestAnalyzer.Services
             Console.WriteLine($"   ✅ Pass 1 complete — {initialTestCases.Count} test cases generated " +
                               $"({generateTokens} tokens)");
 
+            // Fail fast if generation produced no parseable test cases
+            if (result.TestCases.Count == 0)
+                throw new InvalidOperationException(
+                    "GEN Mode generation produced zero test cases. " +
+                    "The AI response may have been malformed or empty. " +
+                    "Check your PromptConfig.json GenSystemMessage and try again.");
+
             // ── CRITIQUE after Pass 1 ────────────────────────────────
             Console.WriteLine($"   🔍 Critiquing Pass 1 output...");
 
