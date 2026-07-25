@@ -45,7 +45,6 @@ namespace AITestAnalyzer.Infrastructure
             LoadCache();
             // Check if migration is needed
             MigrateCacheIfNeeded();
-            SaveCache();
         }
 
         // Load cache from disk
