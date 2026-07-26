@@ -90,12 +90,11 @@ namespace AITestAnalyzer.Infrastructure
         // Migrate old cache entries to new format
         private void MigrateCacheIfNeeded()
         {
-            // Check if any entries actually need migration before looping
             bool needsMigration = _cache.Values.Any(e =>
                 string.IsNullOrEmpty(e.Quality) && !string.IsNullOrEmpty(e.AnalysisResult));
 
             if (!needsMigration)
-                return; // Nothing to do — skip entirely
+                return;
 
             int migrated = 0;
             foreach (var entry in _cache.Values)
@@ -111,6 +110,9 @@ namespace AITestAnalyzer.Infrastructure
             Console.ForegroundColor = ConsoleColor.Green;
             Console.WriteLine($"✅ Migrated {migrated} cache entries to new format");
             Console.ResetColor();
+
+            // Only save when migration actually happened
+            SaveCache();
         }
 
         // Save cache to disk
