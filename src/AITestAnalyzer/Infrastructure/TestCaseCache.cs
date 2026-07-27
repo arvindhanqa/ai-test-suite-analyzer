@@ -29,6 +29,9 @@ namespace AITestAnalyzer.Infrastructure
         private Dictionary<string, string> _genCache; // hash → serialized GenModeResult JSON
         private const int DEFAULT_MAX_AGE_DAYS = Constants.CACHE_MAX_AGE_DAYS;
         private const int MAX_CACHE_ENTRIES = 1000;
+        private const int SAVE_BATCH_SIZE = 10; // Save every N additions
+        private int _unsavedCount = 0;
+        private readonly object _saveLock = new object();
 
         public TestCaseCache(string cacheDirectory = "cache")
         {
