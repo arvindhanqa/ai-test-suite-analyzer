@@ -245,7 +245,16 @@ namespace AITestAnalyzer.Infrastructure
                     _cache.Remove(key);
             }
 
-            SaveCache();
+            // Batch saves — write every SAVE_BATCH_SIZE additions instead of every time
+            _unsavedCount++;
+            if (_unsavedCount >= SAVE_BATCH_SIZE)
+            {
+                lock (_saveLock)
+                {
+                    SaveCache();
+                    _unsavedCount = 0;
+                }
+            }
         }
 
         // Get cache statistics
