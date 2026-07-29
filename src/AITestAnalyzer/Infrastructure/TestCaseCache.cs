@@ -121,12 +121,16 @@ namespace AITestAnalyzer.Infrastructure
         // Save cache to disk
         public void SaveCache()
         {
-            var cacheList = new List<CachedResult>(_cache.Values);
-            string json = JsonSerializer.Serialize(cacheList, new JsonSerializerOptions
+            lock (_saveLock)
             {
-                WriteIndented = true
-            });
-            File.WriteAllText(_cacheFilePath, json);
+                var cacheList = new List<CachedResult>(_cache.Values);
+                string json = JsonSerializer.Serialize(cacheList, new JsonSerializerOptions
+                {
+                    WriteIndented = true
+                });
+                File.WriteAllText(_cacheFilePath, json);
+                _unsavedCount = 0;
+            }
         }
 
         // Save cache to disk (async)
