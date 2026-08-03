@@ -319,8 +319,11 @@ namespace AITestAnalyzer.Services
 
             if (analysisMode == AnalysisMode.BA)
             {
-                result.GoodTests = results.Count(r => !string.IsNullOrWhiteSpace(r.Coverage));
-                result.IssueTests = results.Count(r => string.IsNullOrWhiteSpace(r.Coverage) && !r.Result.StartsWith("ERROR:"));
+                // BA Mode: use Result field same as QA Mode — Coverage is metadata, not a quality signal
+                result.GoodTests = results.Count(r => r.Result.StartsWith(Constants.RESULT_GOOD));
+                result.IssueTests = results.Count(r =>
+                    !r.Result.StartsWith(Constants.RESULT_GOOD) &&
+                    !r.Result.StartsWith(Constants.RESULT_ERROR_PREFIX));
             }
             else
             {
