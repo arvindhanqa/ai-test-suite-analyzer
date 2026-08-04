@@ -1,8 +1,10 @@
+using System.Text;
 using AITestAnalyzer.Models;
 using AITestAnalyzer.Services;
 using FluentAssertions;
 using Moq;
 using Xunit;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace AITestAnalyzer.Tests
 {
@@ -203,6 +205,16 @@ namespace AITestAnalyzer.Tests
         // REAL PARSING TESTS — test actual ParseGeneratedTestCases logic
         // ============================================================
 
+        private RequirementExtractor CreateRequirementExtractor() =>
+    new RequirementExtractor(
+        new AITestAnalyzer.Models.Configuration { ApiKey = "sk-test-key-not-used" },
+        new AITestAnalyzer.Models.PromptConfig
+        {
+            Model = "gpt-4o-mini",
+            MaxTokens = 250,
+            Temperature = 0.2
+        });
+
         private AIAnalyzer CreateAnalyzer() => new AIAnalyzer(
             new AITestAnalyzer.Models.Configuration { ApiKey = "sk-test-key-not-used" },
             new AITestAnalyzer.Models.PromptConfig
@@ -341,6 +353,93 @@ TC-GEN-003|MAYBE|Not sure about this one";
 
             // ASSERT
             result.Should().BeEmpty();
+        }
+
+        // ============================================================
+        // REAL PARSING TESTS — test actual ParsePipeDelimitedResponse logic
+        // ============================================================
+
+        [Fact]
+        public void ParsePipeDelimited_ValidResponse_ReturnsCorrectCount()
+        {
+            // ARRANGE
+            var extractor = CreateRequirementExtractor();
+            var response = @"FR-001|user.auth.login|users login with email and password session expires 30min|1
+FR-002|user.auth.register|new users create account with email verification required|1
+BR-001|user.auth.password|password must be 8-20 chars with uppercase lowercase number|1";
+
+            // ACT
+            var result = extractor.ParsePipeDelimitedResponse(response);
+
+            // ASSERT
+            result.Should().HaveCount(3);
+            result[0].Id.Should().Be("FR-001");
+            result[0].Key.Should().Be("user.auth.login");
+        }
+
+        [Fact]
+        public void ParsePipeDelimited_EmptyResponse_ReturnsEmptyList()
+        {
+            // ARRANGE
+            var extractor = CreateRequirementExtractor();
+
+            // ACT
+            var result = extractor.ParsePipeDelimitedResponse(string.Empty);
+
+            // ASSERT
+            result.Should().BeEmpty();
+        }
+
+        [Fact]
+        public void ParsePipeDelimited_ResponseWithMarkdown_StripsMarkdownAndParses()
+        {
+            // ARRANGE
+            var extractor = CreateRequirementExtractor();
+            var response = @"```
+FR-001|user.auth.login|users login with email and password|1
+FR-002|user.auth.register|new users create account with email verification|1
+```";
+
+            // ACT
+            var result = extractor.ParsePipeDelimitedResponse(response);
+
+            // ASSERT
+            result.Should().HaveCount(2);
+            result[0].Id.Should().Be("FR-001");
+        }
+
+        [Fact]
+        public void ParsePipeDelimited_MalformedRows_SkipsMalformedKeepsValid()
+        {
+            // ARRANGE
+            var extractor = CreateRequirementExtractor();
+            var response = @"FR-001|user.auth.login|users login with email and password|1
+this line has no pipes at all
+FR-002|user.auth.register|new users create account with email verification|1";
+
+            // ACT
+            var result = extractor.ParsePipeDelimitedResponse(response);
+
+            // ASSERT
+            result.Should().HaveCount(2);
+            result.Should().NotContain(r => r.Description == "this line has no pipes at all");
+        }
+
+        [Fact]
+        public void ParsePipeDelimited_DoesNotThrow_OnAnyInput()
+        {
+            // ARRANGE
+            var extractor = CreateRequirementExtractor();
+            var response = @"not valid at all !!!
+|||||||
+   
+FR-001|user.auth|valid line|1";
+
+            // ACT
+            Action act = () => extractor.ParsePipeDelimitedResponse(response);
+
+            // ASSERT
+            act.Should().NotThrow();
         }
     }
 }

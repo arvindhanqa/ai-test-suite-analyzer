@@ -151,7 +151,7 @@ Return ONLY pipe-delimited lines (one per line). NO markdown, NO code blocks, NO
         /// <summary>
         /// Parse pipe-delimited response into ExtractedRequirement objects
         /// </summary>
-        private List<ExtractedRequirement> ParsePipeDelimitedResponse(string response)
+        internal List<ExtractedRequirement> ParsePipeDelimitedResponse(string response)
         {
             try
             {
