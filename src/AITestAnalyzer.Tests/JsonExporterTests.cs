@@ -64,5 +64,40 @@ namespace AITestAnalyzer.Tests
             if (Directory.Exists(outputDir))
                 Directory.Delete(outputDir, true);
         }
+
+        // ============================================================
+        // JSON STRUCTURE TESTS
+        // ============================================================
+
+        [Fact]
+        public void Export_GenModeResult_ContainsMetadataSection()
+        {
+            // ARRANGE
+            string outputDir = CreateOutputDir();
+            Directory.CreateDirectory(outputDir);
+            string excelPath = Path.Combine(outputDir, "generated_tests_test.xlsx");
+
+            var result = CreateFakeGenModeResult();
+
+            // ACT
+            string jsonPath = JsonExporter.Export(
+                result, CreatePromptConfig(), TimeSpan.FromSeconds(10), excelPath);
+
+            string json = File.ReadAllText(jsonPath);
+            using var doc = JsonDocument.Parse(json);
+
+            // ASSERT
+            doc.RootElement.TryGetProperty("metadata", out var metadata)
+                .Should().BeTrue("JSON must contain metadata section");
+            metadata.TryGetProperty("totalPasses", out _)
+                .Should().BeTrue("metadata must contain totalPasses");
+            metadata.TryGetProperty("totalTokens", out _)
+                .Should().BeTrue("metadata must contain totalTokens");
+            metadata.TryGetProperty("requirementsSource", out _)
+                .Should().BeTrue("metadata must contain requirementsSource");
+
+            if (Directory.Exists(outputDir))
+                Directory.Delete(outputDir, true);
+        }
     }
 }
