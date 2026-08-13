@@ -99,5 +99,32 @@ namespace AITestAnalyzer.Tests
             if (Directory.Exists(outputDir))
                 Directory.Delete(outputDir, true);
         }
+
+        [Fact]
+        public void Export_GenModeResult_ContainsSummarySection()
+        {
+            // ARRANGE
+            string outputDir = CreateOutputDir();
+            Directory.CreateDirectory(outputDir);
+            string excelPath = Path.Combine(outputDir, "generated_tests_test.xlsx");
+
+            var result = CreateFakeGenModeResult(3);
+
+            // ACT
+            string jsonPath = JsonExporter.Export(
+                result, CreatePromptConfig(), TimeSpan.FromSeconds(10), excelPath);
+
+            string json = File.ReadAllText(jsonPath);
+            using var doc = JsonDocument.Parse(json);
+
+            // ASSERT
+            doc.RootElement.TryGetProperty("summary", out var summary)
+                .Should().BeTrue("JSON must contain summary section");
+            summary.GetProperty("testsGenerated").GetInt32()
+                .Should().Be(3, "summary.testsGenerated should match test case count");
+
+            if (Directory.Exists(outputDir))
+                Directory.Delete(outputDir, true);
+        }
     }
 }
