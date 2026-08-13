@@ -126,5 +126,36 @@ namespace AITestAnalyzer.Tests
             if (Directory.Exists(outputDir))
                 Directory.Delete(outputDir, true);
         }
+
+        [Fact]
+        public void Export_GenModeResult_ContainsTestCasesArray()
+        {
+            // ARRANGE
+            string outputDir = CreateOutputDir();
+            Directory.CreateDirectory(outputDir);
+            string excelPath = Path.Combine(outputDir, "generated_tests_test.xlsx");
+
+            var result = CreateFakeGenModeResult(5);
+
+            // ACT
+            string jsonPath = JsonExporter.Export(
+                result, CreatePromptConfig(), TimeSpan.FromSeconds(10), excelPath);
+
+            string json = File.ReadAllText(jsonPath);
+            using var doc = JsonDocument.Parse(json);
+
+            // ASSERT
+            doc.RootElement.TryGetProperty("testCases", out var testCases)
+                .Should().BeTrue("JSON must contain testCases array");
+            testCases.GetArrayLength()
+                .Should().Be(5, "testCases array should contain all generated tests");
+            testCases[0].TryGetProperty("testId", out _)
+                .Should().BeTrue("each test case must have testId");
+            testCases[0].TryGetProperty("qaScore", out _)
+                .Should().BeTrue("each test case must have qaScore");
+
+            if (Directory.Exists(outputDir))
+                Directory.Delete(outputDir, true);
+        }
     }
 }
