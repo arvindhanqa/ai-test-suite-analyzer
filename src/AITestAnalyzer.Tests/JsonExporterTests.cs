@@ -157,5 +157,33 @@ namespace AITestAnalyzer.Tests
             if (Directory.Exists(outputDir))
                 Directory.Delete(outputDir, true);
         }
+
+        [Fact]
+        public void Export_EmptyTestCases_ProducesValidJson()
+        {
+            // ARRANGE
+            string outputDir = CreateOutputDir();
+            Directory.CreateDirectory(outputDir);
+            string excelPath = Path.Combine(outputDir, "generated_tests_test.xlsx");
+
+            var result = new GenModeResult
+            {
+                TestCases = new List<GeneratedTestCase>(),
+                TotalPasses = 1,
+                TotalTokens = 100,
+                RequirementsSource = "provided",
+                GeneratedAt = DateTime.UtcNow
+            };
+
+            // ACT
+            Action act = () => JsonExporter.Export(
+                result, CreatePromptConfig(), TimeSpan.FromSeconds(1), excelPath);
+
+            // ASSERT
+            act.Should().NotThrow("empty test cases should produce valid JSON not throw");
+
+            if (Directory.Exists(outputDir))
+                Directory.Delete(outputDir, true);
+        }
     }
 }
