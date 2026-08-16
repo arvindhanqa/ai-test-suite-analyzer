@@ -16,6 +16,7 @@ namespace AITestAnalyzer.Services
         private readonly int _worksheetIndex;
         private readonly PromptConfig _promptConfig;
         private readonly List<(int Row, string Analysis, string Coverage, AnalysisMode Mode)> _pendingWrites = new();
+        private static readonly object _fileLock = new object();
 
         public ExcelWriter(string outputPath, PromptConfig promptConfig, int worksheetIndex = 0)
         {
@@ -64,12 +65,15 @@ namespace AITestAnalyzer.Services
         {
             try
             {
-                using (var package = new ExcelPackage(new FileInfo(_outputPath)))
+                lock (_fileLock)
                 {
-                    var worksheet = package.Workbook.Worksheets[_worksheetIndex]; // Sheet2 (index 1)
-                    worksheet.Name = "AI Detailed Analysis";
-                    package.Save();
-                    Console.WriteLine("   ✅ Renamed sheet to 'AI Detailed Analysis'");
+                    using (var package = new ExcelPackage(new FileInfo(_outputPath)))
+                    {
+                        var worksheet = package.Workbook.Worksheets[_worksheetIndex];
+                        worksheet.Name = "AI Detailed Analysis";
+                        package.Save();
+                        Console.WriteLine("   ✅ Renamed sheet to 'AI Detailed Analysis'");
+                    }
                 }
             }
             catch (Exception ex)
