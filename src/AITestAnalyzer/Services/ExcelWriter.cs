@@ -198,66 +198,69 @@ namespace AITestAnalyzer.Services
 
             try
             {
-                using (var package = new ExcelPackage(new FileInfo(_outputPath)))
+                lock (_fileLock)
                 {
-                    var worksheet = package.Workbook.Worksheets[_worksheetIndex];
-
-                    foreach (var (rowNumber, analysis, coverage, mode) in _pendingWrites)
+                    using (var package = new ExcelPackage(new FileInfo(_outputPath)))
                     {
-                        if (mode == AnalysisMode.QA)
+                        var worksheet = package.Workbook.Worksheets[_worksheetIndex];
+
+                        foreach (var (rowNumber, analysis, coverage, mode) in _pendingWrites)
                         {
-                            worksheet.Cells[rowNumber, 8].Value = analysis;
-
-                            if (analysis == "GOOD")
-                                worksheet.Cells[rowNumber, 8].Style.Font.Color.SetColor(System.Drawing.Color.Green);
-                            else if (analysis.StartsWith("Issue:") || analysis.StartsWith("Steps"))
-                                worksheet.Cells[rowNumber, 8].Style.Font.Color.SetColor(System.Drawing.Color.Orange);
-                            else if (analysis.StartsWith("ERROR:"))
-                                worksheet.Cells[rowNumber, 8].Style.Font.Color.SetColor(System.Drawing.Color.Red);
-
-                            worksheet.Cells[rowNumber, 8].Style.WrapText = true;
-                            worksheet.Cells[rowNumber, 8].Style.VerticalAlignment = OfficeOpenXml.Style.ExcelVerticalAlignment.Top;
-                            worksheet.Cells[rowNumber, 8].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
-                        }
-                        else
-                        {
-                            worksheet.Cells[rowNumber, 8].Value = analysis;
-                            worksheet.Cells[rowNumber, 8].Style.WrapText = true;
-                            worksheet.Cells[rowNumber, 8].Style.VerticalAlignment = OfficeOpenXml.Style.ExcelVerticalAlignment.Top;
-                            worksheet.Cells[rowNumber, 8].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
-
-                            if (string.IsNullOrWhiteSpace(analysis))
+                            if (mode == AnalysisMode.QA)
                             {
-                                worksheet.Cells[rowNumber, 8].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
-                                worksheet.Cells[rowNumber, 8].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGreen);
-                            }
-                            else if (analysis.StartsWith("ERROR:"))
-                                worksheet.Cells[rowNumber, 8].Style.Font.Color.SetColor(System.Drawing.Color.Red);
+                                worksheet.Cells[rowNumber, 8].Value = analysis;
 
-                            worksheet.Cells[rowNumber, 9].Value = coverage;
-                            worksheet.Cells[rowNumber, 9].Style.WrapText = true;
-                            worksheet.Cells[rowNumber, 9].Style.VerticalAlignment = OfficeOpenXml.Style.ExcelVerticalAlignment.Top;
-                            worksheet.Cells[rowNumber, 9].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
+                                if (analysis == "GOOD")
+                                    worksheet.Cells[rowNumber, 8].Style.Font.Color.SetColor(System.Drawing.Color.Green);
+                                else if (analysis.StartsWith("Issue:") || analysis.StartsWith("Steps"))
+                                    worksheet.Cells[rowNumber, 8].Style.Font.Color.SetColor(System.Drawing.Color.Orange);
+                                else if (analysis.StartsWith("ERROR:"))
+                                    worksheet.Cells[rowNumber, 8].Style.Font.Color.SetColor(System.Drawing.Color.Red);
 
-                            if (string.IsNullOrWhiteSpace(coverage) || coverage == "None")
-                            {
-                                worksheet.Cells[rowNumber, 9].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
-                                worksheet.Cells[rowNumber, 9].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightYellow);
+                                worksheet.Cells[rowNumber, 8].Style.WrapText = true;
+                                worksheet.Cells[rowNumber, 8].Style.VerticalAlignment = OfficeOpenXml.Style.ExcelVerticalAlignment.Top;
+                                worksheet.Cells[rowNumber, 8].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
                             }
                             else
                             {
-                                worksheet.Cells[rowNumber, 9].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
-                                worksheet.Cells[rowNumber, 9].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGreen);
+                                worksheet.Cells[rowNumber, 8].Value = analysis;
+                                worksheet.Cells[rowNumber, 8].Style.WrapText = true;
+                                worksheet.Cells[rowNumber, 8].Style.VerticalAlignment = OfficeOpenXml.Style.ExcelVerticalAlignment.Top;
+                                worksheet.Cells[rowNumber, 8].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
+
+                                if (string.IsNullOrWhiteSpace(analysis))
+                                {
+                                    worksheet.Cells[rowNumber, 8].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                                    worksheet.Cells[rowNumber, 8].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGreen);
+                                }
+                                else if (analysis.StartsWith("ERROR:"))
+                                    worksheet.Cells[rowNumber, 8].Style.Font.Color.SetColor(System.Drawing.Color.Red);
+
+                                worksheet.Cells[rowNumber, 9].Value = coverage;
+                                worksheet.Cells[rowNumber, 9].Style.WrapText = true;
+                                worksheet.Cells[rowNumber, 9].Style.VerticalAlignment = OfficeOpenXml.Style.ExcelVerticalAlignment.Top;
+                                worksheet.Cells[rowNumber, 9].Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Thin);
+
+                                if (string.IsNullOrWhiteSpace(coverage) || coverage == "None")
+                                {
+                                    worksheet.Cells[rowNumber, 9].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                                    worksheet.Cells[rowNumber, 9].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightYellow);
+                                }
+                                else
+                                {
+                                    worksheet.Cells[rowNumber, 9].Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                                    worksheet.Cells[rowNumber, 9].Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightGreen);
+                                }
                             }
                         }
+
+                        package.Save();
                     }
 
-                    package.Save();
+                    int writeCount = _pendingWrites.Count;
+                    _pendingWrites.Clear();
+                    Console.WriteLine($"   ✅ Wrote {writeCount} analysis results to Excel");
                 }
-
-                int writeCount = _pendingWrites.Count;
-                _pendingWrites.Clear();
-                Console.WriteLine($"   ✅ Wrote {writeCount} analysis results to Excel");
             }
             catch (Exception ex)
             {
