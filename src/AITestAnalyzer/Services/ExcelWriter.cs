@@ -173,7 +173,7 @@ namespace AITestAnalyzer.Services
                         package.Save();
                     }
                 }
-             }
+            }
             catch (Exception ex)
             {
                 Console.WriteLine($"   ⚠️  Warning: Could not add analysis column header in " +
@@ -298,75 +298,78 @@ namespace AITestAnalyzer.Services
         {
             try
             {
-                using (var package = new ExcelPackage(new FileInfo(_outputPath)))
+                lock (_fileLock)
                 {
-                    // Delete existing sheet if it exists
-                    var existingSheet = package.Workbook.Worksheets["Quality Issues Summary"];
-                    if (existingSheet != null)
+                    using (var package = new ExcelPackage(new FileInfo(_outputPath)))
                     {
-                        package.Workbook.Worksheets.Delete(existingSheet);
-                    }
-                    // Create new worksheet
-                    var issuesSheet = package.Workbook.Worksheets.Add("Quality Issues Summary");
-
-                    // HEADERS
-                    issuesSheet.Cells[1, 1].Value = "Test ID";
-                    issuesSheet.Cells[1, 2].Value = "Issue Found";
-                    issuesSheet.Cells[1, 3].Value = "Status";
-
-                    // Format headers
-                    using (var headerRange = issuesSheet.Cells[1, 1, 1, 3])
-                    {
-                        headerRange.Style.Font.Bold = true;
-                        headerRange.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
-                        headerRange.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightBlue);
-                        headerRange.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
-                        headerRange.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Medium);
-                    }
-                    // Freeze panes on Quality Issues sheet
-                    issuesSheet.View.FreezePanes(2, 1); // Freeze header row
-
-                    // Auto-filter on Quality Issues sheet
-                    issuesSheet.Cells[1, 1, 1, 3].AutoFilter = true;
-
-                    // Auto-size columns
-                    issuesSheet.Column(1).AutoFit(); // Test ID
-                    issuesSheet.Column(2).Width = 80; // Issue Found (wider for readability)
-                    issuesSheet.Column(3).AutoFit(); // Status
-
-                    // DATA ROWS - only tests with issues
-                    int currentRow = 2;
-                    foreach (var (testId, result, tokens, coverage) in results)
-                    {
-                        if (result != "GOOD" && !result.StartsWith("ERROR:"))
+                        // Delete existing sheet if it exists
+                        var existingSheet = package.Workbook.Worksheets["Quality Issues Summary"];
+                        if (existingSheet != null)
                         {
-                            issuesSheet.Cells[currentRow, 1].Value = testId;
-                            issuesSheet.Cells[currentRow, 2].Value = result.Replace("Issue: ", "");
-                            issuesSheet.Cells[currentRow, 3].Value = "Needs Review";
-
-                            // Format issue row
-                            issuesSheet.Cells[currentRow, 2].Style.WrapText = true;
-                            issuesSheet.Cells[currentRow, 1].Style.Font.Color.SetColor(System.Drawing.Color.Orange);
-
-                            currentRow++;
+                            package.Workbook.Worksheets.Delete(existingSheet);
                         }
+                        // Create new worksheet
+                        var issuesSheet = package.Workbook.Worksheets.Add("Quality Issues Summary");
+
+                        // HEADERS
+                        issuesSheet.Cells[1, 1].Value = "Test ID";
+                        issuesSheet.Cells[1, 2].Value = "Issue Found";
+                        issuesSheet.Cells[1, 3].Value = "Status";
+
+                        // Format headers
+                        using (var headerRange = issuesSheet.Cells[1, 1, 1, 3])
+                        {
+                            headerRange.Style.Font.Bold = true;
+                            headerRange.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                            headerRange.Style.Fill.BackgroundColor.SetColor(System.Drawing.Color.LightBlue);
+                            headerRange.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+                            headerRange.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Medium);
+                        }
+                        // Freeze panes on Quality Issues sheet
+                        issuesSheet.View.FreezePanes(2, 1); // Freeze header row
+
+                        // Auto-filter on Quality Issues sheet
+                        issuesSheet.Cells[1, 1, 1, 3].AutoFilter = true;
+
+                        // Auto-size columns
+                        issuesSheet.Column(1).AutoFit(); // Test ID
+                        issuesSheet.Column(2).Width = 80; // Issue Found (wider for readability)
+                        issuesSheet.Column(3).AutoFit(); // Status
+
+                        // DATA ROWS - only tests with issues
+                        int currentRow = 2;
+                        foreach (var (testId, result, tokens, coverage) in results)
+                        {
+                            if (result != "GOOD" && !result.StartsWith("ERROR:"))
+                            {
+                                issuesSheet.Cells[currentRow, 1].Value = testId;
+                                issuesSheet.Cells[currentRow, 2].Value = result.Replace("Issue: ", "");
+                                issuesSheet.Cells[currentRow, 3].Value = "Needs Review";
+
+                                // Format issue row
+                                issuesSheet.Cells[currentRow, 2].Style.WrapText = true;
+                                issuesSheet.Cells[currentRow, 1].Style.Font.Color.SetColor(System.Drawing.Color.Orange);
+
+                                currentRow++;
+                            }
+                        }
+
+                        // Summary at the bottom
+                        currentRow++; // Empty row
+                        issuesSheet.Cells[currentRow, 1].Value = "TOTAL ISSUES:";
+                        issuesSheet.Cells[currentRow, 2].Value = currentRow - 3; // Subtract header + empty row
+                        issuesSheet.Cells[currentRow, 1].Style.Font.Bold = true;
+
+                        // Auto-fit columns
+                        issuesSheet.Column(1).Width = 15;
+                        issuesSheet.Column(2).Width = 60;
+                        issuesSheet.Column(3).Width = 15;
+
+                        package.Save();
+                        Console.WriteLine("   ✅ Created 'Quality Issues Summary' sheet");
                     }
-
-                    // Summary at the bottom
-                    currentRow++; // Empty row
-                    issuesSheet.Cells[currentRow, 1].Value = "TOTAL ISSUES:";
-                    issuesSheet.Cells[currentRow, 2].Value = currentRow - 3; // Subtract header + empty row
-                    issuesSheet.Cells[currentRow, 1].Style.Font.Bold = true;
-
-                    // Auto-fit columns
-                    issuesSheet.Column(1).Width = 15;
-                    issuesSheet.Column(2).Width = 60;
-                    issuesSheet.Column(3).Width = 15;
-
-                    package.Save();
-                    Console.WriteLine("   ✅ Created 'Quality Issues Summary' sheet");
                 }
-            }
+            } // end lock
             catch (Exception ex)
             {
                 Console.WriteLine($"   ⚠️  Warning: Could not create 'Quality Issues Summary' sheet in '{Path.GetFileName(_outputPath)}': {ex.Message}");
