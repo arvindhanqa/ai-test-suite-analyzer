@@ -1025,135 +1025,138 @@ namespace AITestAnalyzer.Services
         {
             try
             {
-                using (var package = new ExcelPackage(new FileInfo(_outputPath)))
+                lock (_fileLock)
                 {
-                    // Delete existing sheet if present
-                    var existingSheet = package.Workbook.Worksheets["Generated Tests"];
-                    if (existingSheet != null)
-                        package.Workbook.Worksheets.Delete(existingSheet);
+                    using (var package = new ExcelPackage(new FileInfo(_outputPath)))
+                    {
+                        // Delete existing sheet if present
+                        var existingSheet = package.Workbook.Worksheets["Generated Tests"];
+                        if (existingSheet != null)
+                            package.Workbook.Worksheets.Delete(existingSheet);
 
-                    var sheet = package.Workbook.Worksheets.Add("Generated Tests");
+                        var sheet = package.Workbook.Worksheets.Add("Generated Tests");
 
-                    // ── HEADERS ────────────────────────────────────────
-                    string[] headers = {
+                        // ── HEADERS ────────────────────────────────────────
+                        string[] headers = {
                         "Test ID", "Feature", "Scenario", "Priority",
                         "Steps", "Expected Result", "Pass", "QA Score"
                     };
 
-                    for (int col = 1; col <= headers.Length; col++)
-                    {
-                        sheet.Cells[1, col].Value = headers[col - 1];
-                    }
-
-                    // Header formatting — dark green (distinct from QA blue / BA coral)
-                    using (var headerRange = sheet.Cells[1, 1, 1, headers.Length])
-                    {
-                        headerRange.Style.Font.Bold = true;
-                        headerRange.Style.Font.Size = 12;
-                        headerRange.Style.Font.Color.SetColor(System.Drawing.Color.White);
-                        headerRange.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
-                        headerRange.Style.Fill.BackgroundColor.SetColor(
-                            System.Drawing.ColorTranslator.FromHtml("#1A6B3C")); // dark green
-                        headerRange.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
-                        headerRange.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Medium);
-                    }
-
-                    // Freeze header row
-                    sheet.View.FreezePanes(2, 1);
-
-                    // Auto-filter
-                    sheet.Cells[1, 1, 1, headers.Length].AutoFilter = true;
-
-                    // ── DATA ROWS ──────────────────────────────────────
-                    for (int i = 0; i < testCases.Count; i++)
-                    {
-                        var tc = testCases[i];
-                        int row = i + 2;
-
-                        sheet.Cells[row, 1].Value = tc.TestId;
-                        sheet.Cells[row, 2].Value = tc.Feature;
-                        sheet.Cells[row, 3].Value = tc.Scenario;
-                        sheet.Cells[row, 4].Value = tc.Priority;
-                        sheet.Cells[row, 5].Value = tc.Steps;
-                        sheet.Cells[row, 6].Value = tc.ExpectedResult;
-                        sheet.Cells[row, 7].Value = tc.PassNumber;
-                        sheet.Cells[row, 8].Value = tc.QAScore;
-
-                        // Wrap text on Steps and Expected Result
-                        sheet.Cells[row, 5].Style.WrapText = true;
-                        sheet.Cells[row, 6].Style.WrapText = true;
-                        sheet.Cells[row, 8].Style.WrapText = true;
-
-                        // Vertical alignment — top for all cells in row
                         for (int col = 1; col <= headers.Length; col++)
                         {
-                            sheet.Cells[row, col].Style.VerticalAlignment =
-                                OfficeOpenXml.Style.ExcelVerticalAlignment.Top;
-                            sheet.Cells[row, col].Style.Border.BorderAround(
-                                OfficeOpenXml.Style.ExcelBorderStyle.Thin);
+                            sheet.Cells[1, col].Value = headers[col - 1];
                         }
 
-                        // Pass number column — highlight refinement passes
-                        if (tc.PassNumber > 1)
+                        // Header formatting — dark green (distinct from QA blue / BA coral)
+                        using (var headerRange = sheet.Cells[1, 1, 1, headers.Length])
                         {
-                            sheet.Cells[row, 7].Style.Fill.PatternType =
-                                OfficeOpenXml.Style.ExcelFillStyle.Solid;
-                            sheet.Cells[row, 7].Style.Fill.BackgroundColor.SetColor(
-                                System.Drawing.ColorTranslator.FromHtml("#FFEB9C")); // light yellow
-                            sheet.Cells[row, 7].Style.Font.Bold = true;
+                            headerRange.Style.Font.Bold = true;
+                            headerRange.Style.Font.Size = 12;
+                            headerRange.Style.Font.Color.SetColor(System.Drawing.Color.White);
+                            headerRange.Style.Fill.PatternType = OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                            headerRange.Style.Fill.BackgroundColor.SetColor(
+                                System.Drawing.ColorTranslator.FromHtml("#1A6B3C")); // dark green
+                            headerRange.Style.HorizontalAlignment = OfficeOpenXml.Style.ExcelHorizontalAlignment.Center;
+                            headerRange.Style.Border.BorderAround(OfficeOpenXml.Style.ExcelBorderStyle.Medium);
                         }
 
-                        // QA Score column — color code by result
-                        if (!string.IsNullOrEmpty(tc.QAScore))
+                        // Freeze header row
+                        sheet.View.FreezePanes(2, 1);
+
+                        // Auto-filter
+                        sheet.Cells[1, 1, 1, headers.Length].AutoFilter = true;
+
+                        // ── DATA ROWS ──────────────────────────────────────
+                        for (int i = 0; i < testCases.Count; i++)
                         {
-                            if (tc.QAScore.StartsWith("GOOD", StringComparison.OrdinalIgnoreCase))
+                            var tc = testCases[i];
+                            int row = i + 2;
+
+                            sheet.Cells[row, 1].Value = tc.TestId;
+                            sheet.Cells[row, 2].Value = tc.Feature;
+                            sheet.Cells[row, 3].Value = tc.Scenario;
+                            sheet.Cells[row, 4].Value = tc.Priority;
+                            sheet.Cells[row, 5].Value = tc.Steps;
+                            sheet.Cells[row, 6].Value = tc.ExpectedResult;
+                            sheet.Cells[row, 7].Value = tc.PassNumber;
+                            sheet.Cells[row, 8].Value = tc.QAScore;
+
+                            // Wrap text on Steps and Expected Result
+                            sheet.Cells[row, 5].Style.WrapText = true;
+                            sheet.Cells[row, 6].Style.WrapText = true;
+                            sheet.Cells[row, 8].Style.WrapText = true;
+
+                            // Vertical alignment — top for all cells in row
+                            for (int col = 1; col <= headers.Length; col++)
                             {
-                                sheet.Cells[row, 8].Style.Font.Color.SetColor(
-                                    System.Drawing.Color.Green);
+                                sheet.Cells[row, col].Style.VerticalAlignment =
+                                    OfficeOpenXml.Style.ExcelVerticalAlignment.Top;
+                                sheet.Cells[row, col].Style.Border.BorderAround(
+                                    OfficeOpenXml.Style.ExcelBorderStyle.Thin);
                             }
-                            else if (tc.QAScore.StartsWith("ERROR:", StringComparison.OrdinalIgnoreCase))
+
+                            // Pass number column — highlight refinement passes
+                            if (tc.PassNumber > 1)
                             {
-                                sheet.Cells[row, 8].Style.Font.Color.SetColor(
-                                    System.Drawing.Color.Red);
+                                sheet.Cells[row, 7].Style.Fill.PatternType =
+                                    OfficeOpenXml.Style.ExcelFillStyle.Solid;
+                                sheet.Cells[row, 7].Style.Fill.BackgroundColor.SetColor(
+                                    System.Drawing.ColorTranslator.FromHtml("#FFEB9C")); // light yellow
+                                sheet.Cells[row, 7].Style.Font.Bold = true;
                             }
-                            else
+
+                            // QA Score column — color code by result
+                            if (!string.IsNullOrEmpty(tc.QAScore))
                             {
-                                sheet.Cells[row, 8].Style.Font.Color.SetColor(
-                                    System.Drawing.Color.OrangeRed);
+                                if (tc.QAScore.StartsWith("GOOD", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    sheet.Cells[row, 8].Style.Font.Color.SetColor(
+                                        System.Drawing.Color.Green);
+                                }
+                                else if (tc.QAScore.StartsWith("ERROR:", StringComparison.OrdinalIgnoreCase))
+                                {
+                                    sheet.Cells[row, 8].Style.Font.Color.SetColor(
+                                        System.Drawing.Color.Red);
+                                }
+                                else
+                                {
+                                    sheet.Cells[row, 8].Style.Font.Color.SetColor(
+                                        System.Drawing.Color.OrangeRed);
+                                }
+                            }
+
+                            // Priority column — color code
+                            switch (tc.Priority.ToLower())
+                            {
+                                case "high":
+                                    sheet.Cells[row, 4].Style.Font.Color.SetColor(
+                                        System.Drawing.Color.Red);
+                                    sheet.Cells[row, 4].Style.Font.Bold = true;
+                                    break;
+                                case "medium":
+                                    sheet.Cells[row, 4].Style.Font.Color.SetColor(
+                                        System.Drawing.Color.OrangeRed);
+                                    break;
+                                case "low":
+                                    sheet.Cells[row, 4].Style.Font.Color.SetColor(
+                                        System.Drawing.Color.Green);
+                                    break;
                             }
                         }
 
-                        // Priority column — color code
-                        switch (tc.Priority.ToLower())
-                        {
-                            case "high":
-                                sheet.Cells[row, 4].Style.Font.Color.SetColor(
-                                    System.Drawing.Color.Red);
-                                sheet.Cells[row, 4].Style.Font.Bold = true;
-                                break;
-                            case "medium":
-                                sheet.Cells[row, 4].Style.Font.Color.SetColor(
-                                    System.Drawing.Color.OrangeRed);
-                                break;
-                            case "low":
-                                sheet.Cells[row, 4].Style.Font.Color.SetColor(
-                                    System.Drawing.Color.Green);
-                                break;
-                        }
+                        // ── COLUMN WIDTHS ──────────────────────────────────
+                        sheet.Column(1).Width = 15;  // Test ID
+                        sheet.Column(2).Width = 20;  // Feature
+                        sheet.Column(3).Width = 45;  // Scenario
+                        sheet.Column(4).Width = 12;  // Priority
+                        sheet.Column(5).Width = 50;  // Steps
+                        sheet.Column(6).Width = 40;  // Expected Result
+                        sheet.Column(7).Width = 10;  // Pass
+                        sheet.Column(8).Width = 60;  // QA Score
+
+                        package.Save();
+                        Console.WriteLine($"   ✅ Created 'Generated Tests' sheet ({testCases.Count} test cases)");
                     }
-
-                    // ── COLUMN WIDTHS ──────────────────────────────────
-                    sheet.Column(1).Width = 15;  // Test ID
-                    sheet.Column(2).Width = 20;  // Feature
-                    sheet.Column(3).Width = 45;  // Scenario
-                    sheet.Column(4).Width = 12;  // Priority
-                    sheet.Column(5).Width = 50;  // Steps
-                    sheet.Column(6).Width = 40;  // Expected Result
-                    sheet.Column(7).Width = 10;  // Pass
-                    sheet.Column(8).Width = 60;  // QA Score
-
-                    package.Save();
-                    Console.WriteLine($"   ✅ Created 'Generated Tests' sheet ({testCases.Count} test cases)");
                 }
             }
             catch (Exception ex)
