@@ -30,6 +30,11 @@ namespace AITestAnalyzer.Services
             });
         }
 
+        public Task<ArchitecturePlan> AnalyzeDocumentStructureAsync( string requirementsMarkdown, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// QA MODE: Analyzes test quality without requirements
         /// </summary>

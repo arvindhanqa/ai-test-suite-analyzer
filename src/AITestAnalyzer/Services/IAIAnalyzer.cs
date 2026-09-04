@@ -5,6 +5,21 @@ namespace AITestAnalyzer.Services
     public interface IAIAnalyzer
     {
         /// <summary>
+        /// Analyses the full requirements document and produces an architecture plan
+        /// identifying all sections, sub-topics, recommended test counts, and
+        /// cross-section integration flows.
+        /// </summary>
+        /// <param name="requirementsMarkdown">
+        /// The full requirements document in Markdown format.
+        /// </param>
+        /// <param name="cancellationToken">Token to cancel the operation.</param>
+        /// <returns>
+        /// An <see cref="ArchitecturePlan"/> containing all sections with
+        /// recommended test breakdowns and integration flows.
+        /// </returns>
+        Task<ArchitecturePlan> AnalyzeDocumentStructureAsync( string requirementsMarkdown, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// QA MODE: Analyzes a single test case for quality without requirements.
         /// Evaluates clarity, completeness, and testability.
         /// Uses gpt-4o-mini and inline system prompt in AIAnalyzer.
