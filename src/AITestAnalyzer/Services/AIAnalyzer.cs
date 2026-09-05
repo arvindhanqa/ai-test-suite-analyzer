@@ -35,6 +35,11 @@ namespace AITestAnalyzer.Services
             throw new NotImplementedException();
         }
 
+        public Task<(List<GeneratedTestCase> TestCases, int TokensUsed)> GenerateTestCasesForSectionAsync( SectionTestPlan plan, string requirementsMarkdown, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
         /// <summary>
         /// QA MODE: Analyzes test quality without requirements
         /// </summary>

@@ -20,6 +20,25 @@ namespace AITestAnalyzer.Services
         Task<ArchitecturePlan> AnalyzeDocumentStructureAsync( string requirementsMarkdown, CancellationToken cancellationToken = default);
 
         /// <summary>
+        /// Generates test cases for a single requirements section to achieve
+        /// 100% coverage of all functional requirements, business rules,
+        /// validation rules, and error handling paths in that section.
+        /// </summary>
+        /// <param name="plan">
+        /// The section test plan produced by <see cref="AnalyzeDocumentStructureAsync"/>,
+        /// providing section name, prefix, and sub-topics.
+        /// </param>
+        /// <param name="requirementsMarkdown">
+        /// The full requirements document in Markdown format. The AI extracts
+        /// the relevant section text internally.
+        /// </param>
+        /// <param name="cancellationToken">Token to cancel the operation.</param>
+        /// <returns>
+        /// A tuple of the generated test cases and the total tokens consumed.
+        /// </returns>
+        Task<(List<GeneratedTestCase> TestCases, int TokensUsed)> GenerateTestCasesForSectionAsync( SectionTestPlan plan, string requirementsMarkdown, CancellationToken cancellationToken = default);
+
+        /// <summary>
         /// QA MODE: Analyzes a single test case for quality without requirements.
         /// Evaluates clarity, completeness, and testability.
         /// Uses gpt-4o-mini and inline system prompt in AIAnalyzer.
