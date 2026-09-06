@@ -30,6 +30,12 @@ namespace AITestAnalyzer.Services
             });
         }
 
+        public Task<(List<GeneratedTestCase> TestCases, int TokensUsed)> GenerateIntegrationTestsAsync( string requirementsMarkdown, List<IntegrationFlow> flows, List<GeneratedTestCase> allSectionTests, CancellationToken cancellationToken = default)
+        {
+            throw new NotImplementedException();
+        }
+
+
         public Task<ArchitecturePlan> AnalyzeDocumentStructureAsync( string requirementsMarkdown, CancellationToken cancellationToken = default)
         {
             throw new NotImplementedException();
