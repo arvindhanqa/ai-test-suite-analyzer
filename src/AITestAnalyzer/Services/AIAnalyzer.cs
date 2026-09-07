@@ -36,9 +36,32 @@ namespace AITestAnalyzer.Services
         }
 
 
-        public Task<ArchitecturePlan> AnalyzeDocumentStructureAsync( string requirementsMarkdown, CancellationToken cancellationToken = default)
+        public async Task<ArchitecturePlan> AnalyzeDocumentStructureAsync(
+            string requirementsMarkdown,
+            CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            var result = await RetryHelper.ExecuteWithRetryAsync(
+                operation: () => _openAiService.ChatCompletion.CreateCompletion(
+                    new ChatCompletionCreateRequest
+                    {
+                        Messages = new List<ChatMessage>
+                        {
+                    ChatMessage.FromSystem(_promptConfig.ArchStructureSystemPrompt),
+                    ChatMessage.FromUser(requirementsMarkdown)
+                        },
+                        Model = _promptConfig.GenModel,
+                        MaxTokens = 3000
+                    }),
+                isSuccess: r => r.Successful,
+                getErrorMessage: r => r.Error?.Message ?? "Unknown API error"
+            );
+
+            if (result == null || result.Choices.Count == 0 || result.Choices[0].Message.Content == null)
+                throw new InvalidOperationException(
+                    "No response from AI for document structure analysis.");
+
+            var rawText = (result.Choices[0].Message.Content ?? string.Empty).Trim();
+            return ParseArchitecturePlan(rawText);
         }
 
         public Task<(List<GeneratedTestCase> TestCases, int TokensUsed)> GenerateTestCasesForSectionAsync( SectionTestPlan plan, string requirementsMarkdown, CancellationToken cancellationToken = default)
@@ -536,6 +559,108 @@ FEEDBACK:
         {
             return string.Join("\n", critiques.Select(c =>
                 $"{c.TestId}|{c.Action}|{c.Reason}"));
+        }
+
+        private static ArchitecturePlan ParseArchitecturePlan(string rawText)
+        {
+            var plan = new ArchitecturePlan();
+            var sectionMap = new Dictionary<string, SectionTestPlan>(
+                StringComparer.OrdinalIgnoreCase);
+
+            var lines = rawText.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+            foreach (var line in lines)
+            {
+                var trimmed = line.Trim();
+                if (string.IsNullOrWhiteSpace(trimmed))
+                    continue;
+
+                if (trimmed.StartsWith("INTEGRATION|", StringComparison.OrdinalIgnoreCase))
+                {
+                    var flow = ParseIntegrationFlow(trimmed);
+                    if (flow != null)
+                        plan.IntegrationFlows.Add(flow);
+                }
+                else if (trimmed.Contains('|'))
+                {
+                    ParseSectionLine(trimmed, sectionMap);
+                }
+            }
+
+            plan.Sections = sectionMap.Values.ToList();
+            plan.TotalSectionTests = plan.Sections.Sum(s => s.TotalRecommended);
+            plan.TotalIntegrationTests = plan.IntegrationFlows
+                .Sum(f => f.RecommendedTests);
+
+            return plan;
+        }
+
+        private static void ParseSectionLine(
+    string line,
+    Dictionary<string, SectionTestPlan> sectionMap)
+        {
+            var fields = line.Split('|');
+            if (fields.Length < 8)
+                return;
+
+            var sectionName = fields[0].Trim();
+            var testIdPrefix = fields[1].Trim();
+            var subTopicName = fields[2].Trim();
+
+            if (!int.TryParse(fields[3].Trim(), out var totalTests))
+                return;
+            if (!int.TryParse(fields[4].Trim(), out var positiveTests))
+                return;
+            if (!int.TryParse(fields[5].Trim(), out var negativeTests))
+                return;
+
+            var riskLevel = fields[6].Trim();
+            var rationale = fields[7].Trim();
+
+            if (!sectionMap.TryGetValue(sectionName, out var section))
+            {
+                section = new SectionTestPlan
+                {
+                    SectionName = sectionName,
+                    TestIdPrefix = testIdPrefix,
+                    RiskLevel = riskLevel
+                };
+                sectionMap[sectionName] = section;
+            }
+
+            section.SubTopics.Add(new SubTopicTestPlan
+            {
+                SubTopicName = subTopicName,
+                RecommendedTests = totalTests,
+                PositiveTests = positiveTests,
+                NegativeTests = negativeTests,
+                Rationale = rationale
+            });
+
+            section.TotalRecommended += totalTests;
+        }
+
+        private static IntegrationFlow? ParseIntegrationFlow(string line)
+        {
+            var fields = line.Split('|');
+            if (fields.Length < 5)
+                return null;
+
+            if (!int.TryParse(fields[3].Trim(), out var testCount))
+                return null;
+
+            var sectionsInvolved = fields[2].Trim()
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(s => s.Trim())
+                .ToList();
+
+            return new IntegrationFlow
+            {
+                FlowName = fields[1].Trim(),
+                SectionsInvolved = sectionsInvolved,
+                RecommendedTests = testCount,
+                Description = fields[4].Trim()
+            };
         }
     }
 }
