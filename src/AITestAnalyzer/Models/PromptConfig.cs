@@ -55,5 +55,7 @@ namespace AITestAnalyzer.Models
         /// Placeholders: {testCases}, {critiqueResults}
         /// </summary>
         public string RefineUserTemplate { get; set; } = "";
+
+        public string ArchStructureSystemPrompt { get; set; } = string.Empty;
     }
 }
