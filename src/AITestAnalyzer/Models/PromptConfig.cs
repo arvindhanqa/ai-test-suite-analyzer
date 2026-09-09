@@ -57,5 +57,7 @@ namespace AITestAnalyzer.Models
         public string RefineUserTemplate { get; set; } = "";
 
         public string ArchStructureSystemPrompt { get; set; } = string.Empty;
+        public string ArchGenSystemPrompt { get; set; } = string.Empty;
+
     }
 }
