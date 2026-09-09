@@ -59,5 +59,7 @@ namespace AITestAnalyzer.Models
         public string ArchStructureSystemPrompt { get; set; } = string.Empty;
         public string ArchGenSystemPrompt { get; set; } = string.Empty;
 
+        public string ArchGenUserTemplate { get; set; } = string.Empty;
+
     }
 }
