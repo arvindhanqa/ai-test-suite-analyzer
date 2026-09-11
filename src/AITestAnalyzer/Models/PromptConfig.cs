@@ -61,5 +61,8 @@ namespace AITestAnalyzer.Models
 
         public string ArchGenUserTemplate { get; set; } = string.Empty;
 
+        public string ArchIntegrationSystemPrompt { get; set; } = string.Empty;
+
+
     }
 }
