@@ -64,9 +64,49 @@ namespace AITestAnalyzer.Services
             return ParseArchitecturePlan(rawText);
         }
 
-        public Task<(List<GeneratedTestCase> TestCases, int TokensUsed)> GenerateTestCasesForSectionAsync( SectionTestPlan plan, string requirementsMarkdown, CancellationToken cancellationToken = default)
+        public async Task<(List<GeneratedTestCase> TestCases, int TokensUsed)> GenerateTestCasesForSectionAsync(
+            SectionTestPlan plan,
+            string requirementsMarkdown,
+            CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            var subTopicList = string.Join("\n",
+                plan.SubTopics.Select(st => $"- {st.SubTopicName}"));
+
+            var userPrompt = _promptConfig.ArchGenUserTemplate
+                .Replace("{SectionName}", plan.SectionName)
+                .Replace("{TestIdPrefix}", plan.TestIdPrefix)
+                .Replace("{SubTopicList}", subTopicList)
+                .Replace("{RequirementsMarkdown}", requirementsMarkdown);
+
+            var result = await RetryHelper.ExecuteWithRetryAsync(
+                operation: () => _openAiService.ChatCompletion.CreateCompletion(
+                    new ChatCompletionCreateRequest
+                    {
+                        Messages = new List<ChatMessage>
+                        {
+                    ChatMessage.FromSystem(_promptConfig.ArchGenSystemPrompt),
+                    ChatMessage.FromUser(userPrompt)
+                        },
+                        Model = _promptConfig.GenModel,
+                        MaxTokens = Constants.TOKENS_GEN_MODE,
+                        Temperature = (float)_promptConfig.Temperature
+                    }),
+                isSuccess: r => r.Successful,
+                getErrorMessage: r => r.Error?.Message ?? "Unknown API error"
+            );
+
+            if (result == null || result.Choices.Count == 0 || result.Choices[0].Message.Content == null)
+            {
+                Console.WriteLine($"⚠️  GenerateTestCasesForSectionAsync: " +
+                                  $"API call failed for section '{plan.SectionName}'.");
+                return (new List<GeneratedTestCase>(), 0);
+            }
+
+            var rawText = (result.Choices[0].Message.Content ?? string.Empty).Trim();
+            int tokens = result.Usage?.TotalTokens ?? 0;
+            var testCases = ParseGeneratedTestCases(rawText);
+
+            return (testCases, tokens);
         }
 
         /// <summary>
