@@ -30,9 +30,65 @@ namespace AITestAnalyzer.Services
             });
         }
 
-        public Task<(List<GeneratedTestCase> TestCases, int TokensUsed)> GenerateIntegrationTestsAsync( string requirementsMarkdown, List<IntegrationFlow> flows, List<GeneratedTestCase> allSectionTests, CancellationToken cancellationToken = default)
+        public async Task<(List<GeneratedTestCase> TestCases, int TokensUsed)> GenerateIntegrationTestsAsync(
+            string requirementsMarkdown,
+            List<IntegrationFlow> flows,
+            List<GeneratedTestCase> allSectionTests,
+            CancellationToken cancellationToken = default)
         {
-            throw new NotImplementedException();
+            var integrationFlowList = string.Join("\n", flows.Select(f =>
+                $"INTEGRATION|{f.FlowName}|{string.Join(",", f.SectionsInvolved)}|{f.RecommendedTests}|{f.Description}"));
+
+            var sectionTestSummaries = BuildSectionTestSummaries(allSectionTests);
+
+            var userPrompt = _promptConfig.ArchIntegrationUserTemplate.Replace("{IntegrationFlowList}", integrationFlowList).Replace("{SectionTestSummaries}", sectionTestSummaries).Replace("{RequirementsMarkdown}", requirementsMarkdown);
+
+            var result = await RetryHelper.ExecuteWithRetryAsync(
+                operation: () => _openAiService.ChatCompletion.CreateCompletion(
+                    new ChatCompletionCreateRequest
+                    {
+                        Messages = new List<ChatMessage>
+                        {
+                    ChatMessage.FromSystem(_promptConfig.ArchIntegrationSystemPrompt),
+                    ChatMessage.FromUser(userPrompt)
+                        },
+                        Model = _promptConfig.GenModel,
+                        MaxTokens = Constants.TOKENS_GEN_MODE,
+                        Temperature = (float)_promptConfig.Temperature
+                    }),
+                isSuccess: r => r.Successful,
+                getErrorMessage: r => r.Error?.Message ?? "Unknown API error"
+            );
+
+            if (result == null || result.Choices.Count == 0 || result.Choices[0].Message.Content == null)
+            {
+                Console.WriteLine("⚠️  GenerateIntegrationTestsAsync: API call failed.");
+                return (new List<GeneratedTestCase>(), 0);
+            }
+
+            var rawText = (result.Choices[0].Message.Content ?? string.Empty).Trim();
+            int tokens = result.Usage?.TotalTokens ?? 0;
+            var testCases = ParseGeneratedTestCases(rawText);
+
+            return (testCases, tokens);
+        }
+
+        private static string BuildSectionTestSummaries(List<GeneratedTestCase> allSectionTests)
+        {
+            var grouped = allSectionTests
+                .GroupBy(tc => tc.Feature)
+                .OrderBy(g => g.Key);
+
+            var sb = new StringBuilder();
+            foreach (var group in grouped)
+            {
+                sb.AppendLine($"[Section: {group.Key}]");
+                foreach (var tc in group)
+                    sb.AppendLine($"{tc.TestId} — {tc.Scenario}");
+                sb.AppendLine();
+            }
+
+            return sb.ToString().TrimEnd();
         }
 
 
