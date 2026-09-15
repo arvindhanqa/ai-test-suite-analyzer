@@ -11,6 +11,23 @@ namespace AITestAnalyzer.Services
         private readonly PromptConfig _promptConfig;
         private readonly ITestCaseCache? _cache;
 
+        /// <summary>
+        /// Initialises a new instance of <see cref="ArchModeOrchestrator"/> with
+        /// the services required to run the full ARCH Mode pipeline.
+        /// </summary>
+        /// <param name="aiAnalyzer">
+        /// AI service used for document structure analysis and test case generation.
+        /// </param>
+        /// <param name="config">
+        /// Application configuration containing API key and run settings.
+        /// </param>
+        /// <param name="promptConfig">
+        /// Prompt templates and model settings for all ARCH Mode AI calls.
+        /// </param>
+        /// <param name="cache">
+        /// Optional cache for storing and retrieving generated test cases.
+        /// Pass null to run without caching.
+        /// </param>
         public ArchModeOrchestrator(
             IAIAnalyzer aiAnalyzer,
             Configuration config,
