@@ -57,11 +57,11 @@ namespace AITestAnalyzer.Services
         /// An <see cref="ArchModeResult"/> containing the approved plan,
         /// all generated test cases, and run statistics.
         /// </returns>
-        public Task<ArchModeResult> RunAsync(
-            string requirementsMarkdown,
-            string requirementsSource,
-            CancellationToken cancellationToken = default)
+        public async Task<ArchModeResult> RunAsync(string requirementsMarkdown, string requirementsSource, CancellationToken cancellationToken = default)
         {
+            // Step 1 — Analyse document structure
+            Console.WriteLine("\n🔍 Analysing requirements document structure...");
+            var plan = await _aiAnalyzer.AnalyzeDocumentStructureAsync(requirementsMarkdown, cancellationToken);
             throw new NotImplementedException();
         }
     }
