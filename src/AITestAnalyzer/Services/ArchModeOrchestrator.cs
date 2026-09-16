@@ -62,7 +62,53 @@ namespace AITestAnalyzer.Services
             // Step 1 — Analyse document structure
             Console.WriteLine("\n🔍 Analysing requirements document structure...");
             var plan = await _aiAnalyzer.AnalyzeDocumentStructureAsync(requirementsMarkdown, cancellationToken);
+
+            // Step 2 — Display plan to user
+            DisplayArchitecturePlan(plan);
             throw new NotImplementedException();
+        }
+
+        private static void DisplayArchitecturePlan(ArchitecturePlan plan)
+        {
+            Console.WriteLine("\n╔══════════════════════════════════════════════════════════════╗");
+            Console.WriteLine("║         ARCH MODE — Document Analysis Complete               ║");
+            Console.WriteLine("╚══════════════════════════════════════════════════════════════╝");
+
+            Console.WriteLine("\nSECTION COVERAGE PLAN");
+            Console.WriteLine(new string('─', 72));
+            Console.WriteLine($"{"Section",-30} {"Prefix",-8} {"SubTopics",-10} {"Tests",-7} {"Risk",-6}");
+            Console.WriteLine(new string('─', 72));
+
+            foreach (var section in plan.Sections)
+            {
+                Console.WriteLine(
+                    $"{section.SectionName,-30} {section.TestIdPrefix,-8} " +
+                    $"{section.SubTopics.Count,-10} {section.TotalRecommended,-7} " +
+                    $"{section.RiskLevel,-6}");
+
+                foreach (var sub in section.SubTopics)
+                    Console.WriteLine($"  └─ {sub.SubTopicName,-40} {sub.RecommendedTests}");
+            }
+
+            Console.WriteLine(new string('─', 72));
+            Console.WriteLine($"Total section tests: {plan.TotalSectionTests}");
+
+            Console.WriteLine("\nINTEGRATION FLOWS");
+            Console.WriteLine(new string('─', 72));
+            Console.WriteLine($"{"Flow",-35} {"Sections",-25} {"Tests",-5}");
+            Console.WriteLine(new string('─', 72));
+
+            foreach (var flow in plan.IntegrationFlows)
+            {
+                var sections = string.Join(", ", flow.SectionsInvolved);
+                var sectionsDisplay = sections.Length > 23 ? sections[..23] + "…" : sections;
+                Console.WriteLine($"{flow.FlowName,-35} {sectionsDisplay,-25} {flow.RecommendedTests,-5}");
+            }
+
+            Console.WriteLine(new string('─', 72));
+            Console.WriteLine($"Total integration tests: {plan.TotalIntegrationTests}");
+            Console.WriteLine(
+                $"\nGRAND TOTAL: {plan.TotalSectionTests + plan.TotalIntegrationTests} tests\n");
         }
     }
 }
