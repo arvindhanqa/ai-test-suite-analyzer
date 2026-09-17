@@ -4,6 +4,13 @@ using AITestAnalyzer.Models;
 
 namespace AITestAnalyzer.Services
 {
+    public enum ArchPlanDecision
+    {
+        Accept,
+        Edit,
+        Back
+    }
+
     public class ArchModeOrchestrator
     {
         private readonly IAIAnalyzer _aiAnalyzer;
