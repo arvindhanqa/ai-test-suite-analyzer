@@ -75,6 +75,34 @@ namespace AITestAnalyzer.Services
             throw new NotImplementedException();
         }
 
+        private static ArchPlanDecision GetUserPlanDecision()
+        {
+            Console.WriteLine("Review the plan above and choose an option:");
+            Console.WriteLine("  [A] Accept — start generating test cases");
+            Console.WriteLine("  [E] Edit   — adjust section test counts");
+            Console.WriteLine("  [B] Back   — return to main menu");
+            Console.WriteLine();
+
+            while (true)
+            {
+                Console.Write("Your choice: ");
+                var key = Console.ReadLine()?.Trim().ToUpper();
+
+                switch (key)
+                {
+                    case "A":
+                        return ArchPlanDecision.Accept;
+                    case "E":
+                        return ArchPlanDecision.Edit;
+                    case "B":
+                        return ArchPlanDecision.Back;
+                    default:
+                        Console.WriteLine("Invalid input. Please enter A, E, or B.");
+                        break;
+                }
+            }
+        }
+
         private static void DisplayArchitecturePlan(ArchitecturePlan plan)
         {
             Console.WriteLine("\n╔══════════════════════════════════════════════════════════════╗");
