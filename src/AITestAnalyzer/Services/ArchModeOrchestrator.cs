@@ -64,15 +64,42 @@ namespace AITestAnalyzer.Services
         /// An <see cref="ArchModeResult"/> containing the approved plan,
         /// all generated test cases, and run statistics.
         /// </returns>
-        public async Task<ArchModeResult> RunAsync(string requirementsMarkdown, string requirementsSource, CancellationToken cancellationToken = default)
+        public async Task<ArchModeResult> RunAsync(
+            string requirementsMarkdown,
+            string requirementsSource,
+            CancellationToken cancellationToken = default)
         {
             // Step 1 — Analyse document structure
             Console.WriteLine("\n🔍 Analysing requirements document structure...");
-            var plan = await _aiAnalyzer.AnalyzeDocumentStructureAsync(requirementsMarkdown, cancellationToken);
+            var plan = await _aiAnalyzer.AnalyzeDocumentStructureAsync(
+                requirementsMarkdown, cancellationToken);
 
             // Step 2 — Display plan to user
             DisplayArchitecturePlan(plan);
-            throw new NotImplementedException();
+
+            // Step 3 — Get user decision
+            var decision = GetUserPlanDecision();
+
+            switch (decision)
+            {
+                case ArchPlanDecision.Back:
+                    Console.WriteLine("\n↩ Returning to main menu.");
+                    return new ArchModeResult
+                    {
+                        Plan = plan,
+                        RequirementsSource = requirementsSource,
+                        GeneratedAt = DateTime.UtcNow
+                    };
+
+                case ArchPlanDecision.Edit:
+                    Console.WriteLine("\n✏️  Edit mode not yet implemented.");
+                    goto case ArchPlanDecision.Accept;
+
+                case ArchPlanDecision.Accept:
+                default:
+                    throw new NotImplementedException(
+                        "Test case generation not yet implemented.");
+            }
         }
 
         private static ArchPlanDecision GetUserPlanDecision()
