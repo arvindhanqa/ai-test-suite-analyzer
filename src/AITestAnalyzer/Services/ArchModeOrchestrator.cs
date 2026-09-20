@@ -102,6 +102,76 @@ namespace AITestAnalyzer.Services
             }
         }
 
+        private async Task<ArchModeResult> RunGenerationAsync(
+    ArchitecturePlan plan,
+    string requirementsMarkdown,
+    string requirementsSource,
+    CancellationToken cancellationToken)
+        {
+            var allSectionTests = new List<GeneratedTestCase>();
+            int totalTokens = 0;
+            int sectionNumber = 0;
+
+            // Step 1 — Generate tests for each section sequentially
+            foreach (var section in plan.Sections)
+            {
+                sectionNumber++;
+                Console.WriteLine(
+                    $"\n[{sectionNumber}/{plan.Sections.Count}] " +
+                    $"Generating tests for: {section.SectionName}...");
+
+                var (testCases, tokens) = await _aiAnalyzer.GenerateTestCasesForSectionAsync(
+                    section, requirementsMarkdown, cancellationToken);
+
+                totalTokens += tokens;
+                allSectionTests.AddRange(testCases);
+
+                Console.WriteLine(
+                    $"  ✅ {testCases.Count} test cases generated " +
+                    $"({tokens:N0} tokens)");
+            }
+
+            Console.WriteLine(
+                $"\n📋 Section generation complete — " +
+                $"{allSectionTests.Count} total tests across " +
+                $"{plan.Sections.Count} sections.");
+
+            // Step 2 — Generate integration tests
+            Console.WriteLine("\n🔗 Generating integration tests...");
+
+            var (integrationTests, integrationTokens) =
+                await _aiAnalyzer.GenerateIntegrationTestsAsync(
+                    requirementsMarkdown,
+                    plan.IntegrationFlows,
+                    allSectionTests,
+                    cancellationToken);
+
+            totalTokens += integrationTokens;
+
+            Console.WriteLine(
+                $"  ✅ {integrationTests.Count} integration test cases generated " +
+                $"({integrationTokens:N0} tokens)");
+
+            // Step 3 — Combine all test cases
+            var allTestCases = new List<GeneratedTestCase>();
+            allTestCases.AddRange(allSectionTests);
+            allTestCases.AddRange(integrationTests);
+
+            Console.WriteLine(
+                $"\n✅ Generation complete — " +
+                $"{allTestCases.Count} total test cases " +
+                $"({totalTokens:N0} tokens used).");
+
+            return new ArchModeResult
+            {
+                Plan = plan,
+                AllTestCases = allTestCases,
+                TotalTokens = totalTokens,
+                RequirementsSource = requirementsSource,
+                GeneratedAt = DateTime.UtcNow
+            };
+        }
+
         private static ArchPlanDecision GetUserPlanDecision()
         {
             Console.WriteLine("Review the plan above and choose an option:");
