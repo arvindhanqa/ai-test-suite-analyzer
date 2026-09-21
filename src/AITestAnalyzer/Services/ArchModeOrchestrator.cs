@@ -97,16 +97,12 @@ namespace AITestAnalyzer.Services
 
                 case ArchPlanDecision.Accept:
                 default:
-                    throw new NotImplementedException(
-                        "Test case generation not yet implemented.");
+                    return await RunGenerationAsync(
+                        plan, requirementsMarkdown, requirementsSource, cancellationToken);
             }
         }
 
-        private async Task<ArchModeResult> RunGenerationAsync(
-    ArchitecturePlan plan,
-    string requirementsMarkdown,
-    string requirementsSource,
-    CancellationToken cancellationToken)
+        private async Task<ArchModeResult> RunGenerationAsync( ArchitecturePlan plan, string requirementsMarkdown, string requirementsSource, CancellationToken cancellationToken)
         {
             var allSectionTests = new List<GeneratedTestCase>();
             int totalTokens = 0;
