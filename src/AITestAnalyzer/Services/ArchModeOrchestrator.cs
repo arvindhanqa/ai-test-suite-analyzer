@@ -102,6 +102,79 @@ namespace AITestAnalyzer.Services
             }
         }
 
+        private Task<ArchitecturePlan> RunEditModeAsync(ArchitecturePlan plan)
+        {
+            while (true)
+            {
+                Console.WriteLine("\n✏️  EDIT MODE — Select a section to adjust:");
+                Console.WriteLine(new string('─', 60));
+
+                for (int i = 0; i < plan.Sections.Count; i++)
+                {
+                    var s = plan.Sections[i];
+                    Console.WriteLine($"  [{i + 1}] {s.SectionName,-30} " +
+                                      $"{s.TotalRecommended} tests ({s.RiskLevel})");
+                }
+
+                Console.WriteLine("  [D] Done editing — proceed to generation");
+                Console.WriteLine(new string('─', 60));
+                Console.Write("Your choice: ");
+
+                var input = Console.ReadLine()?.Trim().ToUpper();
+
+                if (input == "D")
+                    break;
+
+                if (!int.TryParse(input, out var index) ||
+                    index < 1 || index > plan.Sections.Count)
+                {
+                    Console.WriteLine("Invalid input. Enter a section number or D.");
+                    continue;
+                }
+
+                var section = plan.Sections[index - 1];
+
+                Console.WriteLine($"\nSection: {section.SectionName}");
+                Console.WriteLine($"Current total: {section.TotalRecommended} tests");
+                Console.WriteLine("Sub-topics:");
+
+                foreach (var sub in section.SubTopics)
+                    Console.WriteLine($"  └─ {sub.SubTopicName,-40} {sub.RecommendedTests}");
+
+                Console.Write($"\nEnter new total test count for this section " +
+                              $"(or press Enter to keep {section.TotalRecommended}): ");
+
+                var countInput = Console.ReadLine()?.Trim();
+
+                if (string.IsNullOrWhiteSpace(countInput))
+                {
+                    Console.WriteLine("No change made.");
+                    continue;
+                }
+
+                if (!int.TryParse(countInput, out var newCount) || newCount < 1)
+                {
+                    Console.WriteLine("Invalid number. No change made.");
+                    continue;
+                }
+
+                var oldTotal = section.TotalRecommended;
+                section.TotalRecommended = newCount;
+                plan.TotalSectionTests = plan.Sections.Sum(s => s.TotalRecommended);
+
+                Console.WriteLine(
+                    $"✅ {section.SectionName} updated: " +
+                    $"{oldTotal} → {newCount} tests.");
+            }
+
+            Console.WriteLine(
+                $"\n📋 Final plan: {plan.TotalSectionTests} section tests + " +
+                $"{plan.TotalIntegrationTests} integration tests = " +
+                $"{plan.TotalSectionTests + plan.TotalIntegrationTests} total.");
+
+            return Task.FromResult(plan);
+        }
+
         private async Task<ArchModeResult> RunGenerationAsync( ArchitecturePlan plan, string requirementsMarkdown, string requirementsSource, CancellationToken cancellationToken)
         {
             var allSectionTests = new List<GeneratedTestCase>();
