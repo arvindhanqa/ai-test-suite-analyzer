@@ -92,8 +92,10 @@ namespace AITestAnalyzer.Services
                     };
 
                 case ArchPlanDecision.Edit:
-                    Console.WriteLine("\n✏️  Edit mode not yet implemented.");
-                    goto case ArchPlanDecision.Accept;
+                    plan = await RunEditModeAsync(plan);
+                    DisplayArchitecturePlan(plan);
+                    return await RunGenerationAsync(
+                        plan, requirementsMarkdown, requirementsSource, cancellationToken);
 
                 case ArchPlanDecision.Accept:
                 default:
