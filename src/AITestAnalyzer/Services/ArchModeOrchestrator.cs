@@ -77,6 +77,19 @@ namespace AITestAnalyzer.Services
             // Step 2 — Display plan to user
             DisplayArchitecturePlan(plan);
 
+            // Guard — empty plan
+            if (plan.Sections.Count == 0)
+            {
+                Console.WriteLine(
+                    "\n⚠️  No sections identified in the requirements document. " +
+                    "Check the document format and try again.");
+                return new ArchModeResult
+                {
+                    Plan = plan,
+                    RequirementsSource = requirementsSource,
+                    GeneratedAt = DateTime.UtcNow
+                };
+            }
             // Step 3 — Get user decision
             var decision = GetUserPlanDecision();
 
