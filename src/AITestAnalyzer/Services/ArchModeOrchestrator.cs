@@ -222,6 +222,7 @@ namespace AITestAnalyzer.Services
                 $"{plan.Sections.Count} sections.");
 
             // Step 2 — Generate integration tests
+            cancellationToken.ThrowIfCancellationRequested();
             Console.WriteLine("\n🔗 Generating integration tests...");
 
             var (integrationTests, integrationTokens) =
