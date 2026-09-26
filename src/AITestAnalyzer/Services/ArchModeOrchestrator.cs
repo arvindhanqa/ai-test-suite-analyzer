@@ -199,6 +199,7 @@ namespace AITestAnalyzer.Services
             // Step 1 — Generate tests for each section sequentially
             foreach (var section in plan.Sections)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 sectionNumber++;
                 Console.WriteLine(
                     $"\n[{sectionNumber}/{plan.Sections.Count}] " +
