@@ -252,6 +252,7 @@ namespace AITestAnalyzer.Services
             {
                 Plan = plan,
                 AllTestCases = allTestCases,
+                TotalPasses = plan.Sections.Count + 1, // one pass per section + integration
                 TotalTokens = totalTokens,
                 RequirementsSource = requirementsSource,
                 GeneratedAt = DateTime.UtcNow
