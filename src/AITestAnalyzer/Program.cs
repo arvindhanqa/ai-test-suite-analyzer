@@ -1289,6 +1289,13 @@ namespace AITestAnalyzer
                 UserTemplate = configBuilder["UserTemplate"] ?? "Analyze: {Scenario}",
                 CostPerToken = double.Parse(configBuilder["CostPerToken"] ?? "0.00000015"),
 
+                // ARCH Mode fields
+                ArchStructureSystemPrompt = configBuilder["ArchStructureSystemPrompt"] ?? "",
+                ArchGenSystemPrompt = configBuilder["ArchGenSystemPrompt"] ?? "",
+                ArchGenUserTemplate = configBuilder["ArchGenUserTemplate"] ?? "",
+                ArchIntegrationSystemPrompt = configBuilder["ArchIntegrationSystemPrompt"] ?? "",
+                ArchIntegrationUserTemplate = configBuilder["ArchIntegrationUserTemplate"] ?? "",
+
                 // GEN Mode fields
                 GenModel = configBuilder["GenModel"] ?? "gpt-4.1-mini",
                 GenSystemMessage = configBuilder["GenSystemMessage"] ?? "",
