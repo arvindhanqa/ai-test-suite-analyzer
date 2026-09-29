@@ -759,6 +759,82 @@ namespace AITestAnalyzer
             Console.ReadKey();
         }
 
+        // ============================================================
+        // ARCH MODE — generates full test suite from requirements doc
+        // ============================================================
+        private static async Task RunArchModeAsync(
+            Configuration appConfig,
+            PromptConfig promptConfig,
+            CancellationToken cancellationToken)
+        {
+            Console.WriteLine();
+            WriteHeader("═══════════════════════════════════════════════════════════════════════");
+            WriteHeader("   🏗️  ARCH MODE — FULL TEST SUITE GENERATION");
+            WriteHeader("═══════════════════════════════════════════════════════════════════════");
+            Console.WriteLine();
+
+            // Validate API connection
+            WriteInfo("Validating API connection...");
+            var validator = new ConfigurationValidator(appConfig, promptConfig);
+            var connectionResult = await validator.ValidateOpenAIConnectionAsync();
+            if (!connectionResult.IsValid)
+            {
+                WriteError($"OpenAI Connection Error: {connectionResult.ErrorMessage}");
+                WriteInfo("Press any key to exit...");
+                Console.ReadKey();
+                return;
+            }
+            WriteSuccess("API connection validated");
+            Console.WriteLine();
+
+            // Prompt for requirements file
+            Console.Write("📁 Enter path to requirements file: ");
+            string? reqPath = Console.ReadLine()?.Trim().Trim('"').Trim('\'');
+
+            if (string.IsNullOrWhiteSpace(reqPath) || !File.Exists(reqPath))
+            {
+                WriteError($"Requirements file not found: {reqPath}");
+                WriteInfo("Press any key to exit...");
+                Console.ReadKey();
+                return;
+            }
+
+            string requirementsMarkdown = await File.ReadAllTextAsync(reqPath, cancellationToken);
+            WriteSuccess($"Loaded: {Path.GetFileName(reqPath)} ({requirementsMarkdown.Length:N0} chars)");
+            Console.WriteLine();
+
+            try
+            {
+                var aiAnalyzer = new AIAnalyzer(appConfig, promptConfig);
+                var orchestrator = new ArchModeOrchestrator(aiAnalyzer, appConfig, promptConfig);
+
+                var result = await orchestrator.RunAsync(
+                    requirementsMarkdown,
+                    Path.GetFileName(reqPath),
+                    cancellationToken);
+
+                Console.WriteLine();
+                WriteSuccess($"ARCH Mode complete — {result.AllTestCases.Count} test cases generated.");
+                WriteSuccess($"Total tokens: {result.TotalTokens:N0}");
+            }
+            catch (NotImplementedException)
+            {
+                WriteWarning("Output phase not yet implemented — coming in Phase E.");
+            }
+            catch (OperationCanceledException)
+            {
+                WriteWarning("ARCH Mode cancelled.");
+            }
+            catch (Exception ex)
+            {
+                WriteError($"ARCH Mode failed: {ex.Message}");
+            }
+
+            Console.WriteLine();
+            WriteInfo("Press any key to exit...");
+            Console.ReadKey();
+        }
+
 
         // ============================================================
         // SINGLE FILE MODE — orchestrator only, delegates to helpers
