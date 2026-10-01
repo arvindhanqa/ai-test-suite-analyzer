@@ -69,6 +69,17 @@ namespace AITestAnalyzer
                     return;
                 }
 
+                // ARCH Mode direct launch
+                if (firstArg == "--arch-mode")
+                {
+                    var (archAppConfig, archPromptConfig) = LoadConfiguration();
+                    if (archAppConfig == null || archPromptConfig == null)
+                        return;
+
+                    await RunArchModeAsync(archAppConfig, archPromptConfig, _cts.Token);
+                    return;
+                }
+
                 if (firstArg == "--help" || firstArg == "-h")
                 {
                     DisplayHelp();
