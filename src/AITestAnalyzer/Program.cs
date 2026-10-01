@@ -1458,6 +1458,7 @@ namespace AITestAnalyzer
             Console.WriteLine("  dotnet run -- --gen-mode          # 🆕 Launch GEN Mode directly");
             Console.WriteLine("  dotnet run -- --resume            # Resume interrupted batch run");
             Console.WriteLine("  dotnet run -- --format json               # Export results as JSON");
+            Console.WriteLine("  dotnet run -- --arch-mode         # Launch ARCH Mode directly");
             Console.WriteLine();
             WriteInfo("The interactive menu lets you:");
             Console.WriteLine("  - Pick single file or batch mode");
