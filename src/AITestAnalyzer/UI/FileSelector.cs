@@ -18,7 +18,7 @@ namespace AITestAnalyzer.UI
         // ============================================================
         public class SelectionResult
         {
-            public enum Mode { Single, Batch, Gen, Exit }
+            public enum Mode { Single, Batch, Gen, Arch, Exit }
             public Mode SelectedMode { get; set; }
             public AnalysisMode SelectedAnalysisMode { get; set; }
             public string FilePath { get; set; } = "";
