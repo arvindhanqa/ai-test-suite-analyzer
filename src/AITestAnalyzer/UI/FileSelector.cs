@@ -284,6 +284,112 @@ namespace AITestAnalyzer.UI
             }
         }
 
+
+
+        /// <summary>
+        /// Prompts the user to pick a requirements file for ARCH Mode.
+        /// Unlike GEN Mode there are no test count or pass settings —
+        /// ARCH Mode derives coverage from the requirements document itself.
+        /// </summary>
+        /// <returns>
+        /// A <see cref="SelectionResult"/> with <see cref="SelectionResult.Mode.Arch"/>
+        /// and <c>RequirementsPath</c> set, or the main menu result if the user goes back.
+        /// </returns>
+        private static SelectionResult SelectArchMode()
+        {
+            while (true)
+            {
+                Console.Clear();
+                WriteHeader("ARCH MODE — FULL TEST SUITE");
+                Console.WriteLine();
+                Console.WriteLine("  ARCH Mode reads your whole requirements document,");
+                Console.WriteLine("  plans coverage per section, then generates section");
+                Console.WriteLine("  and integration tests.");
+                Console.WriteLine();
+
+                var reqFiles = FindRequirementsFiles();
+                string? reqPath = null;
+
+                if (reqFiles.Count > 0)
+                {
+                    Console.WriteLine("  Available requirements files:");
+                    Console.WriteLine();
+                    for (int i = 0; i < reqFiles.Count; i++)
+                    {
+                        string fileName = Path.GetFileName(reqFiles[i]);
+                        string? folder = GetShortPath(Path.GetDirectoryName(reqFiles[i]));
+                        Console.WriteLine($"    [{i + 1}] {fileName}");
+                        Console.WriteLine($"        {folder}");
+                        Console.WriteLine();
+                    }
+                    WriteMenuItem("T", "Type a file path manually");
+                    WriteMenuItem("B", "Back to main menu");
+                    Console.WriteLine();
+                    WritePrompt($"  Select file (1-{reqFiles.Count}, T, or B): ");
+
+                    string? fileChoice = Console.ReadLine()?.Trim();
+
+                    if (fileChoice?.ToUpper() == "B")
+                        return ShowMainMenu();
+
+                    if (fileChoice?.ToUpper() == "T")
+                    {
+                        WritePrompt("  📁 Enter path to requirements file (.md or .txt): ");
+                        reqPath = Console.ReadLine()?.Trim().Trim('"').Trim('\'');
+                    }
+                    else if (int.TryParse(fileChoice, out int fileIndex)
+                             && fileIndex >= 1 && fileIndex <= reqFiles.Count)
+                    {
+                        reqPath = reqFiles[fileIndex - 1];
+                    }
+                    else
+                    {
+                        WriteWarning("  Invalid selection.");
+                        PauseForUser();
+                        continue;
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("  No requirements files found in common locations.");
+                    Console.WriteLine();
+                    WritePrompt("  📁 Enter path to requirements file (.md or .txt): ");
+                    reqPath = Console.ReadLine()?.Trim().Trim('"').Trim('\'');
+                }
+
+                if (string.IsNullOrWhiteSpace(reqPath) || !File.Exists(reqPath))
+                {
+                    WriteWarning($"  File not found: {reqPath}");
+                    PauseForUser();
+                    continue;
+                }
+
+                string ext = Path.GetExtension(reqPath).ToLower();
+                if (ext != ".md" && ext != ".txt")
+                {
+                    WriteWarning("  Unsupported file type. Please provide a .md or .txt file.");
+                    PauseForUser();
+                    continue;
+                }
+
+                Console.WriteLine();
+                Console.WriteLine("  ─── Ready to run ───────────────────────────────────");
+                Console.WriteLine($"  Requirements: {Path.GetFileName(reqPath)}");
+                Console.WriteLine("  ────────────────────────────────────────────────────");
+                Console.WriteLine();
+                WritePrompt("  Press Enter to start, or B to go back: ");
+
+                string? confirm = Console.ReadLine()?.Trim().ToUpper();
+                if (confirm == "B")
+                    return ShowMainMenu();
+
+                return new SelectionResult
+                {
+                    SelectedMode = SelectionResult.Mode.Arch,
+                    RequirementsPath = reqPath
+                };
+            }
+        }
         // ============================================================
         // SINGLE FILE SELECTION
         // Scans common locations, lets user pick from a list
