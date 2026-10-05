@@ -73,10 +73,11 @@ namespace AITestAnalyzer.UI
                 WriteMenuItem("1", "Analyze a single Excel file — QA Mode");
                 WriteMenuItem("2", "Analyze a single Excel file — BA Mode");
                 WriteMenuItem("3", "Generate test cases — GEN Mode  🆕");
-                WriteMenuItem("4", "Batch analyze all Excel files in a folder");
-                WriteMenuItem("5", "Exit");
+                WriteMenuItem("4", "Generate full test suite — ARCH Mode  🆕");
+                WriteMenuItem("5", "Batch analyze all Excel files in a folder");
+                WriteMenuItem("6", "Exit");
                 Console.WriteLine();
-                string? choice = ReadIntegerInput($"Enter your choice (1-5): ", 1, 5);
+                string? choice = ReadIntegerInput($"Enter your choice (1-6): ", 1, 6);
 
                 switch (choice)
                 {
@@ -87,8 +88,10 @@ namespace AITestAnalyzer.UI
                     case "3":
                         return SelectGenMode();
                     case "4":
-                        return SelectBatchFolder();
+                        return SelectArchMode();
                     case "5":
+                        return SelectBatchFolder();
+                    case "6":
                         return new SelectionResult { SelectedMode = SelectionResult.Mode.Exit };
                 }
             }
