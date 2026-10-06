@@ -166,9 +166,10 @@ namespace AITestAnalyzer
         // ============================================================
         private static async Task HandleDryRunOptionAsync(SelectionResult selection, bool useCache, PromptConfig promptConfig)
         {
-            // Batch and GEN Mode — dry run not supported, proceed normally
+            // Batch, GEN and ARCH Mode — dry run not supported, proceed normally
             if (selection.SelectedMode == SelectionResult.Mode.Batch ||
-                selection.SelectedMode == SelectionResult.Mode.Gen)
+                selection.SelectedMode == SelectionResult.Mode.Gen ||
+                selection.SelectedMode == SelectionResult.Mode.Arch)
                 return;
 
             AnalysisMode analysisMode = selection.SelectedAnalysisMode;
