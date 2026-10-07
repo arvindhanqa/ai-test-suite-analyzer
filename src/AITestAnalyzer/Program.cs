@@ -153,6 +153,10 @@ namespace AITestAnalyzer
             {
                 await RunGenModeAsync(appConfig, promptConfig, selection, exportJson, serviceProvider);
             }
+            else if (selection.SelectedMode == FileSelector.SelectionResult.Mode.Arch)
+            {
+                await RunArchModeAsync(appConfig, promptConfig, _cts.Token, selection.RequirementsPath);
+            }
             else
             {
                 await RunSingleModeAsync(appConfig, promptConfig, selection, useCache, exportJson, serviceProvider);
@@ -777,7 +781,8 @@ namespace AITestAnalyzer
         private static async Task RunArchModeAsync(
             Configuration appConfig,
             PromptConfig promptConfig,
-            CancellationToken cancellationToken)
+            CancellationToken cancellationToken,
+            string? requirementsPath = null)
         {
             Console.WriteLine();
             WriteHeader("═══════════════════════════════════════════════════════════════════════");
