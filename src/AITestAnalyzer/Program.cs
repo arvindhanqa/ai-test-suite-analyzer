@@ -804,9 +804,13 @@ namespace AITestAnalyzer
             WriteSuccess("API connection validated");
             Console.WriteLine();
 
-            // Prompt for requirements file
-            Console.Write("📁 Enter path to requirements file: ");
-            string? reqPath = Console.ReadLine()?.Trim().Trim('"').Trim('\'');
+            // Use path from menu, or prompt when launched via --arch-mode
+            string? reqPath = requirementsPath;
+            if (string.IsNullOrWhiteSpace(reqPath))
+            {
+                Console.Write("📁 Enter path to requirements file: ");
+                reqPath = Console.ReadLine()?.Trim().Trim('"').Trim('\'');
+            }
 
             if (string.IsNullOrWhiteSpace(reqPath) || !File.Exists(reqPath))
             {
