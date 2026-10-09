@@ -14,6 +14,8 @@ namespace AITestAnalyzer.Config
         public const int TOKENS_CRITIQUE_MODE = 400;
         public const int TOKENS_REFINE_MODE = 600;
 
+        public const int TOKENS_ARCH_STRUCTURE = 5000;
+
 
         // Cache Configuration
         public const int CACHE_MAX_AGE_DAYS = 30;

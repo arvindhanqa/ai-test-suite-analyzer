@@ -137,7 +137,7 @@ namespace AITestAnalyzer.Services
                     ChatMessage.FromUser(requirementsMarkdown)
                         },
                         Model = _promptConfig.GenModel,
-                        MaxTokens = 3000
+                        MaxTokens = Constants.TOKENS_ARCH_STRUCTURE
                     }),
                 isSuccess: r => r.Successful,
                 getErrorMessage: r => r.Error?.Message ?? "Unknown API error"
