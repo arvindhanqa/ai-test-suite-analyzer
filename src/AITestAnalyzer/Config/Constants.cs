@@ -16,7 +16,7 @@ namespace AITestAnalyzer.Config
 
         public const int TOKENS_ARCH_STRUCTURE = 5000;
         public const int TOKENS_ARCH_SECTION = 12000;
-
+        public const int TOKENS_ARCH_INTEGRATION = 8000;
 
 
         // Cache Configuration

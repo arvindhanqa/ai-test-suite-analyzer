@@ -72,7 +72,7 @@ namespace AITestAnalyzer.Services
                     ChatMessage.FromUser(userPrompt)
                         },
                         Model = _promptConfig.GenModel,
-                        MaxTokens = Constants.TOKENS_GEN_MODE,
+                        MaxTokens = Constants.TOKENS_ARCH_INTEGRATION,
                         Temperature = (float)_promptConfig.Temperature
                     }),
                 isSuccess: r => r.Successful,
