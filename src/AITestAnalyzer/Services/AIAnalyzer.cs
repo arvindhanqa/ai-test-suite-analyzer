@@ -133,8 +133,8 @@ namespace AITestAnalyzer.Services
                     {
                         Messages = new List<ChatMessage>
                         {
-                    ChatMessage.FromSystem(_promptConfig.ArchStructureSystemPrompt),
-                    ChatMessage.FromUser(requirementsMarkdown)
+                            ChatMessage.FromSystem(_promptConfig.ArchStructureSystemPrompt),
+                            ChatMessage.FromUser("Analyse this requirements document and recommend a test coverage " + "plan for 100% coverage.\n\n" + requirementsMarkdown)
                         },
                         Model = _promptConfig.GenModel,
                         MaxTokens = Constants.TOKENS_ARCH_STRUCTURE
@@ -318,10 +318,10 @@ FEEDBACK:
                 getErrorMessage: r => r.Error?.Message ?? "Unknown API error"
             );
 
-                if (result == null || result.Choices.Count == 0 || result.Choices[0].Message.Content == null)
-                    return ($"ERROR: OpenAI API call failed after {Constants.MAX_RETRIES} retries " +
-                            $"for test '{testCase.TestId}'. Check your API key and network connection.",
-                            new List<string>(), 0);
+            if (result == null || result.Choices.Count == 0 || result.Choices[0].Message.Content == null)
+                return ($"ERROR: OpenAI API call failed after {Constants.MAX_RETRIES} retries " +
+                        $"for test '{testCase.TestId}'. Check your API key and network connection.",
+                        new List<string>(), 0);
             string response = (result.Choices[0].Message.Content ?? string.Empty).Trim();
             int tokens = result.Usage!.TotalTokens;
 
