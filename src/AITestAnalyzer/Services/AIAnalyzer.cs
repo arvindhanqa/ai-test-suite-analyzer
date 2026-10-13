@@ -85,6 +85,10 @@ namespace AITestAnalyzer.Services
                 return (new List<GeneratedTestCase>(), 0);
             }
 
+            if (result.Choices[0].FinishReason == "length")
+                Console.WriteLine("⚠️  Response hit the token limit and was truncated. " +
+                                  "Raise the ARCH token constant in Constants.cs.");
+
             var rawText = (result.Choices[0].Message.Content ?? string.Empty).Trim();
             int tokens = result.Usage?.TotalTokens ?? 0;
             var testCases = ParseGeneratedTestCases(rawText);
