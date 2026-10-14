@@ -837,6 +837,17 @@ namespace AITestAnalyzer
                 Console.WriteLine();
                 WriteSuccess($"ARCH Mode complete — {result.AllTestCases.Count} test cases generated.");
                 WriteSuccess($"Total tokens: {result.TotalTokens:N0}");
+                if (result.AllTestCases.Count > 0)
+                {
+                    string outputDir = ExcelWriter.CreateOutputFolder();
+                    string jsonPath = Path.Combine(outputDir, $"arch_result_{DateTime.Now:yyyyMMdd_HHmmss}.json");
+                    await File.WriteAllTextAsync(jsonPath,
+                        System.Text.Json.JsonSerializer.Serialize(result,
+                            new System.Text.Json.JsonSerializerOptions { WriteIndented = true }),
+                        cancellationToken);
+                    WriteSuccess($"Saved: {jsonPath}");
+                }
+
             }
             catch (NotImplementedException)
             {
