@@ -849,10 +849,6 @@ namespace AITestAnalyzer
                 }
 
             }
-            catch (NotImplementedException)
-            {
-                WriteWarning("Output phase not yet implemented — coming in Phase E.");
-            }
             catch (OperationCanceledException)
             {
                 WriteWarning("ARCH Mode cancelled.");
