@@ -810,5 +810,12 @@ FEEDBACK:
                 Description = fields[4].Trim()
             };
         }
+
+        private static void RequirePrompt(string value, string name)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+                throw new InvalidOperationException(
+                    $"{name} is empty. Check PromptConfig.json (and its copy in bin/).");
+        }
     }
 }
