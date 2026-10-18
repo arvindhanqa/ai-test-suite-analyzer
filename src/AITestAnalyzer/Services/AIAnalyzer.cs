@@ -131,6 +131,8 @@ namespace AITestAnalyzer.Services
             string requirementsMarkdown,
             CancellationToken cancellationToken = default)
         {
+            RequirePrompt(_promptConfig.ArchStructureSystemPrompt, nameof(_promptConfig.ArchStructureSystemPrompt));
+
             var result = await RetryHelper.ExecuteWithRetryAsync(
                 operation: () => _openAiService.ChatCompletion.CreateCompletion(
                     new ChatCompletionCreateRequest
