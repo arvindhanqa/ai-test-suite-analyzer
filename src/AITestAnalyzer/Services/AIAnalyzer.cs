@@ -179,6 +179,9 @@ namespace AITestAnalyzer.Services
             string requirementsMarkdown,
             CancellationToken cancellationToken = default)
         {
+            RequirePrompt(_promptConfig.ArchGenSystemPrompt, nameof(_promptConfig.ArchGenSystemPrompt));
+            RequirePrompt(_promptConfig.ArchGenUserTemplate, nameof(_promptConfig.ArchGenUserTemplate));
+
             var subTopicList = string.Join("\n",
                 plan.SubTopics.Select(st => $"- {st.SubTopicName}"));
 
