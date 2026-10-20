@@ -55,6 +55,9 @@ namespace AITestAnalyzer.Services
             List<GeneratedTestCase> allSectionTests,
             CancellationToken cancellationToken = default)
         {
+            RequirePrompt(_promptConfig.ArchIntegrationSystemPrompt, nameof(_promptConfig.ArchIntegrationSystemPrompt));
+            RequirePrompt(_promptConfig.ArchIntegrationUserTemplate, nameof(_promptConfig.ArchIntegrationUserTemplate));
+
             var integrationFlowList = string.Join("\n", flows.Select(f =>
                 $"INTEGRATION|{f.FlowName}|{string.Join(",", f.SectionsInvolved)}|{f.RecommendedTests}|{f.Description}"));
 
