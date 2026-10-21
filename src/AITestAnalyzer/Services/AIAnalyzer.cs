@@ -735,7 +735,12 @@ FEEDBACK:
                 {
                     var flow = ParseIntegrationFlow(trimmed);
                     if (flow != null)
-                        plan.IntegrationFlows.Add(flow);
+                    {
+                        if (flow.SectionsInvolved.Count >= 2)
+                            plan.IntegrationFlows.Add(flow);
+                        else
+                            Console.WriteLine($"⚠️  Dropped single-section flow: {flow.FlowName}");
+                    }
                 }
                 else if (trimmed.Contains('|'))
                 {
