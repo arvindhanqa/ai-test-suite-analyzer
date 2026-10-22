@@ -532,7 +532,7 @@ FEEDBACK:
                     Scenario = parts[2].Trim(),
                     Priority = parts[3].Trim(),
                     Steps = parts[4].Trim().Replace("\\n", "\n"),
-                    ExpectedResult = parts[5].Trim(),
+                    ExpectedResult = parts[5].Trim().Replace("\\n", "\n"),
                     PassNumber = 1,
                     GeneratedAt = DateTime.UtcNow
                 });
