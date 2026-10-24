@@ -221,22 +221,33 @@ namespace AITestAnalyzer.Services
                 $"{allSectionTests.Count} total tests across " +
                 $"{plan.Sections.Count} sections.");
 
-            // Step 2 — Generate integration tests
-            cancellationToken.ThrowIfCancellationRequested();
-            Console.WriteLine("\n🔗 Generating integration tests...");
+            // Step 2 — Generate integration tests (only if the plan has valid cross-section flows)
+            List<GeneratedTestCase> integrationTests = new();
+            int integrationTokens = 0;
 
-            var (integrationTests, integrationTokens) =
-                await _aiAnalyzer.GenerateIntegrationTestsAsync(
-                    requirementsMarkdown,
-                    plan.IntegrationFlows,
-                    allSectionTests,
-                    cancellationToken);
+            if (plan.IntegrationFlows.Count > 0)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                Console.WriteLine("\n🔗 Generating integration tests...");
 
-            totalTokens += integrationTokens;
+                (integrationTests, integrationTokens) =
+                    await _aiAnalyzer.GenerateIntegrationTestsAsync(
+                        requirementsMarkdown,
+                        plan.IntegrationFlows,
+                        allSectionTests,
+                        cancellationToken);
 
-            Console.WriteLine(
-                $"  ✅ {integrationTests.Count} integration test cases generated " +
-                $"({integrationTokens:N0} tokens)");
+                totalTokens += integrationTokens;
+
+                Console.WriteLine(
+                    $"  ✅ {integrationTests.Count} integration test cases generated " +
+                    $"({integrationTokens:N0} tokens)");
+            }
+            else
+            {
+                Console.WriteLine(
+                    "\n⚠️  No valid cross-section flows in plan — skipping integration tests.");
+            }
 
             // Step 3 — Combine all test cases
             var allTestCases = new List<GeneratedTestCase>();
