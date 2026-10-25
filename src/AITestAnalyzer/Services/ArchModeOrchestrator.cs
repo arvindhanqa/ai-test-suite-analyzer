@@ -69,6 +69,21 @@ namespace AITestAnalyzer.Services
             string requirementsSource,
             CancellationToken cancellationToken = default)
         {
+            foreach (var (value, name) in new[]
+            {
+                (_promptConfig.ArchStructureSystemPrompt, nameof(_promptConfig.ArchStructureSystemPrompt)),
+                (_promptConfig.ArchGenSystemPrompt, nameof(_promptConfig.ArchGenSystemPrompt)),
+                (_promptConfig.ArchGenUserTemplate, nameof(_promptConfig.ArchGenUserTemplate)),
+                (_promptConfig.ArchIntegrationSystemPrompt, nameof(_promptConfig.ArchIntegrationSystemPrompt)),
+                (_promptConfig.ArchIntegrationUserTemplate, nameof(_promptConfig.ArchIntegrationUserTemplate)),
+            })
+            {
+                if (string.IsNullOrWhiteSpace(value))
+                    throw new InvalidOperationException(
+                        $"{name} is empty. Check PromptConfig.json (and its copy in bin/).");
+            } 
+
+
             // Step 1 — Analyse document structure
             Console.WriteLine("\n🔍 Analysing requirements document structure...");
             var plan = await _aiAnalyzer.AnalyzeDocumentStructureAsync(
