@@ -198,6 +198,28 @@ namespace AITestAnalyzer.Services
             return i < 0 ? int.MaxValue : i;
         }
 
+        private static void WriteSummaryRow(ExcelWorksheet ws, int row, string a, string b,
+            int planned, int generated, string risk, bool isTotal)
+        {
+            ws.Cells[row, 1].Value = a;
+            ws.Cells[row, 2].Value = b;
+            ws.Cells[row, 3].Value = planned;
+            ws.Cells[row, 4].Value = generated;
+            ws.Cells[row, 5].Value = generated - planned;
+            ws.Cells[row, 6].Value = risk;
+
+            var range = ws.Cells[row, 1, row, 6];
+            range.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
+            range.Style.Border.Bottom.Color.SetColor(BorderColor);
+
+            if (isTotal)
+            {
+                range.Style.Font.Bold = true;
+                range.Style.Fill.PatternType = ExcelFillStyle.Solid;
+                range.Style.Fill.BackgroundColor.SetColor(TotalFill);
+            }
+        }
+
         // ============================================================
         // SHARED STYLING
         // ============================================================
