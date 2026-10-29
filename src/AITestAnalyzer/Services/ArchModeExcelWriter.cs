@@ -58,10 +58,10 @@ namespace AITestAnalyzer.Services
                 WriteTestSuiteSheet(package, result);
 
                 Console.WriteLine("   📊 Creating Plan Summary sheet...");
-             //   WritePlanSummarySheet(package, result);
+                WritePlanSummarySheet(package, result);
 
                 Console.WriteLine("   📈 Creating Run Stats sheet...");
-              //  WriteRunStatsSheet(package, result, elapsed);
+                WriteRunStatsSheet(package, result, elapsed);
 
                 package.SaveAs(new FileInfo(outputPath));
             }
@@ -198,6 +198,72 @@ namespace AITestAnalyzer.Services
             return i < 0 ? int.MaxValue : i;
         }
 
+        // ============================================================
+        // SHEET 2 — PLAN SUMMARY (planned vs generated)
+        // ============================================================
+        private static void WritePlanSummarySheet(ExcelPackage package, ArchModeResult result)
+        {
+            var ws = package.Workbook.Worksheets.Add("Plan Summary");
+            var plan = result.Plan;
+
+            string[] headers = { "Section", "Sub-topic", "Planned", "Generated", "Difference", "Risk" };
+            for (int c = 0; c < headers.Length; c++)
+                ws.Cells[1, c + 1].Value = headers[c];
+            StyleBanner(ws.Cells[1, 1, 1, headers.Length], HeaderFill);
+
+            int row = 2;
+            foreach (var section in plan.Sections)
+            {
+                string idPrefix = $"TC-{section.TestIdPrefix}-";
+
+                foreach (var sub in section.SubTopics)
+                {
+                    int generated = result.AllTestCases.Count(t =>
+                        t.TestId.StartsWith(idPrefix, StringComparison.OrdinalIgnoreCase) &&
+                        t.Feature.Equals(sub.SubTopicName, StringComparison.OrdinalIgnoreCase));
+
+                    WriteSummaryRow(ws, row++, section.SectionName, sub.SubTopicName,
+                        sub.RecommendedTests, generated, section.RiskLevel, isTotal: false);
+                }
+
+                int sectionGenerated = result.AllTestCases.Count(t =>
+                    t.TestId.StartsWith(idPrefix, StringComparison.OrdinalIgnoreCase));
+
+                WriteSummaryRow(ws, row++, section.SectionName, "Section total",
+                    section.TotalRecommended, sectionGenerated, "", isTotal: true);
+            }
+
+            // Integration flows
+            row++;
+            string[] flowHeaders = { "Flow", "Sections", "Planned", "Generated", "Difference" };
+            for (int c = 0; c < flowHeaders.Length; c++)
+                ws.Cells[row, c + 1].Value = flowHeaders[c];
+            StyleBanner(ws.Cells[row, 1, row, flowHeaders.Length], IntegrationFill);
+            row++;
+
+            foreach (var flow in plan.IntegrationFlows)
+            {
+                int generated = result.AllTestCases.Count(t =>
+                    t.TestId.StartsWith("TC-INT-", StringComparison.OrdinalIgnoreCase) &&
+                    t.Feature.Equals(flow.FlowName, StringComparison.OrdinalIgnoreCase));
+
+                WriteSummaryRow(ws, row++, flow.FlowName, string.Join(", ", flow.SectionsInvolved),
+                    flow.RecommendedTests, generated, "", isTotal: false);
+            }
+
+            WriteSummaryRow(ws, row++, "GRAND TOTAL", "",
+                plan.TotalSectionTests + plan.TotalIntegrationTests,
+                result.AllTestCases.Count, "", isTotal: true);
+
+            ws.Column(1).Width = 36;
+            ws.Column(2).Width = 44;
+            ws.Column(3).Width = 10;
+            ws.Column(4).Width = 11;
+            ws.Column(5).Width = 12;
+            ws.Column(6).Width = 10;
+            ws.View.FreezePanes(2, 1);
+        }
+
         private static void WriteSummaryRow(ExcelWorksheet ws, int row, string a, string b,
             int planned, int generated, string risk, bool isTotal)
         {
@@ -218,6 +284,47 @@ namespace AITestAnalyzer.Services
                 range.Style.Fill.PatternType = ExcelFillStyle.Solid;
                 range.Style.Fill.BackgroundColor.SetColor(TotalFill);
             }
+        }
+
+        // ============================================================
+        // SHEET 3 — RUN STATS
+        // ============================================================
+        private void WriteRunStatsSheet(ExcelPackage package, ArchModeResult result, TimeSpan elapsed)
+        {
+            var ws = package.Workbook.Worksheets.Add("Run Stats");
+
+            int integrationCount = result.AllTestCases.Count(t =>
+                t.TestId.StartsWith("TC-INT-", StringComparison.OrdinalIgnoreCase));
+
+            var stats = new (string Label, object Value)[]
+            {
+                ("Requirements source", result.RequirementsSource),
+                ("Generated at", result.GeneratedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")),
+                ("Section tests", result.AllTestCases.Count - integrationCount),
+                ("Integration tests", integrationCount),
+                ("Total tests", result.AllTestCases.Count),
+                ("AI passes", result.TotalPasses),
+                ("Total tokens", result.TotalTokens),
+                ("Elapsed time", $"{elapsed.TotalSeconds:F1}s"),
+                ("Estimated cost (approx.)", $"${result.TotalTokens * _promptConfig.CostPerToken:F4}")
+            };
+
+            ws.Cells[1, 1].Value = "Metric";
+            ws.Cells[1, 2].Value = "Value";
+            StyleBanner(ws.Cells[1, 1, 1, 2], HeaderFill);
+
+            int row = 2;
+            foreach (var (label, value) in stats)
+            {
+                ws.Cells[row, 1].Value = label;
+                ws.Cells[row, 1].Style.Font.Bold = true;
+                ws.Cells[row, 2].Value = value;
+                ws.Cells[row, 2].Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
+                row++;
+            }
+
+            ws.Column(1).Width = 28;
+            ws.Column(2).Width = 44;
         }
 
         // ============================================================
