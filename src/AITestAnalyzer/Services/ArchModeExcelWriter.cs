@@ -15,7 +15,7 @@ namespace AITestAnalyzer.Services
     {
         // ── STYLE: change these to match GEN Mode's look ─────────────
         private static readonly Color  _headerFill = Color.FromArgb(31, 78, 121);
-        private static readonly Color IntegrationFill = Color.FromArgb(64, 64, 64);
+        private static readonly Color _integrationFill = Color.FromArgb(64, 64, 64);
         private static readonly Color TotalFill = Color.FromArgb(230, 230, 230);
         private static readonly Color BorderColor = Color.FromArgb(191, 191, 191);
         private static readonly Color[] SectionFills =
@@ -122,7 +122,7 @@ namespace AITestAnalyzer.Services
             if (integration.Count > 0)
             {
                 row = WriteBanner(ws, row,
-                    $"INTEGRATION TESTS — {integration.Count} tests", IntegrationFill);
+                    $"INTEGRATION TESTS — {integration.Count} tests", _integrationFill);
 
                 foreach (var t in integration)
                 {
@@ -136,7 +136,7 @@ namespace AITestAnalyzer.Services
             if (unassigned.Count > 0)
             {
                 row = WriteBanner(ws, row,
-                    $"UNASSIGNED — {unassigned.Count} tests (ID prefix not in plan)", IntegrationFill);
+                    $"UNASSIGNED — {unassigned.Count} tests (ID prefix not in plan)", _integrationFill);
                 foreach (var t in unassigned)
                     WriteTestRow(ws, row++, t);
             }
@@ -238,7 +238,7 @@ namespace AITestAnalyzer.Services
             string[] flowHeaders = { "Flow", "Sections", "Planned", "Generated", "Difference" };
             for (int c = 0; c < flowHeaders.Length; c++)
                 ws.Cells[row, c + 1].Value = flowHeaders[c];
-            StyleBanner(ws.Cells[row, 1, row, flowHeaders.Length], IntegrationFill);
+            StyleBanner(ws.Cells[row, 1, row, flowHeaders.Length], _integrationFill);
             row++;
 
             foreach (var flow in plan.IntegrationFlows)
