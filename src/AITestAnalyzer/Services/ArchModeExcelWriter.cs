@@ -14,7 +14,7 @@ namespace AITestAnalyzer.Services
     public class ArchModeExcelWriter
     {
         // ── STYLE: change these to match GEN Mode's look ─────────────
-        private static readonly Color HeaderFill = Color.FromArgb(31, 78, 121);
+        private static readonly Color  _headerFill = Color.FromArgb(31, 78, 121);
         private static readonly Color IntegrationFill = Color.FromArgb(64, 64, 64);
         private static readonly Color TotalFill = Color.FromArgb(230, 230, 230);
         private static readonly Color BorderColor = Color.FromArgb(191, 191, 191);
@@ -85,7 +85,7 @@ namespace AITestAnalyzer.Services
             string[] headers = { "Test ID", "Sub-topic", "Scenario", "Priority", "Steps", "Expected Result" };
             for (int c = 0; c < headers.Length; c++)
                 ws.Cells[1, c + 1].Value = headers[c];
-            StyleBanner(ws.Cells[1, 1, 1, headers.Length], HeaderFill);
+            StyleBanner(ws.Cells[1, 1, 1, headers.Length], _headerFill);
 
             int row = 2;
 
@@ -209,7 +209,7 @@ namespace AITestAnalyzer.Services
             string[] headers = { "Section", "Sub-topic", "Planned", "Generated", "Difference", "Risk" };
             for (int c = 0; c < headers.Length; c++)
                 ws.Cells[1, c + 1].Value = headers[c];
-            StyleBanner(ws.Cells[1, 1, 1, headers.Length], HeaderFill);
+            StyleBanner(ws.Cells[1, 1, 1, headers.Length], _headerFill);
 
             int row = 2;
             foreach (var section in plan.Sections)
@@ -311,7 +311,7 @@ namespace AITestAnalyzer.Services
 
             ws.Cells[1, 1].Value = "Metric";
             ws.Cells[1, 2].Value = "Value";
-            StyleBanner(ws.Cells[1, 1, 1, 2], HeaderFill);
+            StyleBanner(ws.Cells[1, 1, 1, 2], _headerFill);
 
             int row = 2;
             foreach (var (label, value) in stats)
