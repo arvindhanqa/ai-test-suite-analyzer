@@ -16,7 +16,7 @@ namespace AITestAnalyzer.Services
         // ── STYLE: change these to match GEN Mode's look ─────────────
         private static readonly Color  _headerFill = Color.FromArgb(31, 78, 121);
         private static readonly Color _integrationFill = Color.FromArgb(64, 64, 64);
-        private static readonly Color TotalFill = Color.FromArgb(230, 230, 230);
+        private static readonly Color _totalFill = Color.FromArgb(230, 230, 230);
         private static readonly Color BorderColor = Color.FromArgb(191, 191, 191);
         private static readonly Color[] SectionFills =
         {
@@ -282,7 +282,7 @@ namespace AITestAnalyzer.Services
             {
                 range.Style.Font.Bold = true;
                 range.Style.Fill.PatternType = ExcelFillStyle.Solid;
-                range.Style.Fill.BackgroundColor.SetColor(TotalFill);
+                range.Style.Fill.BackgroundColor.SetColor(_totalFill);
             }
         }
 
