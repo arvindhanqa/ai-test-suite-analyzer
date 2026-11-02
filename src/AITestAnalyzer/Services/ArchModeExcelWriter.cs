@@ -17,7 +17,7 @@ namespace AITestAnalyzer.Services
         private static readonly Color  _headerFill = Color.FromArgb(31, 78, 121);
         private static readonly Color _integrationFill = Color.FromArgb(64, 64, 64);
         private static readonly Color _totalFill = Color.FromArgb(230, 230, 230);
-        private static readonly Color BorderColor = Color.FromArgb(191, 191, 191);
+        private static readonly Color _borderColor = Color.FromArgb(191, 191, 191);
         private static readonly Color[] SectionFills =
         {
             Color.FromArgb(31, 78, 121),
@@ -172,7 +172,7 @@ namespace AITestAnalyzer.Services
             range.Style.WrapText = true;
             range.Style.VerticalAlignment = ExcelVerticalAlignment.Top;
             range.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
-            range.Style.Border.Bottom.Color.SetColor(BorderColor);
+            range.Style.Border.Bottom.Color.SetColor(_borderColor);
 
             var priority = ws.Cells[row, 4];
             priority.Style.Font.Bold = true;
@@ -276,7 +276,7 @@ namespace AITestAnalyzer.Services
 
             var range = ws.Cells[row, 1, row, 6];
             range.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
-            range.Style.Border.Bottom.Color.SetColor(BorderColor);
+            range.Style.Border.Bottom.Color.SetColor(_borderColor);
 
             if (isTotal)
             {
