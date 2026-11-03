@@ -18,7 +18,7 @@ namespace AITestAnalyzer.Services
         private static readonly Color _integrationFill = Color.FromArgb(64, 64, 64);
         private static readonly Color _totalFill = Color.FromArgb(230, 230, 230);
         private static readonly Color _borderColor = Color.FromArgb(191, 191, 191);
-        private static readonly Color[] SectionFills =
+        private static readonly Color[] _sectionFills =
         {
             Color.FromArgb(31, 78, 121),
             Color.FromArgb(55, 106, 64),
@@ -103,7 +103,7 @@ namespace AITestAnalyzer.Services
 
                 row = WriteBanner(ws, row,
                     $"{section.SectionName} ({section.TestIdPrefix}) — {tests.Count} tests",
-                    SectionFills[s % SectionFills.Length]);
+                    _sectionFills[s % _sectionFills.Length]);
 
                 foreach (var t in tests)
                 {
