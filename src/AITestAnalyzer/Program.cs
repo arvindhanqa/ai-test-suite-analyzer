@@ -824,6 +824,8 @@ namespace AITestAnalyzer
             WriteSuccess($"Loaded: {Path.GetFileName(reqPath)} ({requirementsMarkdown.Length:N0} chars)");
             Console.WriteLine();
 
+            var startTime = DateTime.Now;
+
             try
             {
                 var aiAnalyzer = new AIAnalyzer(appConfig, promptConfig);
