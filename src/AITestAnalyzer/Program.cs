@@ -848,6 +848,11 @@ namespace AITestAnalyzer
                             new System.Text.Json.JsonSerializerOptions { WriteIndented = true }),
                         cancellationToken);
                     WriteSuccess($"Saved: {jsonPath}");
+
+                    WriteInfo("Creating Excel output...");
+                    string excelPath = new ArchModeExcelWriter(promptConfig)
+                        .WriteOutput(result, DateTime.Now - startTime);
+                    WriteSuccess($"Excel saved: {excelPath}");
                 }
 
             }
