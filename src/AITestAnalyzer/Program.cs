@@ -80,6 +80,20 @@ namespace AITestAnalyzer
                     return;
                 }
 
+                // TEMP DEV HOOK: build the Excel from a saved JSON, no API calls. Delete after Phase E.
+                if (firstArg == "--arch-excel" && args.Length > 1)
+                {
+                    var (_, hookPrompt) = LoadConfiguration();
+                    if (hookPrompt == null)
+                        return;
+
+                    string json = await File.ReadAllTextAsync(args[1].Trim('"'));
+                    var saved = System.Text.Json.JsonSerializer.Deserialize<ArchModeResult>(json)!;
+                    string path = new ArchModeExcelWriter(hookPrompt).WriteOutput(saved, TimeSpan.Zero);
+                    WriteSuccess($"Excel saved: {path}");
+                    return;
+                }
+
                 if (firstArg == "--help" || firstArg == "-h")
                 {
                     DisplayHelp();
