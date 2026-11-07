@@ -14,8 +14,8 @@ namespace AITestAnalyzer.Services
     public class ArchModeExcelWriter
     {
         // ── STYLE: change these to match GEN Mode's look ─────────────
-        private static readonly Color  _headerFill = Color.FromArgb(31, 78, 121);
-        private static readonly Color _integrationFill = Color.FromArgb(64, 64, 64);
+        private static readonly Color  _headerFill = ColorTranslator.FromHtml("#1A6B3C");      // GEN dark green
+        private static readonly Color _integrationFill = ColorTranslator.FromHtml("#D9E1F2");   // GEN section-header blue-grey
         private static readonly Color _totalFill = Color.FromArgb(230, 230, 230);
         private static readonly Color _borderColor = Color.FromArgb(191, 191, 191);
         private static readonly Color[] _sectionFills =
