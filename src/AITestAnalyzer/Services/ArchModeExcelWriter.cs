@@ -9,25 +9,24 @@ namespace AITestAnalyzer.Services
     /// <summary>
     /// Writes ARCH Mode output to Excel: a Test Suite sheet (grouped by section,
     /// then integration tests by flow), a Plan Summary sheet (planned vs generated),
-    /// and a Run Stats sheet.
+    /// and a Run Stats sheet. Styling matches GEN Mode (ExcelWriter.CreateGeneratedTestsSheet
+    /// and CreateGenStatisticsDashboard).
     /// </summary>
     public class ArchModeExcelWriter
     {
-        // ── STYLE: change these to match GEN Mode's look ─────────────
-        private static readonly Color  _headerFill = ColorTranslator.FromHtml("#1A6B3C");      // GEN dark green
-        private static readonly Color _integrationFill = ColorTranslator.FromHtml("#D9E1F2");   // GEN section-header blue-grey
+        // ── STYLE: matches GEN Mode ──────────────────────────────────
+        private static readonly Color _headerFill = ColorTranslator.FromHtml("#1A6B3C");      // GEN dark green
         private static readonly Color _sectionBanner = ColorTranslator.FromHtml("#D9E1F2");   // GEN section-header blue-grey
+        private static readonly Color _integrationFill = ColorTranslator.FromHtml("#7030A0"); // ARCH-only purple banner
         private static readonly Color _totalFill = ColorTranslator.FromHtml("#D9E1F2");
-        private static readonly Color _borderColor = Color.FromArgb(191, 191, 191);
-        private static readonly Color[] _sectionFills =
-        {
-            Color.FromArgb(31, 78, 121),
-            Color.FromArgb(55, 106, 64),
-            Color.FromArgb(112, 48, 160),
-            Color.FromArgb(156, 87, 0),
-            Color.FromArgb(0, 112, 122),
-            Color.FromArgb(153, 0, 0)
-        };
+
+        // Status colours used in GEN's dashboard rows
+        private static readonly Color _goodFill = ColorTranslator.FromHtml("#C6EFCE");
+        private static readonly Color _warnFill = ColorTranslator.FromHtml("#FFEB9C");
+        private static readonly Color _badFill = ColorTranslator.FromHtml("#FFC7CE");
+
+        // A shortfall of up to this fraction of the planned count is shown as a warning, not an error.
+        private const double WarnShortfallRatio = 0.20;
 
         private readonly PromptConfig _promptConfig;
 
@@ -86,14 +85,13 @@ namespace AITestAnalyzer.Services
             string[] headers = { "Test ID", "Sub-topic", "Scenario", "Priority", "Steps", "Expected Result" };
             for (int c = 0; c < headers.Length; c++)
                 ws.Cells[1, c + 1].Value = headers[c];
-            StyleBanner(ws.Cells[1, 1, 1, headers.Length], _headerFill);
+            StyleTableHeader(ws.Cells[1, 1, 1, headers.Length]);
 
             int row = 2;
 
             // Sections, in plan order. Tests are grouped by sub-topic in plan order.
-            for (int s = 0; s < plan.Sections.Count; s++)
+            foreach (var section in plan.Sections)
             {
-                var section = plan.Sections[s];
                 string idPrefix = $"TC-{section.TestIdPrefix}-";
 
                 var tests = result.AllTestCases
@@ -104,7 +102,7 @@ namespace AITestAnalyzer.Services
 
                 row = WriteBanner(ws, row,
                     $"{section.SectionName} ({section.TestIdPrefix}) — {tests.Count} tests",
-                    _sectionFills[s % _sectionFills.Length]);
+                    _sectionBanner, Color.Black);
 
                 foreach (var t in tests)
                 {
@@ -123,7 +121,7 @@ namespace AITestAnalyzer.Services
             if (integration.Count > 0)
             {
                 row = WriteBanner(ws, row,
-                    $"INTEGRATION TESTS — {integration.Count} tests", _integrationFill);
+                    $"INTEGRATION TESTS — {integration.Count} tests", _integrationFill, Color.White);
 
                 foreach (var t in integration)
                 {
@@ -137,26 +135,36 @@ namespace AITestAnalyzer.Services
             if (unassigned.Count > 0)
             {
                 row = WriteBanner(ws, row,
-                    $"UNASSIGNED — {unassigned.Count} tests (ID prefix not in plan)", _integrationFill);
+                    $"UNASSIGNED — {unassigned.Count} tests (ID prefix not in plan)",
+                    _integrationFill, Color.White);
                 foreach (var t in unassigned)
                     WriteTestRow(ws, row++, t);
             }
 
-            ws.Column(1).Width = 14;
-            ws.Column(2).Width = 26;
-            ws.Column(3).Width = 50;
-            ws.Column(4).Width = 10;
-            ws.Column(5).Width = 60;
-            ws.Column(6).Width = 50;
+            // Column widths (same as GEN, Sub-topic slightly wider than GEN's Feature)
+            ws.Column(1).Width = 15;  // Test ID
+            ws.Column(2).Width = 22;  // Sub-topic
+            ws.Column(3).Width = 45;  // Scenario
+            ws.Column(4).Width = 12;  // Priority
+            ws.Column(5).Width = 50;  // Steps
+            ws.Column(6).Width = 40;  // Expected Result
+
             ws.View.FreezePanes(2, 1);
+            ws.Cells[1, 1, 1, headers.Length].AutoFilter = true;
         }
 
-        private static int WriteBanner(ExcelWorksheet ws, int row, string text, Color fill)
+        private static int WriteBanner(ExcelWorksheet ws, int row, string text, Color fill, Color fontColor)
         {
             var range = ws.Cells[row, 1, row, 6];
             range.Merge = true;
             ws.Cells[row, 1].Value = text;
-            StyleBanner(range, fill);
+
+            range.Style.Font.Bold = true;
+            range.Style.Font.Size = 11;
+            range.Style.Font.Color.SetColor(fontColor);
+            range.Style.Fill.PatternType = ExcelFillStyle.Solid;
+            range.Style.Fill.BackgroundColor.SetColor(fill);
+            range.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
             return row + 1;
         }
 
@@ -169,20 +177,30 @@ namespace AITestAnalyzer.Services
             ws.Cells[row, 5].Value = t.Steps;
             ws.Cells[row, 6].Value = t.ExpectedResult;
 
-            var range = ws.Cells[row, 1, row, 6];
-            range.Style.WrapText = true;
-            range.Style.VerticalAlignment = ExcelVerticalAlignment.Top;
-            range.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
-            range.Style.Border.Bottom.Color.SetColor(_borderColor);
-
-            var priority = ws.Cells[row, 4];
-            priority.Style.Font.Bold = true;
-            priority.Style.Font.Color.SetColor((t.Priority ?? "").Trim().ToLowerInvariant() switch
+            // GEN: top-aligned, thin border around every cell
+            for (int col = 1; col <= 6; col++)
             {
-                "high" => Color.FromArgb(192, 0, 0),
-                "medium" => Color.FromArgb(156, 87, 0),
-                _ => Color.FromArgb(84, 130, 53)
-            });
+                var cell = ws.Cells[row, col];
+                cell.Style.WrapText = true;
+                cell.Style.VerticalAlignment = ExcelVerticalAlignment.Top;
+                cell.Style.Border.BorderAround(ExcelBorderStyle.Thin);
+            }
+
+            // GEN priority colours: High red+bold, Medium orange-red, Low green
+            var priority = ws.Cells[row, 4];
+            switch ((t.Priority ?? "").Trim().ToLowerInvariant())
+            {
+                case "high":
+                    priority.Style.Font.Color.SetColor(Color.Red);
+                    priority.Style.Font.Bold = true;
+                    break;
+                case "medium":
+                    priority.Style.Font.Color.SetColor(Color.OrangeRed);
+                    break;
+                case "low":
+                    priority.Style.Font.Color.SetColor(Color.Green);
+                    break;
+            }
         }
 
         private static int SubTopicIndex(SectionTestPlan section, string feature)
@@ -207,12 +225,15 @@ namespace AITestAnalyzer.Services
             var ws = package.Workbook.Worksheets.Add("Plan Summary");
             var plan = result.Plan;
 
+            // Title row (same pattern as GEN dashboard)
+            WriteTitle(ws, "ARCH MODE — PLAN SUMMARY", 6);
+
             string[] headers = { "Section", "Sub-topic", "Planned", "Generated", "Difference", "Risk" };
             for (int c = 0; c < headers.Length; c++)
-                ws.Cells[1, c + 1].Value = headers[c];
-            StyleBanner(ws.Cells[1, 1, 1, headers.Length], _headerFill);
+                ws.Cells[3, c + 1].Value = headers[c];
+            StyleTableHeader(ws.Cells[3, 1, 3, headers.Length]);
 
-            int row = 2;
+            int row = 4;
             foreach (var section in plan.Sections)
             {
                 string idPrefix = $"TC-{section.TestIdPrefix}-";
@@ -239,7 +260,9 @@ namespace AITestAnalyzer.Services
             string[] flowHeaders = { "Flow", "Sections", "Planned", "Generated", "Difference" };
             for (int c = 0; c < flowHeaders.Length; c++)
                 ws.Cells[row, c + 1].Value = flowHeaders[c];
-            StyleBanner(ws.Cells[row, 1, row, flowHeaders.Length], _integrationFill);
+            var flowHeaderRange = ws.Cells[row, 1, row, flowHeaders.Length];
+            StyleTableHeader(flowHeaderRange);
+            flowHeaderRange.Style.Fill.BackgroundColor.SetColor(_integrationFill);
             row++;
 
             foreach (var flow in plan.IntegrationFlows)
@@ -268,27 +291,43 @@ namespace AITestAnalyzer.Services
         private static void WriteSummaryRow(ExcelWorksheet ws, int row, string a, string b,
             int planned, int generated, string risk, bool isTotal)
         {
+            int diff = generated - planned;
+
             ws.Cells[row, 1].Value = a;
             ws.Cells[row, 2].Value = b;
             ws.Cells[row, 3].Value = planned;
             ws.Cells[row, 4].Value = generated;
-            ws.Cells[row, 5].Value = generated - planned;
+            ws.Cells[row, 5].Value = diff;
             ws.Cells[row, 6].Value = risk;
 
-            var range = ws.Cells[row, 1, row, 6];
-            range.Style.Border.Bottom.Style = ExcelBorderStyle.Thin;
-            range.Style.Border.Bottom.Color.SetColor(_borderColor);
+            for (int col = 1; col <= 6; col++)
+                ws.Cells[row, col].Style.Border.BorderAround(ExcelBorderStyle.Thin);
 
             if (isTotal)
             {
+                var range = ws.Cells[row, 1, row, 6];
                 range.Style.Font.Bold = true;
                 range.Style.Fill.PatternType = ExcelFillStyle.Solid;
                 range.Style.Fill.BackgroundColor.SetColor(_totalFill);
+                return;
             }
+
+            // Difference cell: green = met plan, yellow = small shortfall, red = big shortfall
+            Color fill;
+            if (diff >= 0)
+                fill = _goodFill;
+            else if (planned > 0 && (-diff / (double)planned) <= WarnShortfallRatio)
+                fill = _warnFill;
+            else
+                fill = _badFill;
+
+            var diffCell = ws.Cells[row, 5];
+            diffCell.Style.Fill.PatternType = ExcelFillStyle.Solid;
+            diffCell.Style.Fill.BackgroundColor.SetColor(fill);
         }
 
         // ============================================================
-        // SHEET 3 — RUN STATS
+        // SHEET 3 — RUN STATS (same layout as GEN Statistics Dashboard)
         // ============================================================
         private void WriteRunStatsSheet(ExcelPackage package, ArchModeResult result, TimeSpan elapsed)
         {
@@ -297,25 +336,92 @@ namespace AITestAnalyzer.Services
             int integrationCount = result.AllTestCases.Count(t =>
                 t.TestId.StartsWith("TC-INT-", StringComparison.OrdinalIgnoreCase));
 
-            var stats = new (string Label, object Value)[]
+            WriteTitle(ws, "ARCH MODE — STATISTICS DASHBOARD", 4);
+
+            int row = 3;
+
+            // ── GENERATION SUMMARY ─────────────────────────────
+            row = WriteSectionHeader(ws, row, "GENERATION SUMMARY", 4);
+
+            var genData = new (string Label, object Value)[]
             {
-                ("Requirements source", result.RequirementsSource),
-                ("Generated at", result.GeneratedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")),
-                ("Section tests", result.AllTestCases.Count - integrationCount),
-                ("Integration tests", integrationCount),
-                ("Total tests", result.AllTestCases.Count),
-                ("AI passes", result.TotalPasses),
-                ("Total tokens", result.TotalTokens),
-                ("Elapsed time", $"{elapsed.TotalSeconds:F1}s"),
-                ("Estimated cost (approx.)", $"${result.TotalTokens * _promptConfig.CostPerToken:F4}")
+                ("Requirements Source", result.RequirementsSource),
+                ("Generated At", result.GeneratedAt.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss")),
+                ("Section Tests", result.AllTestCases.Count - integrationCount),
+                ("Integration Tests", integrationCount),
+                ("Total Tests", result.AllTestCases.Count),
+                ("AI Passes", result.TotalPasses)
             };
+            row = WriteLabelRows(ws, row, genData);
+            row++; // empty row
 
-            ws.Cells[1, 1].Value = "Metric";
-            ws.Cells[1, 2].Value = "Value";
-            StyleBanner(ws.Cells[1, 1, 1, 2], _headerFill);
+            // ── COST & PERFORMANCE ─────────────────────────────
+            row = WriteSectionHeader(ws, row, "COST & PERFORMANCE", 4);
 
-            int row = 2;
-            foreach (var (label, value) in stats)
+            int total = result.AllTestCases.Count;
+            double totalCost = result.TotalTokens * _promptConfig.CostPerToken;
+
+            var perfData = new (string Label, object Value)[]
+            {
+                ("Total Tokens Used", $"{result.TotalTokens:N0}"),
+                ("Estimated Cost (approx.)", $"${totalCost:F6} USD"),
+                ("Time Elapsed", elapsed.ToString(@"mm\:ss")),
+                ("Cost per Test Case", total > 0 ? $"${totalCost / total:F6} USD" : "$0.000000 USD")
+            };
+            WriteLabelRows(ws, row, perfData);
+
+            ws.Column(1).Width = 35;
+            ws.Column(2).Width = 30;
+            ws.Column(3).Width = 15;
+            ws.View.FreezePanes(2, 1);
+        }
+
+        // ============================================================
+        // SHARED STYLING (GEN look)
+        // ============================================================
+
+        /// <summary>Dark green table header: bold 12pt white, centered, medium border.</summary>
+        private static void StyleTableHeader(ExcelRange range)
+        {
+            range.Style.Font.Bold = true;
+            range.Style.Font.Size = 12;
+            range.Style.Font.Color.SetColor(Color.White);
+            range.Style.Fill.PatternType = ExcelFillStyle.Solid;
+            range.Style.Fill.BackgroundColor.SetColor(_headerFill);
+            range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+            range.Style.Border.BorderAround(ExcelBorderStyle.Medium);
+        }
+
+        /// <summary>Merged dark green title bar: bold 14pt white, centered.</summary>
+        private static void WriteTitle(ExcelWorksheet ws, string text, int columnSpan)
+        {
+            var range = ws.Cells[1, 1, 1, columnSpan];
+            range.Merge = true;
+            ws.Cells[1, 1].Value = text;
+            range.Style.Font.Bold = true;
+            range.Style.Font.Size = 14;
+            range.Style.Font.Color.SetColor(Color.White);
+            range.Style.Fill.PatternType = ExcelFillStyle.Solid;
+            range.Style.Fill.BackgroundColor.SetColor(_headerFill);
+            range.Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
+        }
+
+        /// <summary>Merged blue-grey section header: bold 11pt.</summary>
+        private static int WriteSectionHeader(ExcelWorksheet ws, int row, string text, int columnSpan)
+        {
+            var range = ws.Cells[row, 1, row, columnSpan];
+            range.Merge = true;
+            ws.Cells[row, 1].Value = text;
+            range.Style.Font.Bold = true;
+            range.Style.Font.Size = 11;
+            range.Style.Fill.PatternType = ExcelFillStyle.Solid;
+            range.Style.Fill.BackgroundColor.SetColor(_sectionBanner);
+            return row + 1;
+        }
+
+        private static int WriteLabelRows(ExcelWorksheet ws, int row, (string Label, object Value)[] rows)
+        {
+            foreach (var (label, value) in rows)
             {
                 ws.Cells[row, 1].Value = label;
                 ws.Cells[row, 1].Style.Font.Bold = true;
@@ -323,21 +429,7 @@ namespace AITestAnalyzer.Services
                 ws.Cells[row, 2].Style.HorizontalAlignment = ExcelHorizontalAlignment.Left;
                 row++;
             }
-
-            ws.Column(1).Width = 28;
-            ws.Column(2).Width = 44;
-        }
-
-        // ============================================================
-        // SHARED STYLING
-        // ============================================================
-        private static void StyleBanner(ExcelRange range, Color fill)
-        {
-            range.Style.Font.Bold = true;
-            range.Style.Font.Color.SetColor(Color.White);
-            range.Style.Fill.PatternType = ExcelFillStyle.Solid;
-            range.Style.Fill.BackgroundColor.SetColor(fill);
-            range.Style.VerticalAlignment = ExcelVerticalAlignment.Center;
+            return row;
         }
     }
 }
