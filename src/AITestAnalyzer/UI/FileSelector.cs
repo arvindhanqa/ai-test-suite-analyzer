@@ -110,6 +110,18 @@ namespace AITestAnalyzer.UI
         }
 
         /// <summary>
+        /// Called via --arch-mode CLI flag — skips the main menu entirely.
+        /// Shows only the ARCH Mode file selection screen.
+        /// </summary>
+        public static SelectionResult? SelectArchModeDirect()
+        {
+            var result = SelectArchMode();
+            if (result.SelectedMode == SelectionResult.Mode.Exit)
+                return null;
+            return result;
+        }
+
+        /// <summary>
         /// Prompts user to select QA Mode or BA Mode for analysis
         /// </summary>
         public static AnalysisMode SelectAnalysisMode()
