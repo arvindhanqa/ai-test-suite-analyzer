@@ -70,13 +70,18 @@ namespace AITestAnalyzer
                 }
 
                 // ARCH Mode direct launch
+                // ARCH Mode direct launch
                 if (firstArg == "--arch-mode")
                 {
                     var (archAppConfig, archPromptConfig) = LoadConfiguration();
                     if (archAppConfig == null || archPromptConfig == null)
                         return;
 
-                    await RunArchModeAsync(archAppConfig, archPromptConfig, _cts.Token);
+                    var archSelection = FileSelector.SelectArchModeDirect();
+                    if (archSelection == null || archSelection.SelectedMode != FileSelector.SelectionResult.Mode.Arch)
+                        return;
+
+                    await RunArchModeAsync(archAppConfig, archPromptConfig, _cts.Token, archSelection.RequirementsPath);
                     return;
                 }
 
