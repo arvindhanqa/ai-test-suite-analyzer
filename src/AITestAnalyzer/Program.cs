@@ -1,3 +1,4 @@
+using System.Globalization;
 using AITestAnalyzer.Config;
 using AITestAnalyzer.Infrastructure;
 using AITestAnalyzer.Models;
@@ -1398,7 +1399,7 @@ namespace AITestAnalyzer
 
             var promptConfig = new PromptConfig
             {
-                MaxTokens = int.Parse(configBuilder["MaxTokens"] ?? "150"),
+                MaxTokens = int.Parse(configBuilder["MaxTokens"] ?? "150", CultureInfo.InvariantCulture),
                 Model = configBuilder["Model"] ?? "gpt-4o-mini",
                 Temperature = double.Parse(configBuilder["Temperature"] ?? "0.2"),
                 SystemMessage = configBuilder["SystemMessage"] ?? "You are an expert QA analyzer.",
