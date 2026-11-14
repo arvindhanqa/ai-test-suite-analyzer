@@ -1401,7 +1401,7 @@ namespace AITestAnalyzer
             {
                 MaxTokens = int.Parse(configBuilder["MaxTokens"] ?? "150", CultureInfo.InvariantCulture),
                 Model = configBuilder["Model"] ?? "gpt-4o-mini",
-                Temperature = double.Parse(configBuilder["Temperature"] ?? "0.2"),
+                Temperature = double.Parse(configBuilder["Temperature"] ?? "0.2", CultureInfo.InvariantCulture),
                 SystemMessage = configBuilder["SystemMessage"] ?? "You are an expert QA analyzer.",
                 UserTemplate = configBuilder["UserTemplate"] ?? "Analyze: {Scenario}",
                 CostPerToken = double.Parse(configBuilder["CostPerToken"] ?? "0.00000015"),
