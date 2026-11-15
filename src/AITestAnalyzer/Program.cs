@@ -1404,8 +1404,7 @@ namespace AITestAnalyzer
                 Temperature = double.Parse(configBuilder["Temperature"] ?? "0.2", CultureInfo.InvariantCulture),
                 SystemMessage = configBuilder["SystemMessage"] ?? "You are an expert QA analyzer.",
                 UserTemplate = configBuilder["UserTemplate"] ?? "Analyze: {Scenario}",
-                CostPerToken = double.Parse(configBuilder["CostPerToken"] ?? "0.00000015"),
-
+                CostPerToken = double.Parse(configBuilder["CostPerToken"] ?? "0.00000015", CultureInfo.InvariantCulture),
                 // ARCH Mode fields
                 ArchStructureSystemPrompt = configBuilder["ArchStructureSystemPrompt"] ?? "",
                 ArchGenSystemPrompt = configBuilder["ArchGenSystemPrompt"] ?? "",
