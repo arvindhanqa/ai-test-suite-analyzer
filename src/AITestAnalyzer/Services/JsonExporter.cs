@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using AITestAnalyzer.Config;
 using AITestAnalyzer.Models;
@@ -91,7 +92,7 @@ namespace AITestAnalyzer.Services
             {
                 metadata = new
                 {
-                    generatedAt = result.GeneratedAt.ToString("yyyy-MM-ddTHH:mm:ssZ"),
+                    generatedAt = result.GeneratedAt.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture),
                     requirementsSource = result.RequirementsSource,
                     totalPasses = result.TotalPasses,
                     totalTokens = result.TotalTokens,
