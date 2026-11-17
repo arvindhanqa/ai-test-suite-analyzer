@@ -220,6 +220,8 @@ namespace AITestAnalyzer.Services
 
             var rawText = (result.Choices[0].Message.Content ?? string.Empty).Trim();
             int tokens = result.Usage?.TotalTokens ?? 0;
+            int completionTokens = result.Usage?.CompletionTokens ?? 0;
+            string finishReason = result.Choices[0].FinishReason ?? "unknown";
             var testCases = ParseGeneratedTestCases(rawText);
 
             return (testCases, tokens);
