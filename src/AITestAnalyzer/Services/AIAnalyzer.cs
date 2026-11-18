@@ -224,6 +224,14 @@ namespace AITestAnalyzer.Services
             string finishReason = result.Choices[0].FinishReason ?? "unknown";
             var testCases = ParseGeneratedTestCases(rawText);
 
+            Console.WriteLine($"   🔎 {plan.SectionName}: finish={finishReason}, " +
+                              $"completion tokens={completionTokens}/{Constants.TOKENS_ARCH_SECTION}, " +
+                              $"tests parsed={testCases.Count}");
+
+            if (finishReason == "length")
+                Console.WriteLine($"⚠️  {plan.SectionName}: hit the token limit, tests may be missing. " +
+                                  "Raise TOKENS_ARCH_SECTION in Constants.cs.");
+
             return (testCases, tokens);
         }
 
