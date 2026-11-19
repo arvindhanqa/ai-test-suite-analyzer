@@ -146,7 +146,8 @@ namespace AITestAnalyzer.Services
                             ChatMessage.FromUser("Analyse this requirements document and recommend a test coverage " + "plan for 100% coverage.\n\n" + requirementsMarkdown)
                         },
                         Model = _promptConfig.GenModel,
-                        MaxTokens = Constants.TOKENS_ARCH_STRUCTURE
+                        MaxTokens = Constants.TOKENS_ARCH_STRUCTURE,
+                        Temperature = (float)_promptConfig.Temperature
                     }),
                 isSuccess: r => r.Successful,
                 getErrorMessage: r => r.Error?.Message ?? "Unknown API error"
@@ -155,6 +156,10 @@ namespace AITestAnalyzer.Services
             if (result == null || result.Choices.Count == 0 || result.Choices[0].Message.Content == null)
                 throw new InvalidOperationException(
                     "No response from AI for document structure analysis.");
+
+            if (result.Choices[0].FinishReason == "length")
+                Console.WriteLine("⚠️  Plan response hit the token limit and may be cut off. " +
+                                  "Raise TOKENS_ARCH_STRUCTURE in Constants.cs.");
 
             var rawText = (result.Choices[0].Message.Content ?? string.Empty).Trim();
             return ParseArchitecturePlan(rawText);
